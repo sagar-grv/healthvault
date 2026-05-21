@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "src/app/api/analyze-report/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/doctor-assistant/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}

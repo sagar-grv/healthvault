@@ -39,3 +39,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Supabase local dev temp files (do NOT ignore migrations or config)
+supabase/.temp/
+supabase/.branches/
+
+# Production env backup — NEVER commit this
+.env.local.prod
+
+# OpenCode / Hive tool files
+.hive/
+.opencode/
+opencode.json
+dev-server.log
+
