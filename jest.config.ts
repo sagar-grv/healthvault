@@ -7,17 +7,18 @@ const config: Config = {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: {
-        jsx: 'react-jsx',
-        esModuleInterop: true,
+    '^.+\\.(ts|tsx)$': [
+      'ts-jest',
+      {
+        tsconfig: {
+          jsx: 'react-jsx',
+          esModuleInterop: true,
+          rootDir: '.',
+        },
       },
-    }],
+    ],
   },
-  testMatch: [
-    '**/__tests__/**/*.test.(ts|tsx)',
-    '**/*.test.(ts|tsx)',
-  ],
+  testMatch: ['**/__tests__/**/*.test.(ts|tsx)', '**/*.test.(ts|tsx)'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
 };
 

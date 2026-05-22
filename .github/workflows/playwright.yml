@@ -24,7 +24,7 @@ jobs:
     outputs:
       preview_url: ${{ steps.wait.outputs.url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Wait for Vercel preview deployment
         id: wait
@@ -41,7 +41,7 @@ jobs:
     timeout-minutes: 15
     needs: [wait-for-vercel-preview]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
