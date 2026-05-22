@@ -44,7 +44,7 @@ next-env.d.ts
 supabase/.temp/
 supabase/.branches/
 
-# Production env backup — NEVER commit this
+# Production env backup - NEVER commit this
 .env.local.prod
 
 # OpenCode / Hive tool files
@@ -53,3 +53,5 @@ supabase/.branches/
 opencode.json
 dev-server.log
 
+# Generated proposal PDF
+healthvault-proposal.pdf

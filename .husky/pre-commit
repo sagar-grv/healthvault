@@ -1,0 +1,5 @@
+# Pre-commit hook — Industry standard: lint-staged runs on staged files only
+# This catches issues BEFORE they reach CI, saving time and pipeline minutes
+# If this hook fails, the commit is aborted. Fix the issues and try again.
+
+npx lint-staged

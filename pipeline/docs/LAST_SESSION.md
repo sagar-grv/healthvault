@@ -70,17 +70,6 @@ User → Planner → Builder → Security Reviewer → GitHub Actions → Vercel
 | Change Failure Rate  | TBD (no Sentry yet)             |
 | MTTR                 | TBD (no incident yet)           |
 
-### Pipeline Folder (Centralized Pipeline Config)
-
-- `pipeline/README.md` — Complete documentation of the entire pipeline, folder structure, flow diagram, agent team mapping, setup instructions, DORA metrics, and security gates
-- `pipeline/github/` — Copies of all GitHub Actions workflows
-- `pipeline/agents/` — Copies of all OpenCode agent files
-- `pipeline/husky/` — Pre-commit hook config
-- `pipeline/docs/` — All project documentation files
-- `pipeline/config/` — Config files (prettier, package.json)
-
-> **Design philosophy**: The `pipeline/` folder is the canonical reference for the pipeline. The actual files live at their required paths (`.github/`, `.opencode/agents/`, `.husky/`), and `pipeline/` mirrors them for easy browsing. This pattern makes it portable for other solo developers to adopt.
-
 ## Key Files Created
 
 - `.github/dependabot.yml`

@@ -1,0 +1,51 @@
+# Dependabot — Automated dependency updates
+# Industry standard: weekly security + version updates for npm
+# Ref: https://docs.github.com/en/code-security/dependabot
+
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Kolkata"
+    # Group non-major updates into single PRs to reduce noise
+    groups:
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "patch"
+          - "minor"
+      dev-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "patch"
+          - "minor"
+    # Labels for all dependabot PRs
+    labels:
+      - "dependencies"
+      - "automated"
+    # Maximum 5 open PRs at a time to prevent notification fatigue
+    open-pull-requests-limit: 5
+    # Auto-assign reviewer
+    reviewers:
+      - "sagar-grv"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+
+  # Keep GitHub Actions up to date
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Kolkata"
+    labels:
+      - "dependencies"
+      - "automated"
+    open-pull-requests-limit: 3

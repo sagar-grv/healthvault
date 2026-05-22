@@ -1,0 +1,68 @@
+# CodeQL — Industry-standard security analysis (free for public + private repos)
+# Scans JavaScript/TypeScript for:
+#   - Injection vulnerabilities (SQL, NoSQL, command)
+#   - Cross-site scripting (XSS)
+#   - Insecure cryptographic practices
+#   - Path traversal
+#   - And 100+ other vulnerability classes
+# Ref: https://docs.github.com/en/code-security/codeql-for-vs-code
+
+name: "CodeQL Security Scan"
+
+on:
+  pull_request:
+    branches: [main]
+    # Only scan if JS/TS files changed — skip for docs/markdown only
+    paths:
+      - "src/**/*.ts"
+      - "src/**/*.tsx"
+      - "src/**/*.js"
+      - "src/**/*.jsx"
+  push:
+    branches: [main]
+    paths:
+      - "src/**/*.ts"
+      - "src/**/*.tsx"
+      - "src/**/*.js"
+      - "src/**/*.jsx"
+  schedule:
+    # Weekly full scan of main branch
+    - cron: "0 6 * * 1" # Monday 6 AM IST
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: CodeQL Analyze
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["javascript-typescript"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # Tighter query suite for TS/JS (default: security-and-quality)
+          queries: security-extended,security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
