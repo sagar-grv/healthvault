@@ -23,7 +23,11 @@ interface QRScannerDialogProps {
 type ScanState = 'idle' | 'starting' | 'scanning' | 'success' | 'error';
 
 export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDialogProps) {
-  const scannerRef = useRef<any>(null);
+  const scannerRef = useRef<{
+    stop: () => Promise<void>;
+    clear: () => void;
+    applyVideoConstraints: (c: object) => Promise<void>;
+  } | null>(null);
   const [scanState, setScanState] = useState<ScanState>('idle');
   const [error, setError] = useState('');
   const [torchOn, setTorchOn] = useState(false);
@@ -31,8 +35,16 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
 
   const stopScanner = useCallback(async () => {
     if (scannerRef.current) {
-      try { await scannerRef.current.stop(); } catch { /* already stopped */ }
-      try { scannerRef.current.clear?.(); } catch { /* ignore */ }
+      try {
+        await scannerRef.current.stop();
+      } catch {
+        /* already stopped */
+      }
+      try {
+        scannerRef.current.clear?.();
+      } catch {
+        /* ignore */
+      }
       scannerRef.current = null;
     }
   }, []);
@@ -40,9 +52,6 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
   useEffect(() => {
     if (!open) {
       stopScanner();
-      setScanState('idle');
-      setError('');
-      setTorchOn(false);
       return;
     }
 
@@ -53,8 +62,8 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
       setError('');
 
       // Two rAF cycles ensure the DOM element has real dimensions before html5-qrcode measures it
-      await new Promise(r => requestAnimationFrame(r));
-      await new Promise(r => requestAnimationFrame(r));
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => requestAnimationFrame(r));
 
       try {
         const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
@@ -62,7 +71,11 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
 
         // Enumerate cameras
         let cameras: { id: string; label: string }[] = [];
-        try { cameras = await Html5Qrcode.getCameras(); } catch { /* permission not yet granted */ }
+        try {
+          cameras = await Html5Qrcode.getCameras();
+        } catch {
+          /* permission not yet granted */
+        }
         if (!mounted) return;
         setCameraCount(cameras.length);
 
@@ -100,7 +113,9 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
           try {
             await scanner.start({ facingMode: 'environment' }, upiConfig, onDecode, () => {});
             started = true;
-          } catch { /* unavailable */ }
+          } catch {
+            /* unavailable */
+          }
         }
 
         // Strategy 2: front camera by facingMode (fallback for laptops)
@@ -108,7 +123,9 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
           try {
             await scanner.start({ facingMode: 'user' }, upiConfig, onDecode, () => {});
             started = true;
-          } catch { /* unavailable */ }
+          } catch {
+            /* unavailable */
+          }
         }
 
         // Strategy 3: first camera by device ID (most reliable on desktop)
@@ -120,18 +137,22 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
         // Strategy 4: fresh camera list after permission prompt
         if (!started) {
           const freshCams = await Html5Qrcode.getCameras();
-          if (!freshCams.length) throw Object.assign(new Error('No camera'), { name: 'NotFoundError' });
+          if (!freshCams.length)
+            throw Object.assign(new Error('No camera'), { name: 'NotFoundError' });
           setCameraCount(freshCams.length);
           await scanner.start(freshCams[0].id, upiConfig, onDecode, () => {});
         }
 
         if (mounted) setScanState('scanning');
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (!mounted) return;
-        const name = err?.name ?? '';
-        const msg = (err?.message ?? '').toLowerCase();
+        const e = err as { name?: string; message?: string };
+        const name = e?.name ?? '';
+        const msg = (e?.message ?? '').toLowerCase();
         if (name === 'NotAllowedError' || msg.includes('permission') || msg.includes('denied')) {
-          setError('Camera permission denied. Allow camera access in your browser settings and tap Retry.');
+          setError(
+            'Camera permission denied. Allow camera access in your browser settings and tap Retry.'
+          );
         } else if (name === 'NotFoundError' || msg.includes('no camera')) {
           setError('No camera found on this device.');
         } else if (msg.includes('already in use') || msg.includes('notreadableerror')) {
@@ -144,7 +165,10 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
     };
 
     startScanner();
-    return () => { mounted = false; stopScanner(); };
+    return () => {
+      mounted = false;
+      stopScanner();
+    };
   }, [open, onScan, stopScanner]);
 
   const handleClose = useCallback(() => {
@@ -182,8 +206,10 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
     if (!scannerRef.current) return;
     try {
       await scannerRef.current.applyVideoConstraints({ advanced: [{ torch: !torchOn }] });
-      setTorchOn(t => !t);
-    } catch { /* torch not supported */ }
+      setTorchOn((t) => !t);
+    } catch {
+      /* torch not supported */
+    }
   };
 
   const handleSwitchCamera = async () => {
@@ -194,8 +220,8 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
       if (cameras.length < 2) return;
 
       await stopScanner();
-      await new Promise(r => requestAnimationFrame(r));
-      await new Promise(r => requestAnimationFrame(r));
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => requestAnimationFrame(r));
 
       const scanner = new Html5Qrcode('qr-reader-container', {
         formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
@@ -216,7 +242,9 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
         },
         () => {}
       );
-    } catch { /* switch failed — ignore */ }
+    } catch {
+      /* switch failed — ignore */
+    }
   };
 
   const isScanning = scanState === 'scanning';
@@ -231,16 +259,29 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
       slotProps={{ paper: { sx: { bgcolor: '#000', overflow: 'hidden' } } }}
     >
       {/* Top bar */}
-      <Box sx={{
-        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 30,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        px: 1, pt: 'max(env(safe-area-inset-top), 8px)', pb: 1,
-        background: 'linear-gradient(180deg, rgba(0,0,0,0.85) 0%, transparent 100%)',
-      }}>
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 30,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          px: 1,
+          pt: 'max(env(safe-area-inset-top), 8px)',
+          pb: 1,
+          background: 'linear-gradient(180deg, rgba(0,0,0,0.85) 0%, transparent 100%)',
+        }}
+      >
         <IconButton onClick={handleClose} sx={{ color: 'white' }} aria-label="Close">
           <CloseIcon />
         </IconButton>
-        <Typography variant="body1" sx={{ fontWeight: 700, color: 'white', letterSpacing: '0.02em' }}>
+        <Typography
+          variant="body1"
+          sx={{ fontWeight: 700, color: 'white', letterSpacing: '0.02em' }}
+        >
           Scan Health ID
         </Typography>
         <Box sx={{ display: 'flex' }}>
@@ -250,7 +291,11 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
             </IconButton>
           )}
           {isScanning && cameraCount > 1 && (
-            <IconButton onClick={handleSwitchCamera} sx={{ color: 'white' }} aria-label="Switch camera">
+            <IconButton
+              onClick={handleSwitchCamera}
+              sx={{ color: 'white' }}
+              aria-label="Switch camera"
+            >
               <CameraswitchIcon />
             </IconButton>
           )}
@@ -262,7 +307,8 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
       <Box
         id="qr-reader-container"
         sx={{
-          position: 'absolute', inset: 0,
+          position: 'absolute',
+          inset: 0,
           // CRITICAL: html5-qrcode measures this element's bounding rect.
           // It must be visible (not display:none) with real dimensions.
           // We use opacity to hide it while loading, keeping dimensions intact.
@@ -284,10 +330,17 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
 
       {/* Loading state */}
       {isStarting && (
-        <Box sx={{
-          position: 'absolute', inset: 0, zIndex: 20,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        }}>
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 20,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           <CircularProgress sx={{ color: '#10B981', mb: 2 }} size={40} />
           <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
             Starting camera…
@@ -297,11 +350,18 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
 
       {/* Error state */}
       {hasError && (
-        <Box sx={{
-          position: 'absolute', inset: 0, zIndex: 20,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          px: 3,
-        }}>
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 20,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            px: 3,
+          }}
+        >
           <Alert severity="error" sx={{ mb: 3, width: '100%', maxWidth: 380 }}>
             {error}
           </Alert>
@@ -328,36 +388,62 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
       {isScanning && (
         <>
           {/* Dark overlay top */}
-          <Box sx={{
-            position: 'absolute', top: 0, left: 0, right: 0,
-            height: '20%', bgcolor: 'rgba(0,0,0,0.55)', zIndex: 10, pointerEvents: 'none',
-          }} />
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '20%',
+              bgcolor: 'rgba(0,0,0,0.55)',
+              zIndex: 10,
+              pointerEvents: 'none',
+            }}
+          />
           {/* Dark overlay bottom */}
-          <Box sx={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            height: '25%', bgcolor: 'rgba(0,0,0,0.55)', zIndex: 10, pointerEvents: 'none',
-          }} />
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: '25%',
+              bgcolor: 'rgba(0,0,0,0.55)',
+              zIndex: 10,
+              pointerEvents: 'none',
+            }}
+          />
           {/* Scan frame — center 60% of screen width */}
-          <Box sx={{
-            position: 'absolute',
-            top: '20%', bottom: '25%',
-            left: '10%', right: '10%',
-            zIndex: 15, pointerEvents: 'none',
-            border: '2px solid #10B981',
-            borderRadius: 2,
-          }}>
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '20%',
+              bottom: '25%',
+              left: '10%',
+              right: '10%',
+              zIndex: 15,
+              pointerEvents: 'none',
+              border: '2px solid #10B981',
+              borderRadius: 2,
+            }}
+          >
             {/* Animated scan line */}
-            <Box sx={{
-              position: 'absolute', left: 4, right: 4, height: 2,
-              bgcolor: '#10B981',
-              boxShadow: '0 0 8px #10B981, 0 0 16px #10B981',
-              animation: 'scanLine 2s ease-in-out infinite',
-              '@keyframes scanLine': {
-                '0%': { top: 4 },
-                '50%': { top: 'calc(100% - 6px)' },
-                '100%': { top: 4 },
-              },
-            }} />
+            <Box
+              sx={{
+                position: 'absolute',
+                left: 4,
+                right: 4,
+                height: 2,
+                bgcolor: '#10B981',
+                boxShadow: '0 0 8px #10B981, 0 0 16px #10B981',
+                animation: 'scanLine 2s ease-in-out infinite',
+                '@keyframes scanLine': {
+                  '0%': { top: 4 },
+                  '50%': { top: 'calc(100% - 6px)' },
+                  '100%': { top: 4 },
+                },
+              }}
+            />
             {/* Corner accents — UPI style */}
             {[
               { top: -2, left: -2, borderWidth: '3px 0 0 3px' },
@@ -365,20 +451,33 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
               { bottom: -2, left: -2, borderWidth: '0 0 3px 3px' },
               { bottom: -2, right: -2, borderWidth: '0 3px 3px 0' },
             ].map((style, i) => (
-              <Box key={i} sx={{
-                position: 'absolute', width: 20, height: 20,
-                borderColor: '#10B981', borderStyle: 'solid',
-                borderRadius: 0.5,
-                ...style,
-              }} />
+              <Box
+                key={i}
+                sx={{
+                  position: 'absolute',
+                  width: 20,
+                  height: 20,
+                  borderColor: '#10B981',
+                  borderStyle: 'solid',
+                  borderRadius: 0.5,
+                  ...style,
+                }}
+              />
             ))}
           </Box>
 
           {/* Instructions */}
-          <Box sx={{
-            position: 'absolute', bottom: '6%', left: 0, right: 0,
-            textAlign: 'center', zIndex: 20, pointerEvents: 'none',
-          }}>
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: '6%',
+              left: 0,
+              right: 0,
+              textAlign: 'center',
+              zIndex: 20,
+              pointerEvents: 'none',
+            }}
+          >
             <Typography variant="body2" sx={{ color: 'white', fontWeight: 600, mb: 0.5 }}>
               Place QR code in the frame
             </Typography>
