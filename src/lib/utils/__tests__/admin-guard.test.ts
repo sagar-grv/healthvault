@@ -32,22 +32,22 @@ describe('isAdminRole', () => {
 
 describe('getAdminRedirectPath', () => {
   test('returns null (no redirect) when role is admin', () => {
-    expect(getAdminRedirectPath('admin', '/admin/users')).toBeNull();
+    expect(getAdminRedirectPath('admin')).toBeNull();
   });
 
   test('redirects to /login when no role (unauthenticated)', () => {
-    expect(getAdminRedirectPath(null, '/admin')).toBe('/login');
+    expect(getAdminRedirectPath(null)).toBe('/login');
   });
 
   test('redirects to /login when role is patient', () => {
-    expect(getAdminRedirectPath('patient', '/admin')).toBe('/login');
+    expect(getAdminRedirectPath('patient')).toBe('/login');
   });
 
   test('redirects to /login when role is doctor', () => {
-    expect(getAdminRedirectPath('doctor', '/admin/doctors')).toBe('/login');
+    expect(getAdminRedirectPath('doctor')).toBe('/login');
   });
 
-  test('redirects to /login for any non-admin access to /admin subpaths', () => {
-    expect(getAdminRedirectPath('patient', '/admin/analytics')).toBe('/login');
+  test('redirects to /login for any non-admin access', () => {
+    expect(getAdminRedirectPath('patient')).toBe('/login');
   });
 });
