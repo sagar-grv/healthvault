@@ -12,7 +12,9 @@ import {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -93,7 +95,10 @@ export async function POST(request: NextRequest) {
     // ── Security guardrails ──────────────────────────────────────────────────
     const guardResult = await checkAIGuardrails(supabase, user.id, reportId, fileSizeBytes);
     if (!guardResult.allowed) {
-      return NextResponse.json({ error: guardResult.reason }, { status: guardResult.status ?? 429 });
+      return NextResponse.json(
+        { error: guardResult.reason },
+        { status: guardResult.status ?? 429 }
+      );
     }
 
     const mimeType = report.mime_type as string;
@@ -117,14 +122,11 @@ export async function POST(request: NextRequest) {
 
     // Model priority: gemini-2.5-flash → gemini-2.0-flash-lite
     const MODEL_PRIORITY = ['gemini-2.5-flash', 'gemini-2.0-flash-lite'];
-    const contents = [
-      systemPrompt,
-      { inlineData: { data: base64, mimeType } },
-    ];
+    const contents = [systemPrompt, { inlineData: { data: base64, mimeType } }];
 
     let rawText = '';
     let usedModel = '';
-    let lastErr: any = null;
+    let lastErr: { status?: number; message?: string } | null = null;
 
     for (const modelName of MODEL_PRIORITY) {
       try {
@@ -133,11 +135,12 @@ export async function POST(request: NextRequest) {
         rawText = result.response.text();
         usedModel = modelName;
         break;
-      } catch (e: any) {
-        lastErr = e;
-        if (e?.status === 404) continue;
-        if (e?.status === 429 || e?.status === 503) {
-          await new Promise(r => setTimeout(r, 2000));
+      } catch (e: unknown) {
+        const apiErr = e as { status?: number; message?: string };
+        lastErr = apiErr;
+        if (apiErr.status === 404) continue;
+        if (apiErr.status === 429 || apiErr.status === 503) {
+          await new Promise((r) => setTimeout(r, 2000));
           continue;
         }
         throw e;
@@ -200,15 +203,18 @@ export async function POST(request: NextRequest) {
     // Store result in DB
     const { data: saved, error: saveError } = await supabase
       .from('report_analyses')
-      .upsert({
-        report_id: reportId,
-        summary: analysis.summary,
-        key_findings: analysis.key_findings,
-        abnormal_values: analysis.abnormal_values,
-        medications_found: analysis.medications_found,
-        recommendation: analysis.recommendation,
-        model_used: usedModel,
-      }, { onConflict: 'report_id' })
+      .upsert(
+        {
+          report_id: reportId,
+          summary: analysis.summary,
+          key_findings: analysis.key_findings,
+          abnormal_values: analysis.abnormal_values,
+          medications_found: analysis.medications_found,
+          recommendation: analysis.recommendation,
+          model_used: usedModel,
+        },
+        { onConflict: 'report_id' }
+      )
       .select()
       .single();
 
@@ -217,9 +223,10 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ analysis: saved });
-  } catch (err: any) {
-    console.error('[analyze-report] error:', err);
-    if (err?.status === 429) {
+  } catch (err: unknown) {
+    const apiErr = err as { status?: number; message?: string };
+    console.error('[analyze-report] error:', apiErr);
+    if (apiErr.status === 429) {
       return NextResponse.json(
         { error: 'AI service is busy. Please wait a few seconds and try again.' },
         { status: 429 }
