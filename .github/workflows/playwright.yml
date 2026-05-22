@@ -31,7 +31,7 @@ jobs:
         uses: jakub-g/await-vercel-preview@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          vercel_project_id: prj_xTEI1w7PMVpNZDIusM2DIf2DY6GE
+          vercel_project_id: ${{ secrets.VERCEL_PROJECT_ID }}
           # vercel_org_id: not needed with github_token auth
           max_timeout_seconds: 300 # 5 minutes max wait
 

@@ -39,10 +39,10 @@ export default function ReportDetailDialog({
   onDeleted,
 }: ReportDetailDialogProps) {
   const [tab, setTab] = useState(0); // 0 = view, 1 = edit
-  const [title, setTitle] = useState('');
-  const [reportType, setReportType] = useState('');
-  const [reportDate, setReportDate] = useState('');
-  const [notes, setNotes] = useState('');
+  const [title, setTitle] = useState(() => report?.title ?? '');
+  const [reportType, setReportType] = useState(() => report?.report_type ?? '');
+  const [reportDate, setReportDate] = useState(() => report?.report_date ?? '');
+  const [notes, setNotes] = useState(() => report?.notes ?? '');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -50,37 +50,27 @@ export default function ReportDetailDialog({
   const [loadingFile, setLoadingFile] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Load file URL when viewing
-  const handleOpen = async () => {
-    if (!report) return;
-    setTitle(report.title);
-    setReportType(report.report_type);
-    setReportDate(report.report_date);
-    setNotes(report.notes || '');
-    setTab(0);
-    setError('');
-    setConfirmDelete(false);
-
-    // Load signed URL
-    setLoadingFile(true);
-    try {
-      const supabase = createClient();
-      const { data } = await supabase.storage
-        .from('reports')
-        .createSignedUrl(report.file_path, 300);
-      setFileUrl(data?.signedUrl || null);
-    } catch {
-      setFileUrl(null);
-    } finally {
-      setLoadingFile(false);
-    }
-  };
-
-  // Load file URL and reset state when dialog opens with a report
+  // Load signed file URL when dialog opens with a report
+  // (form state is initialized via lazy useState, remount via key prop)
   useEffect(() => {
-    if (open && report) {
-      handleOpen();
-    }
+    if (!open || !report) return;
+
+    const loadSignedUrl = async () => {
+      setLoadingFile(true);
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.storage
+          .from('reports')
+          .createSignedUrl(report.file_path, 300);
+        setFileUrl(data?.signedUrl || null);
+      } catch {
+        setFileUrl(null);
+      } finally {
+        setLoadingFile(false);
+      }
+    };
+    loadSignedUrl();
+    // Intentionally runs only when report changes: state init via lazy useState + key remount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, report?.id]);
 
@@ -132,10 +122,7 @@ export default function ReportDetailDialog({
       await supabase.storage.from('reports').remove([report.file_path]);
 
       // Delete record from database
-      const { error: deleteError } = await supabase
-        .from('reports')
-        .delete()
-        .eq('id', report.id);
+      const { error: deleteError } = await supabase.from('reports').delete().eq('id', report.id);
 
       if (deleteError) {
         setError(deleteError.message);
@@ -304,11 +291,7 @@ export default function ReportDetailDialog({
                     >
                       {deleting ? 'Deleting...' : 'Confirm Delete'}
                     </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => setConfirmDelete(false)}
-                    >
+                    <Button variant="outlined" size="small" onClick={() => setConfirmDelete(false)}>
                       Cancel
                     </Button>
                   </Box>
@@ -323,11 +306,7 @@ export default function ReportDetailDialog({
       {tab === 1 && (
         <DialogActions sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
           <Button onClick={onClose}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={saving}
-          >
+          <Button variant="contained" onClick={handleSave} disabled={saving}>
             {saving ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogActions>
