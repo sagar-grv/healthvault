@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Box from '@mui/material/Box';
@@ -19,17 +19,13 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
+  const [error, setError] = useState(() => {
     const errorParam = searchParams.get('error');
-    if (errorParam === 'setup_failed') {
-      setError('Account setup failed. Please try registering again.');
-    } else if (errorParam === 'session_expired') {
-      setError('Your session has expired. Please sign in again.');
-    }
-  }, [searchParams]);
+    if (errorParam === 'setup_failed') return 'Account setup failed. Please try registering again.';
+    if (errorParam === 'session_expired') return 'Your session has expired. Please sign in again.';
+    return '';
+  });
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,9 +63,13 @@ function LoginForm() {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 5 }}>
         <Box
           sx={{
-            width: 44, height: 44, borderRadius: 2.5,
+            width: 44,
+            height: 44,
+            borderRadius: 2.5,
             background: 'linear-gradient(135deg, #1D4ED8, #3B82F6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             boxShadow: '0 4px 12px rgba(37,99,235,0.3)',
           }}
         >
@@ -83,7 +83,8 @@ function LoginForm() {
       {/* Login Card */}
       <Card
         sx={{
-          width: '100%', maxWidth: 400,
+          width: '100%',
+          maxWidth: 400,
           boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
           borderRadius: 3,
           border: '1px solid #E5E7EB',
@@ -97,7 +98,11 @@ function LoginForm() {
             Access your HealthVault account
           </Typography>
 
-          {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
 
           <Box component="form" onSubmit={handleLogin}>
             <TextField
@@ -105,7 +110,7 @@ function LoginForm() {
               label="Email address"
               type="email"
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
               autoFocus
@@ -116,7 +121,7 @@ function LoginForm() {
               label="Password"
               type="password"
               value={password}
-              onChange={e => setPassword(e.target.value)}
+              onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="current-password"
               sx={{ mb: 3 }}
@@ -134,7 +139,9 @@ function LoginForm() {
           </Box>
 
           <Divider sx={{ my: 2 }}>
-            <Typography variant="caption" color="text.secondary">New to HealthVault?</Typography>
+            <Typography variant="caption" color="text.secondary">
+              New to HealthVault?
+            </Typography>
           </Divider>
 
           {/* Two clear register buttons */}
@@ -145,7 +152,13 @@ function LoginForm() {
               variant="outlined"
               fullWidth
               size="large"
-              sx={{ py: 1.25, borderColor: '#BFDBFE', color: '#1D4ED8', bgcolor: '#EFF6FF', '&:hover': { bgcolor: '#DBEAFE', borderColor: '#93C5FD', transform: 'none' } }}
+              sx={{
+                py: 1.25,
+                borderColor: '#BFDBFE',
+                color: '#1D4ED8',
+                bgcolor: '#EFF6FF',
+                '&:hover': { bgcolor: '#DBEAFE', borderColor: '#93C5FD', transform: 'none' },
+              }}
             >
               Register as a Patient
             </Button>
@@ -155,7 +168,13 @@ function LoginForm() {
               variant="outlined"
               fullWidth
               size="large"
-              sx={{ py: 1.25, borderColor: '#A7F3D0', color: '#047857', bgcolor: '#F0FDF4', '&:hover': { bgcolor: '#D1FAE5', borderColor: '#6EE7B7', transform: 'none' } }}
+              sx={{
+                py: 1.25,
+                borderColor: '#A7F3D0',
+                color: '#047857',
+                bgcolor: '#F0FDF4',
+                '&:hover': { bgcolor: '#D1FAE5', borderColor: '#6EE7B7', transform: 'none' },
+              }}
             >
               Register as a Doctor
             </Button>

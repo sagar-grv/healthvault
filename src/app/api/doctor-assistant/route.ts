@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import {
-  detectPromptInjection,
-  validateAIResponse,
-  logAuditEntry,
-} from '@/lib/ai/guardrails';
+import { detectPromptInjection, validateAIResponse, logAuditEntry } from '@/lib/ai/guardrails';
 
 // Max patients / reports in context to keep prompt size sane
 const MAX_PATIENTS = 5;
@@ -16,7 +12,10 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
 
     // ── Auth: must be an authenticated doctor ────────────────────────────────
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -116,30 +115,37 @@ export async function POST(request: NextRequest) {
         }
 
         // 3. Fetch cached analyses for those reports
-        const reportIds = reports.map(r => r.id);
+        const reportIds = reports.map((r) => r.id);
         const { data: analyses } = await supabase
           .from('report_analyses')
           .select('report_id, summary, abnormal_values, medications_found, recommendation')
           .in('report_id', reportIds);
 
-        const analysisMap = new Map(analyses?.map(a => [a.report_id, a]) ?? []);
+        const analysisMap = new Map(analyses?.map((a) => [a.report_id, a]) ?? []);
 
         // 4. Format per-patient context block
-        const reportBlocks = reports.map(r => {
-          const analysis = analysisMap.get(r.id);
-          if (!analysis) {
-            return `  - ${r.report_type} (${r.report_date}): Not yet analyzed`;
-          }
-          const abnormals = Array.isArray(analysis.abnormal_values) && analysis.abnormal_values.length > 0
-            ? analysis.abnormal_values.map((v: { name: string; value: string; status: string }) =>
-                `${v.name}: ${v.value} [${v.status}]`
-              ).join(', ')
-            : 'None';
-          const meds = Array.isArray(analysis.medications_found) && analysis.medications_found.length > 0
-            ? analysis.medications_found.join(', ')
-            : 'None';
-          return `  - ${r.report_type} (${r.report_date}):\n      Summary: ${analysis.summary}\n      Abnormal values: ${abnormals}\n      Medications: ${meds}`;
-        }).join('\n');
+        const reportBlocks = reports
+          .map((r) => {
+            const analysis = analysisMap.get(r.id);
+            if (!analysis) {
+              return `  - ${r.report_type} (${r.report_date}): Not yet analyzed`;
+            }
+            const abnormals =
+              Array.isArray(analysis.abnormal_values) && analysis.abnormal_values.length > 0
+                ? analysis.abnormal_values
+                    .map(
+                      (v: { name: string; value: string; status: string }) =>
+                        `${v.name}: ${v.value} [${v.status}]`
+                    )
+                    .join(', ')
+                : 'None';
+            const meds =
+              Array.isArray(analysis.medications_found) && analysis.medications_found.length > 0
+                ? analysis.medications_found.join(', ')
+                : 'None';
+            return `  - ${r.report_type} (${r.report_date}):\n      Summary: ${analysis.summary}\n      Abnormal values: ${abnormals}\n      Medications: ${meds}`;
+          })
+          .join('\n');
 
         patientContextParts.push(
           `Patient: ${patient.full_name} (${healthId})\n  Shared reports: ${reports.length}\n${reportBlocks}`
@@ -150,13 +156,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const patientContext = patientContextParts.length > 0
-      ? patientContextParts.join('\n\n---\n\n')
-      : 'No recent patient data available. I can answer general medical knowledge questions.';
+    const patientContext =
+      patientContextParts.length > 0
+        ? patientContextParts.join('\n\n---\n\n')
+        : 'No recent patient data available. I can answer general medical knowledge questions.';
 
     // ── Doctor identity context ───────────────────────────────────────────────
     const doctorTitle = `Dr. ${profile.full_name}`;
-    const specialty = doctorProfile?.specialization || doctorProfile?.qualification || 'General Medicine';
+    const specialty =
+      doctorProfile?.specialization || doctorProfile?.qualification || 'General Medicine';
     const clinic = doctorProfile?.clinic_name ? ` at ${doctorProfile.clinic_name}` : '';
 
     // ── System prompt ─────────────────────────────────────────────────────────
@@ -184,22 +192,15 @@ ${patientContext}`;
 
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      systemInstruction: systemPrompt,
-    });
 
     // Trim history to last MAX_HISTORY_MESSAGES messages to keep context window manageable
     const trimmedHistory = history.slice(-MAX_HISTORY_MESSAGES);
 
     // Map our history format to Gemini's Content format
-    const geminiHistory = trimmedHistory.map(msg => ({
+    const geminiHistory = trimmedHistory.map((msg) => ({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.text }],
     }));
-
-    // Start chat with history for session memory
-    const chat = model.startChat({ history: geminiHistory });
 
     let rawReply = '';
     let lastErr: unknown = null;
@@ -221,7 +222,7 @@ ${patientContext}`;
         const status = (e as { status?: number })?.status;
         if (status === 404) continue;
         if (status === 429 || status === 503) {
-          await new Promise(r => setTimeout(r, 2000));
+          await new Promise((r) => setTimeout(r, 2000));
           continue;
         }
         throw e;
@@ -268,7 +269,6 @@ ${patientContext}`;
     ]);
 
     return NextResponse.json({ reply: rawReply.trim() });
-
   } catch (err) {
     console.error('[doctor-assistant] error:', err);
     return NextResponse.json(

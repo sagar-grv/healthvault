@@ -30,6 +30,7 @@
     "@mui/icons-material": "^9.0.1",
     "@mui/material": "^9.0.1",
     "@mui/material-nextjs": "^9.0.1",
+    "@sentry/nextjs": "^10.53.1",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.1",
     "html5-qrcode": "^2.3.8",
@@ -65,6 +66,7 @@
     "prettier": "^3.8.3",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.10",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }
