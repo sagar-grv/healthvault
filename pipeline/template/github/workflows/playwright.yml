@@ -31,7 +31,7 @@ jobs:
         uses: jakub-g/await-vercel-preview@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          vercel_project_id: {{DEPLOY_PROJECT_ID}}
+          vercel_project_id: ${{ secrets.VERCEL_PROJECT_ID }}
           max_timeout_seconds: 300
 
   e2e:
