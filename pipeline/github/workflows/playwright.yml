@@ -19,6 +19,7 @@ env:
 jobs:
   wait-for-vercel-preview:
     name: Wait for Vercel Preview
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -37,6 +38,7 @@ jobs:
 
   e2e:
     name: Playwright E2E Tests
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [wait-for-vercel-preview]
