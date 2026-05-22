@@ -10,10 +10,7 @@ export function isAdminRole(role: string | null | undefined): boolean {
  * Given a role and the requested path, returns the redirect path if access should
  * be denied, or null if access is permitted.
  */
-export function getAdminRedirectPath(
-  role: string | null | undefined,
-  _path: string
-): string | null {
+export function getAdminRedirectPath(role: string | null | undefined): string | null {
   if (isAdminRole(role)) return null;
   return '/login';
 }
