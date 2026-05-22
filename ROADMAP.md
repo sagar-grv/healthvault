@@ -32,21 +32,33 @@
 - [x] Security Reviewer Agent — security engineer (`.opencode/agents/security-reviewer.md`)
 - [x] Monitor Agent — SRE + incident commander (`.opencode/agents/monitor.md`)
 
+### Infrastructure & Security
+
+- [x] Sentry `@sentry/nextjs` SDK installed + configured (env-var DSN)
+- [x] Branch protection — 1 review + CI + CodeQL + admin enforcement
+- [x] GitHub Secrets — Supabase URL + anon key + Vercel project ID
+- [x] CodeQL path filter widened (root `.ts` files)
+- [x] Playwright E2E — Vercel preview URL via secret
+- [x] Dependabot safe PRs merged (ts-jest, supabase-js, react, setup-node)
+- [x] `src/.env.local.example` docs for all env vars
+
 ## In Progress
 
 - [ ] Firebase Auth integration (Google Sign-In + Email)
 
 ## Planned
 
-- [ ] Sentry error tracking setup (create account, add DSN)
+- [ ] **Sentry Account**: Create account at sentry.io → add `SENTRY_DSN` to Vercel env vars → monitoring goes live
 - [ ] QR Scanner (re-enable camera detection)
 - [ ] Family Profiles (manage reports for family members)
 
 ## Backlog
 
+- [ ] Dependabot high-risk PRs: eslint v10, typescript v6, @types/node v25, codeql v4, checkout v6
 - [ ] Emergency QR Card (public shareable page)
 - [ ] Time-limited sharing links
 - [ ] Push notifications
 - [ ] Hindi i18n
 - [ ] Analytics dashboard
 - [ ] Export reports as PDF
+- [ ] Sentry SDK deprecation cleanup: `disableLogger` → `treeshake.removeDebugLogging`, `automaticVercelMonitors` → `webpack.*`
