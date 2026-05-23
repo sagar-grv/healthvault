@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useTranslations, useLocale } from 'next-intl';
 import Box from '@mui/material/Box';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
@@ -28,7 +29,11 @@ interface AccessLogClientProps {
 
 export default function AccessLogClient({ logs }: AccessLogClientProps) {
   const router = useRouter();
+  const t = useTranslations('accessLog');
+  const tc = useTranslations('common');
+  const locale = useLocale();
 
+  // Relative time — inside component to access t()
   const formatRelativeTime = (dateStr: string) => {
     const now = new Date();
     const date = new Date(dateStr);
@@ -36,18 +41,31 @@ export default function AccessLogClient({ logs }: AccessLogClientProps) {
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+    if (diffMins < 1) return t('justNow');
+    if (diffMins < 60) return t('minutesAgo', { count: diffMins });
+    if (diffHours < 24) return t('hoursAgo', { count: diffHours });
+    if (diffDays < 7) return t('daysAgo', { count: diffDays });
+
+    // Use locale-aware date formatting
+    const displayLocale = locale === 'hi' ? 'hi-IN' : 'en-IN';
+    return date.toLocaleDateString(displayLocale, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
   };
 
-  const formatFullTime = (dateStr: string) =>
-    new Date(dateStr).toLocaleString('en-IN', {
-      day: 'numeric', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
+  const formatFullTime = (dateStr: string) => {
+    const displayLocale = locale === 'hi' ? 'hi-IN' : 'en-IN';
+    return new Date(dateStr).toLocaleString(displayLocale, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
+  };
 
   return (
     <Box sx={{ pb: 10, minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -57,9 +75,13 @@ export default function AccessLogClient({ logs }: AccessLogClientProps) {
             <ArrowBackIcon />
           </IconButton>
           <Box sx={{ ml: 1 }}>
-            <Typography variant="h6">Access Log</Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1, mt: -0.25 }}>
-              Who viewed your records
+            <Typography variant="h6">{t('pageTitle')}</Typography>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: 'block', lineHeight: 1, mt: -0.25 }}
+            >
+              {t('pageSubtitle')}
             </Typography>
           </Box>
         </Toolbar>
@@ -68,32 +90,77 @@ export default function AccessLogClient({ logs }: AccessLogClientProps) {
       <Box sx={{ px: 2, py: 3, maxWidth: 600, mx: 'auto' }}>
         {/* Stats */}
         <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
-          <Card sx={{ flex: 1, textAlign: 'center', bgcolor: '#EFF6FF', border: '1px solid #BFDBFE', boxShadow: 'none' }}>
+          <Card
+            sx={{
+              flex: 1,
+              textAlign: 'center',
+              bgcolor: '#EFF6FF',
+              border: '1px solid #BFDBFE',
+              boxShadow: 'none',
+            }}
+          >
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-              <Typography variant="h3" sx={{ color: '#1D4ED8', mb: 0.25 }}>{logs.length}</Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>Total Views</Typography>
+              <Typography variant="h3" sx={{ color: '#1D4ED8', mb: 0.25 }}>
+                {logs.length}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                {t('totalViews')}
+              </Typography>
             </CardContent>
           </Card>
-          <Card sx={{ flex: 1, textAlign: 'center', bgcolor: '#F0FDF4', border: '1px solid #A7F3D0', boxShadow: 'none' }}>
+          <Card
+            sx={{
+              flex: 1,
+              textAlign: 'center',
+              bgcolor: '#F0FDF4',
+              border: '1px solid #A7F3D0',
+              boxShadow: 'none',
+            }}
+          >
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
               <Typography variant="h3" sx={{ color: '#047857', mb: 0.25 }}>
-                {new Set(logs.map(l => l.doctor_id)).size}
+                {new Set(logs.map((l) => l.doctor_id)).size}
               </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>Unique Doctors</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                {t('uniqueDoctors')}
+              </Typography>
             </CardContent>
           </Card>
         </Box>
 
         {/* Empty State */}
         {logs.length === 0 && (
-          <Card className="animate-fade-in-up" sx={{ textAlign: 'center', py: 7, border: '2px dashed #E5E7EB', bgcolor: 'transparent', boxShadow: 'none' }}>
+          <Card
+            className="animate-fade-in-up"
+            sx={{
+              textAlign: 'center',
+              py: 7,
+              border: '2px dashed #E5E7EB',
+              bgcolor: 'transparent',
+              boxShadow: 'none',
+            }}
+          >
             <CardContent>
-              <Box sx={{ width: 72, height: 72, borderRadius: 4, bgcolor: '#F0FDF4', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2.5 }}>
+              <Box
+                sx={{
+                  width: 72,
+                  height: 72,
+                  borderRadius: 4,
+                  bgcolor: '#F0FDF4',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mx: 'auto',
+                  mb: 2.5,
+                }}
+              >
                 <ShieldOutlinedIcon sx={{ fontSize: 32, color: '#059669' }} />
               </Box>
-              <Typography variant="h5" sx={{ mb: 1 }}>No views yet</Typography>
+              <Typography variant="h5" sx={{ mb: 1 }}>
+                {t('noViewsHeading')}
+              </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 260, mx: 'auto' }}>
-                When a doctor views your records using your Health ID, it will appear here.
+                {t('noViewsBody')}
               </Typography>
             </CardContent>
           </Card>
@@ -102,15 +169,25 @@ export default function AccessLogClient({ logs }: AccessLogClientProps) {
         {/* Timeline */}
         {logs.length > 0 && (
           <Box className="stagger-children">
-            {logs.map(log => (
+            {logs.map((log) => (
               <Box key={log.id} sx={{ display: 'flex', gap: 2, mb: 2.5 }}>
-                {/* Timeline line */}
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 0.5 }}>
+                {/* Avatar */}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    pt: 0.5,
+                  }}
+                >
                   <Avatar
                     sx={{
-                      width: 38, height: 38, flexShrink: 0,
+                      width: 38,
+                      height: 38,
+                      flexShrink: 0,
                       background: 'linear-gradient(135deg, #047857, #10B981)',
-                      fontSize: '0.85rem', fontWeight: 700,
+                      fontSize: '0.85rem',
+                      fontWeight: 700,
                       boxShadow: '0 2px 8px rgba(5,150,105,0.25)',
                     }}
                   >
@@ -121,14 +198,26 @@ export default function AccessLogClient({ logs }: AccessLogClientProps) {
                 {/* Content */}
                 <Card sx={{ flex: 1 }}>
                   <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between',
+                        mb: 0.5,
+                      }}
+                    >
                       <Typography variant="body1" sx={{ fontWeight: 600 }}>
                         Dr. {log.doctor_name.replace('Dr. ', '')}
                       </Typography>
                       <Chip
                         label={formatRelativeTime(log.searched_at)}
                         size="small"
-                        sx={{ bgcolor: '#F3F4F6', color: '#6B7280', fontWeight: 500, fontSize: '0.68rem' }}
+                        sx={{
+                          bgcolor: '#F3F4F6',
+                          color: '#6B7280',
+                          fontWeight: 500,
+                          fontSize: '0.68rem',
+                        }}
                       />
                     </Box>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -137,7 +226,7 @@ export default function AccessLogClient({ logs }: AccessLogClientProps) {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                       <VisibilityIcon sx={{ fontSize: 14, color: '#9CA3AF' }} />
                       <Typography variant="caption" color="text.secondary">
-                        Viewed {(log.reports_viewed || []).length} report{(log.reports_viewed || []).length !== 1 ? 's' : ''}
+                        {t('viewedReports', { count: (log.reports_viewed || []).length })}
                       </Typography>
                     </Box>
                   </CardContent>
@@ -154,15 +243,14 @@ export default function AccessLogClient({ logs }: AccessLogClientProps) {
           onChange={(_, v) => {
             if (v === 0) router.push('/dashboard/patient');
             if (v === 1) router.push('/dashboard/patient/upload');
-            // v === 2 is current page — no navigation needed
             if (v === 3) router.push('/dashboard/patient/profile');
           }}
           showLabels
         >
-          <BottomNavigationAction label="Home" icon={<HomeIcon />} />
-          <BottomNavigationAction label="Upload" icon={<UploadFileIcon />} />
-          <BottomNavigationAction label="Access Log" icon={<HistoryIcon />} />
-          <BottomNavigationAction label="Profile" icon={<PersonIcon />} />
+          <BottomNavigationAction label={tc('bottomNav.home')} icon={<HomeIcon />} />
+          <BottomNavigationAction label={tc('bottomNav.upload')} icon={<UploadFileIcon />} />
+          <BottomNavigationAction label={tc('bottomNav.accessLog')} icon={<HistoryIcon />} />
+          <BottomNavigationAction label={tc('bottomNav.profile')} icon={<PersonIcon />} />
         </BottomNavigation>
       </Paper>
     </Box>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
@@ -31,6 +32,8 @@ import { optimizeImage, isOptimizableImage, formatFileSize } from '@/lib/utils/i
 
 export default function UploadReportPage() {
   const router = useRouter();
+  const t = useTranslations('upload');
+
   const [title, setTitle] = useState('');
   const [reportType, setReportType] = useState('');
   const [reportDate, setReportDate] = useState('');
@@ -50,11 +53,11 @@ export default function UploadReportPage() {
   const handleFileChange = (selectedFile: File | null) => {
     if (!selectedFile) return;
     if (!ACCEPTED_FILE_TYPES.includes(selectedFile.type)) {
-      setError('Only PDF, JPG, and PNG files are accepted.');
+      setError(t('invalidType'));
       return;
     }
     if (selectedFile.size > MAX_FILE_SIZE) {
-      setError('File size must be less than 10MB.');
+      setError(t('fileTooLarge'));
       return;
     }
     setFile(selectedFile);
@@ -75,7 +78,7 @@ export default function UploadReportPage() {
     setProgress(0);
     setProgressLabel('');
     if (!file) {
-      setError('Please select a file to upload.');
+      setError(t('noFile'));
       return;
     }
     setUploading(true);
@@ -86,7 +89,7 @@ export default function UploadReportPage() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        setError('Session expired. Please login again.');
+        setError(t('sessionExpired'));
         setUploading(false);
         return;
       }
@@ -100,7 +103,7 @@ export default function UploadReportPage() {
 
       if (isOptimizableImage(file)) {
         setProgress(10);
-        setProgressLabel('Optimizing image...');
+        setProgressLabel(t('optimizing'));
         try {
           const optimized = await optimizeImage(file);
           uploadBlob = optimized.blob;
@@ -117,7 +120,7 @@ export default function UploadReportPage() {
 
       // Step 2: Upload to Supabase Storage
       setProgress(20);
-      setProgressLabel('Uploading...');
+      setProgressLabel(t('uploading'));
       const reportId = crypto.randomUUID();
       const filePath = `${user.id}/${reportId}/${uploadFileName}`;
 
@@ -134,7 +137,7 @@ export default function UploadReportPage() {
       // Step 3: Upload thumbnail (if generated)
       let thumbnailPath: string | null = null;
       if (thumbnailBlob) {
-        setProgressLabel('Saving thumbnail...');
+        setProgressLabel(t('savingThumbnail'));
         thumbnailPath = `${user.id}/${reportId}/thumb.jpg`;
         await supabase.storage
           .from('reports')
@@ -143,7 +146,7 @@ export default function UploadReportPage() {
       setProgress(85);
 
       // Step 4: Save to database
-      setProgressLabel('Saving report...');
+      setProgressLabel(t('savingReport'));
       const { error: dbError } = await supabase.from('reports').insert({
         id: reportId,
         patient_id: user.id,
@@ -167,11 +170,11 @@ export default function UploadReportPage() {
       }
 
       setProgress(100);
-      setProgressLabel('Done!');
+      setProgressLabel(t('done'));
       router.push('/dashboard/patient');
       router.refresh();
     } catch {
-      setError('Something went wrong. Please try again.');
+      setError(t('unknownError'));
     } finally {
       setUploading(false);
     }
@@ -194,7 +197,7 @@ export default function UploadReportPage() {
             <ArrowBackIcon />
           </IconButton>
           <Typography variant="h6" sx={{ ml: 1 }}>
-            Upload Report
+            {t('pageTitle')}
           </Typography>
         </Toolbar>
       </AppBar>
@@ -207,7 +210,7 @@ export default function UploadReportPage() {
             sx={{ height: 4, borderRadius: 2 }}
           />
           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-            {progressLabel || `Uploading... ${progress}%`}
+            {progressLabel || `${t('uploading')} ${progress}%`}
           </Typography>
         </Box>
       )}
@@ -249,7 +252,7 @@ export default function UploadReportPage() {
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   {formatFileSize(file.size)}
-                  {isOptimizableImage(file) && <> — will be optimized</>}
+                  {isOptimizableImage(file) && <> — {t('willBeOptimized')}</>}
                 </Typography>
                 {compressionInfo && (
                   <Chip
@@ -261,7 +264,7 @@ export default function UploadReportPage() {
                 )}
                 {!compressionInfo && (
                   <Chip
-                    label="Tap to change"
+                    label={t('tapToChange')}
                     size="small"
                     sx={{ mt: 1.5, bgcolor: '#D1FAE5', color: '#065F46' }}
                   />
@@ -285,10 +288,10 @@ export default function UploadReportPage() {
                   <CloudUploadIcon sx={{ fontSize: 28, color: '#2563EB' }} />
                 </Box>
                 <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
-                  Tap to upload or drop here
+                  {t('dropPrompt')}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  PDF, JPG, or PNG — Max 10MB
+                  {t('dropHint')}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', mt: 1.5 }}>
                   {['PDF', 'JPG', 'PNG'].map((f) => (
@@ -316,17 +319,17 @@ export default function UploadReportPage() {
             <CardContent sx={{ p: 3 }}>
               <TextField
                 fullWidth
-                label="Report Title"
+                label={t('reportTitle')}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
-                placeholder="e.g., Blood Test Results"
+                placeholder={t('reportTitlePlaceholder')}
                 sx={{ mb: 2 }}
               />
               <TextField
                 fullWidth
                 select
-                label="Report Type"
+                label={t('reportType')}
                 value={reportType}
                 onChange={(e) => setReportType(e.target.value)}
                 required
@@ -348,7 +351,7 @@ export default function UploadReportPage() {
               </TextField>
               <TextField
                 fullWidth
-                label="Report Date"
+                label={t('reportDate')}
                 type="date"
                 value={reportDate}
                 onChange={(e) => setReportDate(e.target.value)}
@@ -358,12 +361,12 @@ export default function UploadReportPage() {
               />
               <TextField
                 fullWidth
-                label="Notes (Optional)"
+                label={t('notes')}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 multiline
                 rows={2}
-                placeholder="Any additional notes..."
+                placeholder={t('notesPlaceholder')}
               />
             </CardContent>
           </Card>
@@ -398,12 +401,10 @@ export default function UploadReportPage() {
                     )}
                     <Box>
                       <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                        {isShareable ? 'Shareable with doctors' : 'Private — only you'}
+                        {isShareable ? t('shareableTitle') : t('privateTitle')}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {isShareable
-                          ? 'Doctors with your Health ID can view this report'
-                          : 'Only you can see this report — switch to share with doctors'}
+                        {isShareable ? t('shareableBody') : t('privateBody')}
                       </Typography>
                     </Box>
                   </Box>
@@ -421,7 +422,7 @@ export default function UploadReportPage() {
             disabled={uploading || !file}
             sx={{ py: 1.75, fontSize: '1rem', boxShadow: '0 4px 14px rgba(37,99,235,0.3)' }}
           >
-            {uploading ? progressLabel || `Uploading... ${progress}%` : 'Upload Report'}
+            {uploading ? progressLabel || `${t('uploading')} ${progress}%` : t('submitButton')}
           </Button>
         </Box>
       </Box>

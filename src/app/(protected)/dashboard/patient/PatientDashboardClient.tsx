@@ -30,20 +30,21 @@ import AddIcon from '@mui/icons-material/Add';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
 import HomeIcon from '@mui/icons-material/Home';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
+import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined';
 import HistoryIcon from '@mui/icons-material/History';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import LockIcon from '@mui/icons-material/Lock';
 import PublicIcon from '@mui/icons-material/Public';
-import DescriptionIcon from '@mui/icons-material/DescriptionOutlined';
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import PersonIcon from '@mui/icons-material/PersonOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import DocumentScannerIcon from '@mui/icons-material/DocumentScanner';
-import FavoriteIcon from '@mui/icons-material/Favorite';
+import BiotechIcon from '@mui/icons-material/Biotech';
+import DocumentScannerOutlinedIcon from '@mui/icons-material/DocumentScannerOutlined';
+import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import TranslateIcon from '@mui/icons-material/Translate';
+import LanguageIcon from '@mui/icons-material/Language';
 import { QRCodeSVG } from 'qrcode.react';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
@@ -317,6 +318,7 @@ export default function PatientDashboardClient({
           </Box>
           {/* Language toggle chip — tap to switch between EN and HI */}
           <Chip
+            icon={<LanguageIcon sx={{ fontSize: '14px !important', color: '#2563EB' }} />}
             label={t('currentLocale')}
             onClick={handleLocaleSwitch}
             size="small"
@@ -464,7 +466,7 @@ export default function PatientDashboardClient({
                 <Button
                   size="small"
                   variant="outlined"
-                  startIcon={<AutoAwesomeIcon sx={{ fontSize: 16 }} />}
+                  startIcon={<BiotechIcon sx={{ fontSize: 16 }} />}
                   onClick={() => setShowAISummary(true)}
                   sx={{
                     borderColor: '#7C3AED',
@@ -612,7 +614,7 @@ export default function PatientDashboardClient({
                         justifyContent: 'center',
                       }}
                     >
-                      <DescriptionIcon sx={{ fontSize: 20, color: typeColor.color }} />
+                      <AssignmentOutlinedIcon sx={{ fontSize: 20, color: typeColor.color }} />
                     </Box>
 
                     {/* Info */}
@@ -675,7 +677,7 @@ export default function PatientDashboardClient({
                         sx={{ color: '#7C3AED', '&:hover': { bgcolor: '#F5F3FF' } }}
                         aria-label="Analyze report with AI"
                       >
-                        <AutoAwesomeIcon sx={{ fontSize: 18 }} />
+                        <BiotechIcon sx={{ fontSize: 18 }} />
                       </IconButton>
                     </Tooltip>
 
@@ -737,7 +739,7 @@ export default function PatientDashboardClient({
       >
         {/* Scan Report — blue */}
         <SpeedDialAction
-          icon={<DocumentScannerIcon sx={{ fontSize: 20 }} />}
+          icon={<DocumentScannerOutlinedIcon sx={{ fontSize: 20 }} />}
           slotProps={{
             tooltip: { title: 'Scan Report' },
             fab: {
@@ -755,7 +757,7 @@ export default function PatientDashboardClient({
         />
         {/* Upload File — green */}
         <SpeedDialAction
-          icon={<UploadFileIcon sx={{ fontSize: 20 }} />}
+          icon={<FileUploadOutlinedIcon sx={{ fontSize: 20 }} />}
           slotProps={{
             tooltip: { title: 'Upload File' },
             fab: {
@@ -773,7 +775,7 @@ export default function PatientDashboardClient({
         />
         {/* Emergency Card — red */}
         <SpeedDialAction
-          icon={<FavoriteIcon sx={{ fontSize: 20 }} />}
+          icon={<MonitorHeartIcon sx={{ fontSize: 20 }} />}
           slotProps={{
             tooltip: { title: 'Emergency Card' },
             fab: {
@@ -805,7 +807,7 @@ export default function PatientDashboardClient({
           showLabels
         >
           <BottomNavigationAction label={t('home')} icon={<HomeIcon />} />
-          <BottomNavigationAction label={t('upload')} icon={<UploadFileIcon />} />
+          <BottomNavigationAction label={t('upload')} icon={<FileUploadOutlinedIcon />} />
           <BottomNavigationAction label={t('accessLog')} icon={<HistoryIcon />} />
           <BottomNavigationAction label={t('profile')} icon={<PersonIcon />} />
         </BottomNavigation>

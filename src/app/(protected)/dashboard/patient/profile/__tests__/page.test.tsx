@@ -7,6 +7,10 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
+// next-intl is mocked via src/__mocks__/next-intl.ts
+// useTranslations('profile') returns (key) => 'profile.key'
+// useTranslations('common') returns (key) => 'common.key'
+
 const mockGetUser = jest.fn();
 const mockFrom = jest.fn();
 
@@ -54,10 +58,16 @@ describe('PatientProfilePage', () => {
     jest.clearAllMocks();
   });
 
-  it('renders the emergency card section', async () => {
+  it('renders the emergency card section with translated keys', async () => {
     render(<PatientProfilePage />);
 
-    expect(await screen.findByText('Emergency Card')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Set Up Emergency Card' })).toBeInTheDocument();
+    // Mock returns 'profile.<key>' — verifies translation keys are used
+    expect(await screen.findByText('profile.emergencyCard')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'profile.setupEmergencyCard' })).toBeInTheDocument();
+  });
+
+  it('renders the profile page title', async () => {
+    render(<PatientProfilePage />);
+    expect(await screen.findByText('profile.pageTitle')).toBeInTheDocument();
   });
 });
