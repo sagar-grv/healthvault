@@ -57,7 +57,7 @@ async function networkFirstWithCache(request) {
       cache.put(request, response.clone());
     }
     return response;
-  } catch (e) {
+  } catch {
     const cached = await caches.match(request);
     return cached || new Response('Offline', { status: 503 });
   }
