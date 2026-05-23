@@ -385,7 +385,9 @@ deno_version = 2
 # secret_key = "env(SECRET_VALUE)"
 
 [analytics]
-enabled = true
+# Disabled — vector log aggregation fails on Windows due to Docker socket permissions
+# Non-critical for local development
+enabled = false
 # Using 56327 to avoid Windows excluded port ranges
 port = 56327
 # Configure one of the supported backends: `postgres`, `bigquery`.
