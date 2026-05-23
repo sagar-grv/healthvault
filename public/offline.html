@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HealthVault — Offline</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 24px;
+      background: #F9FAFB;
+      color: #374151;
+      text-align: center;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 8px; }
+    p { color: #6B7280; max-width: 300px; }
+    .icon { font-size: 3rem; margin-bottom: 16px; }
+    button {
+      margin-top: 24px;
+      padding: 12px 24px;
+      background: #2563EB;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="icon">📡</div>
+  <h1>You're offline</h1>
+  <p>Check your internet connection. Your saved reports and emergency card are still available.</p>
+  <button onclick="location.reload()">Try Again</button>
+</body>
+</html>

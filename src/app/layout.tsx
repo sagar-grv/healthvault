@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, Inter } from 'next/font/google';
 import './globals.css';
 import ThemeProvider from '@/components/ThemeProvider';
 import EmotionRegistry from '@/components/EmotionRegistry';
+import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration';
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -22,6 +23,12 @@ export const metadata: Metadata = {
   description:
     'Share your medical records securely with doctors. Paperless, simple, and accessible on any device.',
   keywords: ['health records', 'medical records', 'digital health', 'ABDM', 'patient records'],
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'HealthVault',
+  },
 };
 
 export const viewport: Viewport = {
@@ -46,6 +53,7 @@ export default function RootLayout({
         <EmotionRegistry>
           <ThemeProvider>{children}</ThemeProvider>
         </EmotionRegistry>
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );
