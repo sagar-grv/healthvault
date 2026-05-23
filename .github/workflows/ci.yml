@@ -35,7 +35,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: ESLint
         run: npm run lint
@@ -54,7 +54,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: TypeScript type check
         run: npx tsc --noEmit
@@ -73,7 +73,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Run Jest tests
         run: npm test -- --ci --coverage
@@ -101,7 +101,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       # NOTE: These NEXT_PUBLIC_ vars are needed at build time.
       # Add them as GitHub repository secrets:

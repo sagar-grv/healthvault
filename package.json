@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "dev:local": "node -e \"require('fs').copyFileSync('.env.local.docker', '.env.local')\" && next dev",
     "dev:prod": "node -e \"const fs=require('fs');fs.copyFileSync('.env.local.prod','.env.local');console.log('Switched to PRODUCTION Supabase');\" && next dev",
     "build": "next build",
     "start": "next start",
@@ -19,7 +20,8 @@
     "db:start": "npx supabase start",
     "db:stop": "npx supabase stop",
     "db:reset": "npx supabase db reset",
-    "db:studio": "start http://127.0.0.1:54323",
+    "db:seed": "node scripts/seed-users.mjs",
+    "db:studio": "start http://127.0.0.1:56323",
     "prepare": "husky"
   },
   "dependencies": {
@@ -36,6 +38,7 @@
     "html5-qrcode": "^2.3.8",
     "nanoid": "^5.1.11",
     "next": "16.2.6",
+    "next-intl": "^4.12.0",
     "qrcode.react": "^4.2.0",
     "react": "19.2.6",
     "react-dom": "19.2.6"

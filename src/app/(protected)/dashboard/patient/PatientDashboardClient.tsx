@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import AppBar from '@mui/material/AppBar';
@@ -12,7 +13,8 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Switch from '@mui/material/Switch';
-import Fab from '@mui/material/Fab';
+import SpeedDial from '@mui/material/SpeedDial';
+import SpeedDialAction from '@mui/material/SpeedDialAction';
 import Tooltip from '@mui/material/Tooltip';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
@@ -28,23 +30,45 @@ import AddIcon from '@mui/icons-material/Add';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
 import HomeIcon from '@mui/icons-material/Home';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
+import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined';
 import HistoryIcon from '@mui/icons-material/History';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import LockIcon from '@mui/icons-material/Lock';
 import PublicIcon from '@mui/icons-material/Public';
-import DescriptionIcon from '@mui/icons-material/DescriptionOutlined';
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import PersonIcon from '@mui/icons-material/PersonOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import BiotechIcon from '@mui/icons-material/Biotech';
+import DocumentScannerOutlinedIcon from '@mui/icons-material/DocumentScannerOutlined';
+import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
+import TranslateIcon from '@mui/icons-material/Translate';
+import LanguageIcon from '@mui/icons-material/Language';
 import { QRCodeSVG } from 'qrcode.react';
+import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, Report } from '@/types';
 import { REPORT_TYPES, REPORT_TYPE_COLORS } from '@/constants';
-import ReportDetailDialog from '@/components/patient/ReportDetailDialog';
-import AISummaryDialog from '@/components/patient/AISummaryDialog';
+import { optimizeImage, isOptimizableImage } from '@/lib/utils/image-optimizer';
+import { getAiLanguage, syncLanguageFromProfile } from '@/lib/utils/language';
+
+// Lazy load heavy dialog components — only loaded when user clicks
+const ReportDetailDialog = dynamic(() => import('@/components/patient/ReportDetailDialog'), {
+  ssr: false,
+});
+const AISummaryDialog = dynamic(() => import('@/components/patient/AISummaryDialog'), {
+  ssr: false,
+});
+const CameraCapture = dynamic(() => import('@/components/patient/CameraCapture'), {
+  ssr: false,
+});
+const EmergencyCardSetup = dynamic(() => import('@/components/patient/EmergencyCardSetup'), {
+  ssr: false,
+});
+const HealthInterpreter = dynamic(() => import('@/components/patient/HealthInterpreter'), {
+  ssr: false,
+});
 
 interface PatientDashboardClientProps {
   profile: Profile;
@@ -56,6 +80,7 @@ export default function PatientDashboardClient({
   reports: initialReports,
 }: PatientDashboardClientProps) {
   const router = useRouter();
+  const t = useTranslations('dashboard');
   const [reports, setReports] = useState<Report[]>(initialReports);
   const [showQR, setShowQR] = useState(false);
   const [snackbar, setSnackbar] = useState<{
@@ -68,6 +93,17 @@ export default function PatientDashboardClient({
   const [navValue, setNavValue] = useState(0);
   const [viewingReport, setViewingReport] = useState<Report | null>(null);
   const [showAISummary, setShowAISummary] = useState(false);
+  // New P0 feature states
+  const [speedDialOpen, setSpeedDialOpen] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [showEmergencySetup, setShowEmergencySetup] = useState(false);
+  const [interpretingReport, setInterpretingReport] = useState<Report | null>(null);
+  const [uploadingCamera, setUploadingCamera] = useState(false);
+
+  // Sync language preference from DB profile on mount (cross-device sync)
+  useEffect(() => {
+    syncLanguageFromProfile(profile.preferred_language);
+  }, [profile.preferred_language]);
 
   const handleCopyId = async () => {
     if (profile.health_id) {
@@ -104,7 +140,7 @@ export default function PatientDashboardClient({
     );
     setSnackbar({
       open: true,
-      message: !currentValue ? 'Report is now shareable' : 'Report is now private',
+      message: !currentValue ? t('reportIsNowShareable') : t('reportIsNowPrivate'),
       severity: 'success',
     });
   };
@@ -148,12 +184,109 @@ export default function PatientDashboardClient({
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    // Use replace() so the browser back button can't return to the dashboard
     window.location.replace('/login');
+  };
+
+  // Handle camera capture — optimize then upload
+  const handleCameraCapture = async (images: Blob[]) => {
+    setShowCamera(false);
+    if (!images.length) return;
+    setUploadingCamera(true);
+    setSnackbar({ open: true, message: t('processingReport'), severity: 'info' });
+
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Use first image (multi-page: combine later)
+      const rawBlob = images[0];
+      const rawFile = new File([rawBlob], 'camera-capture.jpg', { type: 'image/jpeg' });
+
+      // Optimize
+      const optimized = isOptimizableImage(rawFile) ? await optimizeImage(rawFile) : null;
+
+      const uploadBlob = optimized?.blob ?? rawBlob;
+      const uploadName = optimized?.fileName ?? 'capture.jpg';
+      const uploadMime = optimized?.mimeType ?? 'image/jpeg';
+
+      const reportId = crypto.randomUUID();
+      const filePath = `${user.id}/${reportId}/${uploadName}`;
+
+      const { error: uploadErr } = await supabase.storage
+        .from('reports')
+        .upload(filePath, uploadBlob, { contentType: uploadMime, upsert: false });
+
+      if (uploadErr) {
+        setSnackbar({ open: true, message: t('uploadFailed'), severity: 'error' });
+        return;
+      }
+
+      // Upload thumbnail
+      let thumbnailPath: string | null = null;
+      if (optimized?.thumbnail) {
+        thumbnailPath = `${user.id}/${reportId}/thumb.jpg`;
+        await supabase.storage
+          .from('reports')
+          .upload(thumbnailPath, optimized.thumbnail, { contentType: 'image/jpeg', upsert: false });
+      }
+
+      // Save report record
+      const today = new Date().toISOString().split('T')[0];
+      const { data: newReport, error: dbErr } = await supabase
+        .from('reports')
+        .insert({
+          id: reportId,
+          patient_id: user.id,
+          title: 'Captured Report',
+          report_type: 'other',
+          file_path: filePath,
+          file_name: uploadName,
+          file_size: uploadBlob.size,
+          mime_type: uploadMime,
+          report_date: today,
+          is_shareable: false,
+          thumbnail_path: thumbnailPath,
+        })
+        .select()
+        .single();
+
+      if (dbErr) {
+        setSnackbar({ open: true, message: 'Failed to save. Try again.', severity: 'error' });
+        await supabase.storage.from('reports').remove([filePath]);
+        return;
+      }
+
+      setReports((prev) => [newReport, ...prev]);
+      setSnackbar({
+        open: true,
+        message: t('reportSaved'),
+        severity: 'success',
+      });
+    } catch {
+      setSnackbar({ open: true, message: t('somethingWentWrong'), severity: 'error' });
+    } finally {
+      setUploadingCamera(false);
+    }
   };
 
   const getReportTypeLabel = (type: string) =>
     REPORT_TYPES.find((t) => t.value === type)?.label || type;
+
+  // Toggle app UI language between en and hi, then refresh server components
+  const handleLocaleSwitch = useCallback(() => {
+    const current =
+      document.cookie
+        .split('; ')
+        .find((r) => r.startsWith('hv_locale='))
+        ?.split('=')[1] || 'en';
+    const next = current === 'en' ? 'hi' : 'en';
+    document.cookie = `hv_locale=${next}; path=/; max-age=31536000; SameSite=Lax`;
+    localStorage.setItem('hv_preferred_language', next);
+    router.refresh(); // re-runs server components → layout.tsx re-reads cookie → new messages
+  }, [router]);
 
   const shareableCount = reports.filter((r) => r.is_shareable).length;
 
@@ -183,6 +316,25 @@ export default function PatientDashboardClient({
               HealthVault
             </Typography>
           </Box>
+          {/* Language toggle chip — tap to switch between EN and HI */}
+          <Chip
+            icon={<LanguageIcon sx={{ fontSize: '14px !important', color: '#2563EB' }} />}
+            label={t('currentLocale')}
+            onClick={handleLocaleSwitch}
+            size="small"
+            sx={{
+              mr: 0.5,
+              height: 26,
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+              bgcolor: '#EFF6FF',
+              color: '#2563EB',
+              border: '1px solid #BFDBFE',
+              cursor: 'pointer',
+              '&:hover': { bgcolor: '#DBEAFE' },
+            }}
+          />
           <IconButton
             onClick={() => router.push('/dashboard/patient/profile')}
             aria-label="Profile"
@@ -222,7 +374,7 @@ export default function PatientDashboardClient({
                 mb: 1.5,
               }}
             >
-              Your Health ID
+              {t('yourHealthId')}
             </Typography>
 
             <Typography
@@ -263,17 +415,17 @@ export default function PatientDashboardClient({
               {[
                 {
                   icon: <ContentCopyIcon sx={{ fontSize: 15 }} />,
-                  label: 'Copy ID',
+                  label: t('copyId'),
                   action: handleCopyId,
                 },
                 {
                   icon: <QrCode2Icon sx={{ fontSize: 15 }} />,
-                  label: showQR ? 'Hide QR' : 'Show QR',
+                  label: showQR ? t('hideQr') : t('showQr'),
                   action: () => setShowQR(!showQR),
                 },
                 {
                   icon: <ShareIcon sx={{ fontSize: 15 }} />,
-                  label: 'WhatsApp',
+                  label: t('share'),
                   action: handleWhatsAppShare,
                 },
               ].map((btn) => (
@@ -303,7 +455,7 @@ export default function PatientDashboardClient({
         {/* Reports Header */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Box>
-            <Typography variant="h5">My Reports</Typography>
+            <Typography variant="h5">{t('myReports')}</Typography>
             <Typography variant="body2" color="text.secondary">
               {reports.length} total · {shareableCount} shareable
             </Typography>
@@ -314,7 +466,7 @@ export default function PatientDashboardClient({
                 <Button
                   size="small"
                   variant="outlined"
-                  startIcon={<AutoAwesomeIcon sx={{ fontSize: 16 }} />}
+                  startIcon={<BiotechIcon sx={{ fontSize: 16 }} />}
                   onClick={() => setShowAISummary(true)}
                   sx={{
                     borderColor: '#7C3AED',
@@ -346,11 +498,12 @@ export default function PatientDashboardClient({
                   onClose={() => setBulkMenuAnchor(null)}
                 >
                   <MenuItem onClick={() => handleBulkAction(true)}>
-                    <PublicIcon sx={{ mr: 1, fontSize: 18, color: 'secondary.main' }} /> Make
-                    Shareable
+                    <PublicIcon sx={{ mr: 1, fontSize: 18, color: 'secondary.main' }} />
+                    {t('shareableWithDoctors')}
                   </MenuItem>
                   <MenuItem onClick={() => handleBulkAction(false)}>
-                    <LockIcon sx={{ mr: 1, fontSize: 18, color: 'text.secondary' }} /> Make Private
+                    <LockIcon sx={{ mr: 1, fontSize: 18, color: 'text.secondary' }} />
+                    {t('privateOnlyYou')}
                   </MenuItem>
                 </Menu>
               </Box>
@@ -387,15 +540,14 @@ export default function PatientDashboardClient({
                 <NoteAddIcon sx={{ fontSize: 32, color: '#2563EB' }} />
               </Box>
               <Typography variant="h5" sx={{ mb: 1 }}>
-                No reports yet
+                {t('noReports')}
               </Typography>
               <Typography
                 variant="body2"
                 color="text.secondary"
                 sx={{ mb: 3, maxWidth: 260, mx: 'auto' }}
               >
-                Upload your first medical report — prescriptions, lab results, scans or any
-                document.
+                {t('noReportsHint')}
               </Typography>
               <Button
                 variant="contained"
@@ -403,7 +555,7 @@ export default function PatientDashboardClient({
                 onClick={() => router.push('/dashboard/patient/upload')}
                 size="large"
               >
-                Upload Report
+                {t('upload')}
               </Button>
             </CardContent>
           </Card>
@@ -462,7 +614,7 @@ export default function PatientDashboardClient({
                         justifyContent: 'center',
                       }}
                     >
-                      <DescriptionIcon sx={{ fontSize: 20, color: typeColor.color }} />
+                      <AssignmentOutlinedIcon sx={{ fontSize: 20, color: typeColor.color }} />
                     </Box>
 
                     {/* Info */}
@@ -496,7 +648,9 @@ export default function PatientDashboardClient({
                     </Box>
 
                     {/* Shareable Toggle */}
-                    <Tooltip title={report.is_shareable ? 'Shareable' : 'Private'}>
+                    <Tooltip
+                      title={report.is_shareable ? t('shareableWithDoctors') : t('privateOnlyYou')}
+                    >
                       <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                         {report.is_shareable ? (
                           <PublicIcon sx={{ fontSize: 16, color: 'secondary.main', mr: 0.25 }} />
@@ -512,8 +666,8 @@ export default function PatientDashboardClient({
                       </Box>
                     </Tooltip>
 
-                    {/* AI Analyze */}
-                    <Tooltip title="Analyze with AI">
+                    {/* AI Analyze (existing) */}
+                    <Tooltip title={t('analyzeWithAi')}>
                       <IconButton
                         size="small"
                         onClick={(e) => {
@@ -523,12 +677,27 @@ export default function PatientDashboardClient({
                         sx={{ color: '#7C3AED', '&:hover': { bgcolor: '#F5F3FF' } }}
                         aria-label="Analyze report with AI"
                       >
-                        <AutoAwesomeIcon sx={{ fontSize: 18 }} />
+                        <BiotechIcon sx={{ fontSize: 18 }} />
+                      </IconButton>
+                    </Tooltip>
+
+                    {/* Explain in my language (NEW) */}
+                    <Tooltip title={t('explainInMyLanguage')}>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setInterpretingReport(report);
+                        }}
+                        sx={{ color: '#059669', '&:hover': { bgcolor: '#F0FDF4' } }}
+                        aria-label="Explain in my language"
+                      >
+                        <TranslateIcon sx={{ fontSize: 18 }} />
                       </IconButton>
                     </Tooltip>
 
                     {/* Delete */}
-                    <Tooltip title="Delete report">
+                    <Tooltip title={t('deleteReport')}>
                       <IconButton
                         size="small"
                         onClick={(e) => {
@@ -551,20 +720,78 @@ export default function PatientDashboardClient({
         )}
       </Box>
 
-      {/* FAB */}
-      <Fab
-        color="primary"
-        aria-label="Upload report"
-        onClick={() => router.push('/dashboard/patient/upload')}
+      {/* Speed Dial — Add Report or Emergency Card */}
+      <SpeedDial
+        ariaLabel="Quick actions"
+        open={speedDialOpen}
+        onOpen={() => setSpeedDialOpen(true)}
+        onClose={() => setSpeedDialOpen(false)}
+        icon={<AddIcon />}
+        FabProps={{
+          disabled: uploadingCamera,
+          sx: { boxShadow: '0 8px 24px rgba(37,99,235,0.35)' },
+        }}
         sx={{
           position: 'fixed',
-          bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))',
+          bottom: 'calc(88px + env(safe-area-inset-bottom, 0px))',
           right: 20,
-          boxShadow: '0 8px 24px rgba(37,99,235,0.35)',
         }}
       >
-        <AddIcon />
-      </Fab>
+        {/* Scan Report — blue */}
+        <SpeedDialAction
+          icon={<DocumentScannerOutlinedIcon sx={{ fontSize: 20 }} />}
+          slotProps={{
+            tooltip: { title: 'Scan Report' },
+            fab: {
+              sx: {
+                bgcolor: '#EFF6FF',
+                color: '#2563EB',
+                '&:hover': { bgcolor: '#DBEAFE' },
+              },
+            },
+          }}
+          onClick={() => {
+            setSpeedDialOpen(false);
+            setShowCamera(true);
+          }}
+        />
+        {/* Upload File — green */}
+        <SpeedDialAction
+          icon={<FileUploadOutlinedIcon sx={{ fontSize: 20 }} />}
+          slotProps={{
+            tooltip: { title: 'Upload File' },
+            fab: {
+              sx: {
+                bgcolor: '#F0FDF4',
+                color: '#059669',
+                '&:hover': { bgcolor: '#DCFCE7' },
+              },
+            },
+          }}
+          onClick={() => {
+            setSpeedDialOpen(false);
+            router.push('/dashboard/patient/upload');
+          }}
+        />
+        {/* Emergency Card — red */}
+        <SpeedDialAction
+          icon={<MonitorHeartIcon sx={{ fontSize: 20 }} />}
+          slotProps={{
+            tooltip: { title: 'Emergency Card' },
+            fab: {
+              sx: {
+                bgcolor: '#FEF2F2',
+                color: '#DC2626',
+                '&:hover': { bgcolor: '#FEE2E2' },
+              },
+            },
+          }}
+          onClick={() => {
+            setSpeedDialOpen(false);
+            setShowEmergencySetup(true);
+          }}
+        />
+      </SpeedDial>
 
       {/* Bottom Navigation */}
       <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={0}>
@@ -579,10 +806,10 @@ export default function PatientDashboardClient({
           }}
           showLabels
         >
-          <BottomNavigationAction label="Home" icon={<HomeIcon />} />
-          <BottomNavigationAction label="Upload" icon={<UploadFileIcon />} />
-          <BottomNavigationAction label="Access Log" icon={<HistoryIcon />} />
-          <BottomNavigationAction label="Profile" icon={<PersonIcon />} />
+          <BottomNavigationAction label={t('home')} icon={<HomeIcon />} />
+          <BottomNavigationAction label={t('upload')} icon={<FileUploadOutlinedIcon />} />
+          <BottomNavigationAction label={t('accessLog')} icon={<HistoryIcon />} />
+          <BottomNavigationAction label={t('profile')} icon={<PersonIcon />} />
         </BottomNavigation>
       </Paper>
 
@@ -623,6 +850,25 @@ export default function PatientDashboardClient({
         onClose={() => setShowAISummary(false)}
         reports={reports}
       />
+
+      {/* Camera Capture (full screen) */}
+      {showCamera && (
+        <CameraCapture onCapture={handleCameraCapture} onClose={() => setShowCamera(false)} />
+      )}
+
+      {/* Emergency Card Setup */}
+      <EmergencyCardSetup open={showEmergencySetup} onClose={() => setShowEmergencySetup(false)} />
+
+      {/* Health Interpreter */}
+      {interpretingReport && (
+        <HealthInterpreter
+          reportId={interpretingReport.id}
+          reportTitle={interpretingReport.title}
+          defaultLanguage={getAiLanguage()}
+          open={!!interpretingReport}
+          onClose={() => setInterpretingReport(null)}
+        />
+      )}
     </Box>
   );
 }
