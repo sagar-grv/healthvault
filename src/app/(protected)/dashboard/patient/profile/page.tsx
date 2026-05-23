@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import AppBar from '@mui/material/AppBar';
@@ -27,8 +28,15 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import HomeIcon from '@mui/icons-material/Home';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import HistoryIcon from '@mui/icons-material/History';
+import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@/lib/supabase/client';
+
+// Lazy load — only pulled in when user taps "Set Up Emergency Card"
+const EmergencyCardSetup = dynamic(
+  () => import('@/components/patient/EmergencyCardSetup'),
+  { ssr: false }
+);
 
 export default function PatientProfilePage() {
   const router = useRouter();
@@ -41,6 +49,7 @@ export default function PatientProfilePage() {
   const [reportCount, setReportCount] = useState(0);
   const [shareableCount, setShareableCount] = useState(0);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [showEmergencySetup, setShowEmergencySetup] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -248,7 +257,7 @@ export default function PatientProfilePage() {
         </Card>
 
         {/* Account Info */}
-        <Card>
+        <Card sx={{ mb: 3 }}>
           <CardContent sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>Account</Typography>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -262,7 +271,38 @@ export default function PatientProfilePage() {
             </Box>
           </CardContent>
         </Card>
+
+        {/* Emergency Card */}
+        <Card sx={{ border: '1px solid #FECACA', borderRadius: 3, bgcolor: '#FFF5F5' }}>
+          <CardContent sx={{ p: 2.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+              <LocalHospitalIcon sx={{ color: '#DC2626', fontSize: 24 }} />
+              <Box>
+                <Typography variant="body1" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+                  Emergency Card
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  First responders can scan your QR even without your phone
+                </Typography>
+              </Box>
+            </Box>
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={() => setShowEmergencySetup(true)}
+              sx={{ bgcolor: '#DC2626', '&:hover': { bgcolor: '#B91C1C' } }}
+            >
+              Set Up Emergency Card
+            </Button>
+          </CardContent>
+        </Card>
       </Box>
+
+      {/* Emergency Card Setup Dialog */}
+      <EmergencyCardSetup
+        open={showEmergencySetup}
+        onClose={() => setShowEmergencySetup(false)}
+      />
 
       {/* Bottom Navigation */}
       <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={3}>
