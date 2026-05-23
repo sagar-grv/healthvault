@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import AppBar from '@mui/material/AppBar';
@@ -43,8 +44,14 @@ import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, Report } from '@/types';
 import { REPORT_TYPES, REPORT_TYPE_COLORS } from '@/constants';
-import ReportDetailDialog from '@/components/patient/ReportDetailDialog';
-import AISummaryDialog from '@/components/patient/AISummaryDialog';
+
+// Lazy load heavy dialog components — only loaded when user clicks
+const ReportDetailDialog = dynamic(() => import('@/components/patient/ReportDetailDialog'), {
+  ssr: false,
+});
+const AISummaryDialog = dynamic(() => import('@/components/patient/AISummaryDialog'), {
+  ssr: false,
+});
 
 interface PatientDashboardClientProps {
   profile: Profile;

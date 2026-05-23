@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  experimental: {
+    optimizePackageImports: ['@mui/material', '@mui/icons-material'],
+  },
 };
 
 import { withSentryConfig } from '@sentry/nextjs';

@@ -24,8 +24,10 @@ import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFileOutlined';
 import ImageIcon from '@mui/icons-material/ImageOutlined';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdfOutlined';
+import CompressIcon from '@mui/icons-material/CompressOutlined';
 import { createClient } from '@/lib/supabase/client';
 import { REPORT_TYPES, REPORT_TYPE_COLORS, ACCEPTED_FILE_TYPES, MAX_FILE_SIZE } from '@/constants';
+import { optimizeImage, isOptimizableImage, formatFileSize } from '@/lib/utils/image-optimizer';
 
 export default function UploadReportPage() {
   const router = useRouter();
@@ -38,7 +40,12 @@ export default function UploadReportPage() {
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState('');
   const [dragOver, setDragOver] = useState(false);
+  const [compressionInfo, setCompressionInfo] = useState<{
+    original: number;
+    compressed: number;
+  } | null>(null);
 
   const handleFileChange = (selectedFile: File | null) => {
     if (!selectedFile) return;
@@ -52,6 +59,7 @@ export default function UploadReportPage() {
     }
     setFile(selectedFile);
     setError('');
+    setCompressionInfo(null);
     if (!title) setTitle(selectedFile.name.replace(/\.[^/.]+$/, ''));
   };
 
@@ -64,47 +72,102 @@ export default function UploadReportPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setProgress(0); // Reset progress on each attempt
-    if (!file) { setError('Please select a file to upload.'); return; }
+    setProgress(0);
+    setProgressLabel('');
+    if (!file) {
+      setError('Please select a file to upload.');
+      return;
+    }
     setUploading(true);
-    setProgress(15);
 
     try {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         setError('Session expired. Please login again.');
         setUploading(false);
         return;
       }
 
-      setProgress(35);
+      // Step 1: Optimize image (skip for PDFs)
+      let uploadBlob: Blob | File = file;
+      let uploadFileName = file.name;
+      let uploadMimeType = file.type;
+      let uploadSize = file.size;
+      let thumbnailBlob: Blob | null = null;
+
+      if (isOptimizableImage(file)) {
+        setProgress(10);
+        setProgressLabel('Optimizing image...');
+        try {
+          const optimized = await optimizeImage(file);
+          uploadBlob = optimized.blob;
+          uploadFileName = optimized.fileName;
+          uploadMimeType = optimized.mimeType;
+          uploadSize = optimized.compressedSize;
+          thumbnailBlob = optimized.thumbnail;
+          setCompressionInfo({ original: file.size, compressed: optimized.compressedSize });
+        } catch {
+          // If optimization fails, upload original
+          uploadBlob = file;
+        }
+      }
+
+      // Step 2: Upload to Supabase Storage
+      setProgress(20);
+      setProgressLabel('Uploading...');
       const reportId = crypto.randomUUID();
-      const filePath = `${user.id}/${reportId}/${file.name}`;
+      const filePath = `${user.id}/${reportId}/${uploadFileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('reports')
-        .upload(filePath, file, { contentType: file.type, upsert: false });
+        .upload(filePath, uploadBlob, { contentType: uploadMimeType, upsert: false });
 
-      if (uploadError) { setError(`Upload failed: ${uploadError.message}`); return; }
-      setProgress(75);
+      if (uploadError) {
+        setError(`Upload failed: ${uploadError.message}`);
+        return;
+      }
+      setProgress(70);
 
+      // Step 3: Upload thumbnail (if generated)
+      let thumbnailPath: string | null = null;
+      if (thumbnailBlob) {
+        setProgressLabel('Saving thumbnail...');
+        thumbnailPath = `${user.id}/${reportId}/thumb.jpg`;
+        await supabase.storage
+          .from('reports')
+          .upload(thumbnailPath, thumbnailBlob, { contentType: 'image/jpeg', upsert: false });
+      }
+      setProgress(85);
+
+      // Step 4: Save to database
+      setProgressLabel('Saving report...');
       const { error: dbError } = await supabase.from('reports').insert({
-        id: reportId, patient_id: user.id,
-        title, report_type: reportType,
-        file_path: filePath, file_name: file.name,
-        file_size: file.size, mime_type: file.type,
-        notes: notes || null, report_date: reportDate,
+        id: reportId,
+        patient_id: user.id,
+        title,
+        report_type: reportType,
+        file_path: filePath,
+        file_name: uploadFileName,
+        file_size: uploadSize,
+        mime_type: uploadMimeType,
+        notes: notes || null,
+        report_date: reportDate,
         is_shareable: isShareable,
+        thumbnail_path: thumbnailPath,
       });
 
       if (dbError) {
         setError(`Failed to save report: ${dbError.message}`);
         await supabase.storage.from('reports').remove([filePath]);
+        if (thumbnailPath) await supabase.storage.from('reports').remove([thumbnailPath]);
         return;
       }
 
       setProgress(100);
+      setProgressLabel('Done!');
       router.push('/dashboard/patient');
       router.refresh();
     } catch {
@@ -114,11 +177,14 @@ export default function UploadReportPage() {
     }
   };
 
-  const fileIcon = file?.type === 'application/pdf'
-    ? <PictureAsPdfIcon sx={{ fontSize: 36, color: '#EF4444' }} />
-    : file?.type?.startsWith('image/')
-    ? <ImageIcon sx={{ fontSize: 36, color: '#8B5CF6' }} />
-    : <InsertDriveFileIcon sx={{ fontSize: 36, color: '#2563EB' }} />;
+  const fileIcon =
+    file?.type === 'application/pdf' ? (
+      <PictureAsPdfIcon sx={{ fontSize: 36, color: '#EF4444' }} />
+    ) : file?.type?.startsWith('image/') ? (
+      <ImageIcon sx={{ fontSize: 36, color: '#8B5CF6' }} />
+    ) : (
+      <InsertDriveFileIcon sx={{ fontSize: 36, color: '#2563EB' }} />
+    );
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 4 }}>
@@ -127,23 +193,39 @@ export default function UploadReportPage() {
           <IconButton edge="start" onClick={() => router.push('/dashboard/patient')}>
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h6" sx={{ ml: 1 }}>Upload Report</Typography>
+          <Typography variant="h6" sx={{ ml: 1 }}>
+            Upload Report
+          </Typography>
         </Toolbar>
       </AppBar>
 
       {uploading && (
-        <Box sx={{ position: 'sticky', top: 64, zIndex: 10 }}>
-          <LinearProgress variant="indeterminate" sx={{ height: 3 }} />
+        <Box sx={{ position: 'sticky', top: 64, zIndex: 10, bgcolor: 'white', px: 2, py: 1 }}>
+          <LinearProgress
+            variant="determinate"
+            value={progress}
+            sx={{ height: 4, borderRadius: 2 }}
+          />
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+            {progressLabel || `Uploading... ${progress}%`}
+          </Typography>
         </Box>
       )}
 
       <Box sx={{ px: 2, py: 3, maxWidth: 520, mx: 'auto' }}>
-        {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
 
         <Box component="form" onSubmit={handleSubmit}>
           {/* Drop Zone */}
           <Box
-            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
             onClick={() => document.getElementById('file-input')?.click()}
@@ -162,24 +244,61 @@ export default function UploadReportPage() {
             {file ? (
               <Box className="animate-scale-in">
                 {fileIcon}
-                <Typography variant="body1" sx={{ fontWeight: 600, mt: 1 }}>{file.name}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {(file.size / 1024 / 1024).toFixed(2)} MB
+                <Typography variant="body1" sx={{ fontWeight: 600, mt: 1 }}>
+                  {file.name}
                 </Typography>
-                <Chip label="Tap to change" size="small" sx={{ mt: 1.5, bgcolor: '#D1FAE5', color: '#065F46' }} />
+                <Typography variant="body2" color="text.secondary">
+                  {formatFileSize(file.size)}
+                  {isOptimizableImage(file) && <> — will be optimized</>}
+                </Typography>
+                {compressionInfo && (
+                  <Chip
+                    icon={<CompressIcon sx={{ fontSize: 14 }} />}
+                    label={`${formatFileSize(compressionInfo.original)} → ${formatFileSize(compressionInfo.compressed)} (${Math.round((1 - compressionInfo.compressed / compressionInfo.original) * 100)}% smaller)`}
+                    size="small"
+                    sx={{ mt: 1, bgcolor: '#D1FAE5', color: '#065F46' }}
+                  />
+                )}
+                {!compressionInfo && (
+                  <Chip
+                    label="Tap to change"
+                    size="small"
+                    sx={{ mt: 1.5, bgcolor: '#D1FAE5', color: '#065F46' }}
+                  />
+                )}
               </Box>
             ) : (
               <>
-                <Box sx={{ width: 56, height: 56, borderRadius: 3, bgcolor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2 }}>
+                <Box
+                  sx={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 3,
+                    bgcolor: '#EFF6FF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mx: 'auto',
+                    mb: 2,
+                  }}
+                >
                   <CloudUploadIcon sx={{ fontSize: 28, color: '#2563EB' }} />
                 </Box>
                 <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
                   Tap to upload or drop here
                 </Typography>
-                <Typography variant="body2" color="text.secondary">PDF, JPG, or PNG — Max 10MB</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  PDF, JPG, or PNG — Max 10MB
+                </Typography>
                 <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', mt: 1.5 }}>
-                  {['PDF', 'JPG', 'PNG'].map(f => (
-                    <Chip key={f} label={f} size="small" variant="outlined" sx={{ fontSize: '0.7rem' }} />
+                  {['PDF', 'JPG', 'PNG'].map((f) => (
+                    <Chip
+                      key={f}
+                      label={f}
+                      size="small"
+                      variant="outlined"
+                      sx={{ fontSize: '0.7rem' }}
+                    />
                   ))}
                 </Box>
               </>
@@ -188,7 +307,7 @@ export default function UploadReportPage() {
               id="file-input"
               type="file"
               accept=".pdf,.jpg,.jpeg,.png,image/*"
-              onChange={e => handleFileChange(e.target.files?.[0] || null)}
+              onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
               style={{ display: 'none' }}
             />
           </Box>
@@ -196,21 +315,31 @@ export default function UploadReportPage() {
           <Card sx={{ mb: 3 }}>
             <CardContent sx={{ p: 3 }}>
               <TextField
-                fullWidth label="Report Title" value={title}
-                onChange={e => setTitle(e.target.value)}
-                required placeholder="e.g., Blood Test Results"
+                fullWidth
+                label="Report Title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+                placeholder="e.g., Blood Test Results"
                 sx={{ mb: 2 }}
               />
               <TextField
-                fullWidth select label="Report Type" value={reportType}
-                onChange={e => setReportType(e.target.value)} required sx={{ mb: 2 }}
+                fullWidth
+                select
+                label="Report Type"
+                value={reportType}
+                onChange={(e) => setReportType(e.target.value)}
+                required
+                sx={{ mb: 2 }}
               >
-                {REPORT_TYPES.map(type => {
+                {REPORT_TYPES.map((type) => {
                   const c = REPORT_TYPE_COLORS[type.value] || REPORT_TYPE_COLORS.other;
                   return (
                     <MenuItem key={type.value} value={type.value}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: c.color }} />
+                        <Box
+                          sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: c.color }}
+                        />
                         {type.label}
                       </Box>
                     </MenuItem>
@@ -218,39 +347,55 @@ export default function UploadReportPage() {
                 })}
               </TextField>
               <TextField
-                fullWidth label="Report Date" type="date"
+                fullWidth
+                label="Report Date"
+                type="date"
                 value={reportDate}
-                onChange={e => setReportDate(e.target.value)}
+                onChange={(e) => setReportDate(e.target.value)}
                 required
                 slotProps={{ inputLabel: { shrink: true } }}
                 sx={{ mb: 2 }}
               />
               <TextField
-                fullWidth label="Notes (Optional)" value={notes}
-                onChange={e => setNotes(e.target.value)}
-                multiline rows={2}
+                fullWidth
+                label="Notes (Optional)"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                multiline
+                rows={2}
                 placeholder="Any additional notes..."
               />
             </CardContent>
           </Card>
 
           {/* Visibility Toggle */}
-          <Card sx={{ mb: 3, bgcolor: isShareable ? '#F0FDF4' : '#F9FAFB', border: `1px solid ${isShareable ? '#A7F3D0' : '#E5E7EB'}` }}>
+          <Card
+            sx={{
+              mb: 3,
+              bgcolor: isShareable ? '#F0FDF4' : '#F9FAFB',
+              border: `1px solid ${isShareable ? '#A7F3D0' : '#E5E7EB'}`,
+            }}
+          >
             <CardContent sx={{ p: 2.5 }}>
               <FormControlLabel
                 control={
                   <Switch
                     checked={isShareable}
-                    onChange={e => setIsShareable(e.target.checked)}
+                    onChange={(e) => setIsShareable(e.target.checked)}
                     color="secondary"
                   />
                 }
                 label={
                   <Box sx={{ ml: 0.5, display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                    {isShareable
-                      ? <LockOpenOutlinedIcon sx={{ fontSize: 20, color: 'secondary.main', mt: 0.1, flexShrink: 0 }} />
-                      : <LockOutlinedIcon sx={{ fontSize: 20, color: 'text.secondary', mt: 0.1, flexShrink: 0 }} />
-                    }
+                    {isShareable ? (
+                      <LockOpenOutlinedIcon
+                        sx={{ fontSize: 20, color: 'secondary.main', mt: 0.1, flexShrink: 0 }}
+                      />
+                    ) : (
+                      <LockOutlinedIcon
+                        sx={{ fontSize: 20, color: 'text.secondary', mt: 0.1, flexShrink: 0 }}
+                      />
+                    )}
                     <Box>
                       <Typography variant="body1" sx={{ fontWeight: 600 }}>
                         {isShareable ? 'Shareable with doctors' : 'Private — only you'}
@@ -269,11 +414,14 @@ export default function UploadReportPage() {
           </Card>
 
           <Button
-            type="submit" variant="contained" fullWidth size="large"
+            type="submit"
+            variant="contained"
+            fullWidth
+            size="large"
             disabled={uploading || !file}
             sx={{ py: 1.75, fontSize: '1rem', boxShadow: '0 4px 14px rgba(37,99,235,0.3)' }}
           >
-            {uploading ? `Uploading... ${progress}%` : 'Upload Report'}
+            {uploading ? progressLabel || `Uploading... ${progress}%` : 'Upload Report'}
           </Button>
         </Box>
       </Box>
