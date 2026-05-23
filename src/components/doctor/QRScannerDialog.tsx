@@ -140,14 +140,14 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
           started = true;
         }
 
-        // Strategy 4: fresh camera list after permission prompt
+        // Strategy 4: fresh camera list after permission prompt (last resort)
         if (!started) {
           const freshCams = await Html5Qrcode.getCameras();
           if (!freshCams.length)
             throw Object.assign(new Error('No camera'), { name: 'NotFoundError' });
           setCameraCount(freshCams.length);
           await scanner.start(freshCams[0].id, upiConfig, onDecode, () => {});
-          started = true; // consistent with strategies 1-3
+          // Note: no started = true here — this is the final strategy, value unused after
         }
 
         if (mounted) setScanState('scanning');
