@@ -1,0 +1,27 @@
+{
+  "dashboard": {
+    "yourHealthId": "Your Health ID",
+    "copyId": "Copy ID",
+    "share": "Share",
+    "showQr": "Show QR",
+    "hideQr": "Hide QR",
+    "myReports": "My Reports",
+    "noReports": "No reports yet",
+    "noReportsHint": "Tap + to add your first report",
+    "upload": "Upload",
+    "accessLog": "Access Log",
+    "profile": "Profile",
+    "home": "Home",
+    "analyzeWithAi": "Analyze with AI",
+    "explainInMyLanguage": "Explain in my language",
+    "deleteReport": "Delete report",
+    "reportIsNowShareable": "Report is now shareable",
+    "reportIsNowPrivate": "Report is now private",
+    "shareableWithDoctors": "Shareable with doctors",
+    "privateOnlyYou": "Private — only you",
+    "processingReport": "Processing your report...",
+    "reportSaved": "Report saved! Open it to get AI explanation.",
+    "uploadFailed": "Upload failed. Try again.",
+    "somethingWentWrong": "Something went wrong. Try again."
+  }
+}

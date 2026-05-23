@@ -1,6 +1,9 @@
-import type { NextConfig } from 'next';
+import createNextIntlPlugin from 'next-intl/plugin';
+import { withSentryConfig } from '@sentry/nextjs';
 
-const nextConfig: NextConfig = {
+const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
+
+const nextConfig = {
   images: {
     remotePatterns: [
       {
@@ -15,9 +18,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-import { withSentryConfig } from '@sentry/nextjs';
-
-export default withSentryConfig(nextConfig, {
+export default withSentryConfig(withNextIntl(nextConfig), {
   org: process.env.SENTRY_ORG || 'nan-tb',
   project: process.env.SENTRY_PROJECT || 'healthvault',
   authToken: process.env.SENTRY_AUTH_TOKEN,
