@@ -24,6 +24,13 @@ import Checkbox from '@mui/material/Checkbox';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Collapse from '@mui/material/Collapse';
+import BottomSheet from '@mui/material/Drawer';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Divider from '@mui/material/Divider';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AddIcon from '@mui/icons-material/Add';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -40,16 +47,31 @@ import PersonIcon from '@mui/icons-material/PersonOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import CameraAltIcon from '@mui/icons-material/CameraAlt';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
+import TranslateIcon from '@mui/icons-material/Translate';
 import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, Report } from '@/types';
 import { REPORT_TYPES, REPORT_TYPE_COLORS } from '@/constants';
+import { optimizeImage, isOptimizableImage } from '@/lib/utils/image-optimizer';
+import { getPreferredLanguage } from '@/lib/utils/language';
 
 // Lazy load heavy dialog components — only loaded when user clicks
 const ReportDetailDialog = dynamic(() => import('@/components/patient/ReportDetailDialog'), {
   ssr: false,
 });
 const AISummaryDialog = dynamic(() => import('@/components/patient/AISummaryDialog'), {
+  ssr: false,
+});
+const CameraCapture = dynamic(() => import('@/components/patient/CameraCapture'), {
+  ssr: false,
+});
+const EmergencyCardSetup = dynamic(() => import('@/components/patient/EmergencyCardSetup'), {
+  ssr: false,
+});
+const HealthInterpreter = dynamic(() => import('@/components/patient/HealthInterpreter'), {
   ssr: false,
 });
 
@@ -75,6 +97,12 @@ export default function PatientDashboardClient({
   const [navValue, setNavValue] = useState(0);
   const [viewingReport, setViewingReport] = useState<Report | null>(null);
   const [showAISummary, setShowAISummary] = useState(false);
+  // New P0 feature states
+  const [showAddSheet, setShowAddSheet] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [showEmergencySetup, setShowEmergencySetup] = useState(false);
+  const [interpretingReport, setInterpretingReport] = useState<Report | null>(null);
+  const [uploadingCamera, setUploadingCamera] = useState(false);
 
   const handleCopyId = async () => {
     if (profile.health_id) {
@@ -155,8 +183,92 @@ export default function PatientDashboardClient({
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    // Use replace() so the browser back button can't return to the dashboard
     window.location.replace('/login');
+  };
+
+  // Handle camera capture — optimize then upload
+  const handleCameraCapture = async (images: Blob[]) => {
+    setShowCamera(false);
+    if (!images.length) return;
+    setUploadingCamera(true);
+    setSnackbar({ open: true, message: 'Processing your report...', severity: 'info' });
+
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Use first image (multi-page: combine later)
+      const rawBlob = images[0];
+      const rawFile = new File([rawBlob], 'camera-capture.jpg', { type: 'image/jpeg' });
+
+      // Optimize
+      const optimized = isOptimizableImage(rawFile) ? await optimizeImage(rawFile) : null;
+
+      const uploadBlob = optimized?.blob ?? rawBlob;
+      const uploadName = optimized?.fileName ?? 'capture.jpg';
+      const uploadMime = optimized?.mimeType ?? 'image/jpeg';
+
+      const reportId = crypto.randomUUID();
+      const filePath = `${user.id}/${reportId}/${uploadName}`;
+
+      const { error: uploadErr } = await supabase.storage
+        .from('reports')
+        .upload(filePath, uploadBlob, { contentType: uploadMime, upsert: false });
+
+      if (uploadErr) {
+        setSnackbar({ open: true, message: 'Upload failed. Try again.', severity: 'error' });
+        return;
+      }
+
+      // Upload thumbnail
+      let thumbnailPath: string | null = null;
+      if (optimized?.thumbnail) {
+        thumbnailPath = `${user.id}/${reportId}/thumb.jpg`;
+        await supabase.storage
+          .from('reports')
+          .upload(thumbnailPath, optimized.thumbnail, { contentType: 'image/jpeg', upsert: false });
+      }
+
+      // Save report record
+      const today = new Date().toISOString().split('T')[0];
+      const { data: newReport, error: dbErr } = await supabase
+        .from('reports')
+        .insert({
+          id: reportId,
+          patient_id: user.id,
+          title: 'Captured Report',
+          report_type: 'other',
+          file_path: filePath,
+          file_name: uploadName,
+          file_size: uploadBlob.size,
+          mime_type: uploadMime,
+          report_date: today,
+          is_shareable: false,
+          thumbnail_path: thumbnailPath,
+        })
+        .select()
+        .single();
+
+      if (dbErr) {
+        setSnackbar({ open: true, message: 'Failed to save. Try again.', severity: 'error' });
+        await supabase.storage.from('reports').remove([filePath]);
+        return;
+      }
+
+      setReports((prev) => [newReport, ...prev]);
+      setSnackbar({
+        open: true,
+        message: 'Report saved! Open it to get AI explanation.',
+        severity: 'success',
+      });
+    } catch {
+      setSnackbar({ open: true, message: 'Something went wrong. Try again.', severity: 'error' });
+    } finally {
+      setUploadingCamera(false);
+    }
   };
 
   const getReportTypeLabel = (type: string) =>
@@ -519,7 +631,7 @@ export default function PatientDashboardClient({
                       </Box>
                     </Tooltip>
 
-                    {/* AI Analyze */}
+                    {/* AI Analyze (existing) */}
                     <Tooltip title="Analyze with AI">
                       <IconButton
                         size="small"
@@ -531,6 +643,21 @@ export default function PatientDashboardClient({
                         aria-label="Analyze report with AI"
                       >
                         <AutoAwesomeIcon sx={{ fontSize: 18 }} />
+                      </IconButton>
+                    </Tooltip>
+
+                    {/* Explain in my language (NEW) */}
+                    <Tooltip title="Explain in my language">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setInterpretingReport(report);
+                        }}
+                        sx={{ color: '#059669', '&:hover': { bgcolor: '#F0FDF4' } }}
+                        aria-label="Explain in my language"
+                      >
+                        <TranslateIcon sx={{ fontSize: 18 }} />
                       </IconButton>
                     </Tooltip>
 
@@ -558,11 +685,12 @@ export default function PatientDashboardClient({
         )}
       </Box>
 
-      {/* FAB */}
+      {/* FAB — opens add sheet */}
       <Fab
         color="primary"
-        aria-label="Upload report"
-        onClick={() => router.push('/dashboard/patient/upload')}
+        aria-label="Add report"
+        onClick={() => setShowAddSheet(true)}
+        disabled={uploadingCamera}
         sx={{
           position: 'fixed',
           bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))',
@@ -572,6 +700,106 @@ export default function PatientDashboardClient({
       >
         <AddIcon />
       </Fab>
+
+      {/* Emergency Card quick button */}
+      <Tooltip title="Set up Emergency Card">
+        <Fab
+          size="small"
+          aria-label="Emergency Card"
+          onClick={() => setShowEmergencySetup(true)}
+          sx={{
+            position: 'fixed',
+            bottom: 'calc(140px + env(safe-area-inset-bottom, 0px))',
+            right: 20,
+            bgcolor: '#FEF2F2',
+            color: '#DC2626',
+            boxShadow: '0 4px 12px rgba(220,38,38,0.2)',
+            '&:hover': { bgcolor: '#FEE2E2' },
+          }}
+        >
+          <LocalHospitalIcon sx={{ fontSize: 20 }} />
+        </Fab>
+      </Tooltip>
+
+      {/* Add Report Bottom Sheet */}
+      <BottomSheet
+        anchor="bottom"
+        open={showAddSheet}
+        onClose={() => setShowAddSheet(false)}
+        sx={{ '& .MuiDrawer-paper': { borderRadius: '16px 16px 0 0', pb: 2 } }}
+      >
+        <Box sx={{ px: 2, pt: 2, pb: 1 }}>
+          <Box
+            sx={{ width: 40, height: 4, bgcolor: '#E5E7EB', borderRadius: 2, mx: 'auto', mb: 2 }}
+          />
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
+            Add Report
+          </Typography>
+        </Box>
+        <List disablePadding>
+          <ListItem disablePadding>
+            <ListItemButton
+              onClick={() => {
+                setShowAddSheet(false);
+                setShowCamera(true);
+              }}
+              sx={{ px: 2, py: 1.5 }}
+            >
+              <ListItemIcon sx={{ minWidth: 44 }}>
+                <Box
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 2,
+                    bgcolor: '#EFF6FF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <CameraAltIcon sx={{ fontSize: 20, color: '#2563EB' }} />
+                </Box>
+              </ListItemIcon>
+              <ListItemText
+                primary="Take Photo"
+                secondary="Scan report with camera"
+                slotProps={{ primary: { sx: { fontWeight: 600 } } }}
+              />
+            </ListItemButton>
+          </ListItem>
+          <Divider sx={{ mx: 2 }} />
+          <ListItem disablePadding>
+            <ListItemButton
+              onClick={() => {
+                setShowAddSheet(false);
+                router.push('/dashboard/patient/upload');
+              }}
+              sx={{ px: 2, py: 1.5 }}
+            >
+              <ListItemIcon sx={{ minWidth: 44 }}>
+                <Box
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 2,
+                    bgcolor: '#F0FDF4',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <FolderOpenIcon sx={{ fontSize: 20, color: '#059669' }} />
+                </Box>
+              </ListItemIcon>
+              <ListItemText
+                primary="Choose from Phone"
+                secondary="Upload PDF, JPG or PNG"
+                slotProps={{ primary: { sx: { fontWeight: 600 } } }}
+              />
+            </ListItemButton>
+          </ListItem>
+        </List>
+      </BottomSheet>
 
       {/* Bottom Navigation */}
       <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={0}>
@@ -630,6 +858,25 @@ export default function PatientDashboardClient({
         onClose={() => setShowAISummary(false)}
         reports={reports}
       />
+
+      {/* Camera Capture (full screen) */}
+      {showCamera && (
+        <CameraCapture onCapture={handleCameraCapture} onClose={() => setShowCamera(false)} />
+      )}
+
+      {/* Emergency Card Setup */}
+      <EmergencyCardSetup open={showEmergencySetup} onClose={() => setShowEmergencySetup(false)} />
+
+      {/* Health Interpreter */}
+      {interpretingReport && (
+        <HealthInterpreter
+          reportId={interpretingReport.id}
+          reportTitle={interpretingReport.title}
+          defaultLanguage={getPreferredLanguage()}
+          open={!!interpretingReport}
+          onClose={() => setInterpretingReport(null)}
+        />
+      )}
     </Box>
   );
 }
