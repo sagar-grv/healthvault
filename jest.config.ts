@@ -3,6 +3,11 @@ import type { Config } from 'jest';
 const config: Config = {
   testEnvironment: 'jsdom',
   preset: 'ts-jest',
+  modulePathIgnorePatterns: ['<rootDir>/pipeline/'],
+  watchPathIgnorePatterns: ['<rootDir>/pipeline/'],
+  haste: {
+    enableSymlinks: false,
+  },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },

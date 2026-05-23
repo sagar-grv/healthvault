@@ -47,6 +47,7 @@ import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { QRCodeSVG } from 'qrcode.react';
+import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, Report } from '@/types';
 import { REPORT_TYPES, REPORT_TYPE_COLORS } from '@/constants';
@@ -80,6 +81,7 @@ export default function PatientDashboardClient({
   reports: initialReports,
 }: PatientDashboardClientProps) {
   const router = useRouter();
+  const t = useTranslations('dashboard');
   const [reports, setReports] = useState<Report[]>(initialReports);
   const [showQR, setShowQR] = useState(false);
   const [snackbar, setSnackbar] = useState<{
@@ -134,7 +136,7 @@ export default function PatientDashboardClient({
     );
     setSnackbar({
       open: true,
-      message: !currentValue ? 'Report is now shareable' : 'Report is now private',
+      message: !currentValue ? t('reportIsNowShareable') : t('reportIsNowPrivate'),
       severity: 'success',
     });
   };
@@ -186,7 +188,7 @@ export default function PatientDashboardClient({
     setShowCamera(false);
     if (!images.length) return;
     setUploadingCamera(true);
-    setSnackbar({ open: true, message: 'Processing your report...', severity: 'info' });
+    setSnackbar({ open: true, message: t('processingReport'), severity: 'info' });
 
     try {
       const supabase = createClient();
@@ -214,7 +216,7 @@ export default function PatientDashboardClient({
         .upload(filePath, uploadBlob, { contentType: uploadMime, upsert: false });
 
       if (uploadErr) {
-        setSnackbar({ open: true, message: 'Upload failed. Try again.', severity: 'error' });
+        setSnackbar({ open: true, message: t('uploadFailed'), severity: 'error' });
         return;
       }
 
@@ -256,11 +258,11 @@ export default function PatientDashboardClient({
       setReports((prev) => [newReport, ...prev]);
       setSnackbar({
         open: true,
-        message: 'Report saved! Open it to get AI explanation.',
+        message: t('reportSaved'),
         severity: 'success',
       });
     } catch {
-      setSnackbar({ open: true, message: 'Something went wrong. Try again.', severity: 'error' });
+      setSnackbar({ open: true, message: t('somethingWentWrong'), severity: 'error' });
     } finally {
       setUploadingCamera(false);
     }
@@ -336,7 +338,7 @@ export default function PatientDashboardClient({
                 mb: 1.5,
               }}
             >
-              Your Health ID
+              {t('yourHealthId')}
             </Typography>
 
             <Typography
@@ -377,17 +379,17 @@ export default function PatientDashboardClient({
               {[
                 {
                   icon: <ContentCopyIcon sx={{ fontSize: 15 }} />,
-                  label: 'Copy ID',
+                  label: t('copyId'),
                   action: handleCopyId,
                 },
                 {
                   icon: <QrCode2Icon sx={{ fontSize: 15 }} />,
-                  label: showQR ? 'Hide QR' : 'Show QR',
+                  label: showQR ? t('hideQr') : t('showQr'),
                   action: () => setShowQR(!showQR),
                 },
                 {
                   icon: <ShareIcon sx={{ fontSize: 15 }} />,
-                  label: 'WhatsApp',
+                  label: t('share'),
                   action: handleWhatsAppShare,
                 },
               ].map((btn) => (
@@ -417,7 +419,7 @@ export default function PatientDashboardClient({
         {/* Reports Header */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Box>
-            <Typography variant="h5">My Reports</Typography>
+            <Typography variant="h5">{t('myReports')}</Typography>
             <Typography variant="body2" color="text.secondary">
               {reports.length} total · {shareableCount} shareable
             </Typography>
@@ -460,11 +462,12 @@ export default function PatientDashboardClient({
                   onClose={() => setBulkMenuAnchor(null)}
                 >
                   <MenuItem onClick={() => handleBulkAction(true)}>
-                    <PublicIcon sx={{ mr: 1, fontSize: 18, color: 'secondary.main' }} /> Make
-                    Shareable
+                    <PublicIcon sx={{ mr: 1, fontSize: 18, color: 'secondary.main' }} />
+                    {t('shareableWithDoctors')}
                   </MenuItem>
                   <MenuItem onClick={() => handleBulkAction(false)}>
-                    <LockIcon sx={{ mr: 1, fontSize: 18, color: 'text.secondary' }} /> Make Private
+                    <LockIcon sx={{ mr: 1, fontSize: 18, color: 'text.secondary' }} />
+                    {t('privateOnlyYou')}
                   </MenuItem>
                 </Menu>
               </Box>
@@ -501,15 +504,14 @@ export default function PatientDashboardClient({
                 <NoteAddIcon sx={{ fontSize: 32, color: '#2563EB' }} />
               </Box>
               <Typography variant="h5" sx={{ mb: 1 }}>
-                No reports yet
+                {t('noReports')}
               </Typography>
               <Typography
                 variant="body2"
                 color="text.secondary"
                 sx={{ mb: 3, maxWidth: 260, mx: 'auto' }}
               >
-                Upload your first medical report — prescriptions, lab results, scans or any
-                document.
+                {t('noReportsHint')}
               </Typography>
               <Button
                 variant="contained"
@@ -517,7 +519,7 @@ export default function PatientDashboardClient({
                 onClick={() => router.push('/dashboard/patient/upload')}
                 size="large"
               >
-                Upload Report
+                {t('upload')}
               </Button>
             </CardContent>
           </Card>
@@ -610,7 +612,9 @@ export default function PatientDashboardClient({
                     </Box>
 
                     {/* Shareable Toggle */}
-                    <Tooltip title={report.is_shareable ? 'Shareable' : 'Private'}>
+                    <Tooltip
+                      title={report.is_shareable ? t('shareableWithDoctors') : t('privateOnlyYou')}
+                    >
                       <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                         {report.is_shareable ? (
                           <PublicIcon sx={{ fontSize: 16, color: 'secondary.main', mr: 0.25 }} />
@@ -627,7 +631,7 @@ export default function PatientDashboardClient({
                     </Tooltip>
 
                     {/* AI Analyze (existing) */}
-                    <Tooltip title="Analyze with AI">
+                    <Tooltip title={t('analyzeWithAi')}>
                       <IconButton
                         size="small"
                         onClick={(e) => {
@@ -642,7 +646,7 @@ export default function PatientDashboardClient({
                     </Tooltip>
 
                     {/* Explain in my language (NEW) */}
-                    <Tooltip title="Explain in my language">
+                    <Tooltip title={t('explainInMyLanguage')}>
                       <IconButton
                         size="small"
                         onClick={(e) => {
@@ -657,7 +661,7 @@ export default function PatientDashboardClient({
                     </Tooltip>
 
                     {/* Delete */}
-                    <Tooltip title="Delete report">
+                    <Tooltip title={t('deleteReport')}>
                       <IconButton
                         size="small"
                         onClick={(e) => {
@@ -739,10 +743,10 @@ export default function PatientDashboardClient({
           }}
           showLabels
         >
-          <BottomNavigationAction label="Home" icon={<HomeIcon />} />
-          <BottomNavigationAction label="Upload" icon={<UploadFileIcon />} />
-          <BottomNavigationAction label="Access Log" icon={<HistoryIcon />} />
-          <BottomNavigationAction label="Profile" icon={<PersonIcon />} />
+          <BottomNavigationAction label={t('home')} icon={<HomeIcon />} />
+          <BottomNavigationAction label={t('upload')} icon={<UploadFileIcon />} />
+          <BottomNavigationAction label={t('accessLog')} icon={<HistoryIcon />} />
+          <BottomNavigationAction label={t('profile')} icon={<PersonIcon />} />
         </BottomNavigation>
       </Paper>
 

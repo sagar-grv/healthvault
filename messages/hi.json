@@ -1,0 +1,27 @@
+{
+  "dashboard": {
+    "yourHealthId": "आपकी हेल्थ ID",
+    "copyId": "ID कॉपी करें",
+    "share": "शेयर करें",
+    "showQr": "QR दिखाएं",
+    "hideQr": "QR छुपाएं",
+    "myReports": "मेरी रिपोर्ट्स",
+    "noReports": "अभी कोई रिपोर्ट नहीं",
+    "noReportsHint": "+ दबाएं अपनी पहली रिपोर्ट जोड़ने के लिए",
+    "upload": "अपलोड",
+    "accessLog": "एक्सेस लॉग",
+    "profile": "प्रोफ़ाइल",
+    "home": "होम",
+    "analyzeWithAi": "AI से विश्लेषण करें",
+    "explainInMyLanguage": "मेरी भाषा में समझाएं",
+    "deleteReport": "रिपोर्ट हटाएं",
+    "reportIsNowShareable": "रिपोर्ट अब शेयर की जा सकती है",
+    "reportIsNowPrivate": "रिपोर्ट अब प्राइवेट है",
+    "shareableWithDoctors": "डॉक्टर्स के साथ शेयर",
+    "privateOnlyYou": "प्राइवेट — सिर्फ आप",
+    "processingReport": "आपकी रिपोर्ट प्रोसेस हो रही है...",
+    "reportSaved": "रिपोर्ट सेव हुई! AI समझाने के लिए खोलें।",
+    "uploadFailed": "अपलोड विफल। फिर से कोशिश करें।",
+    "somethingWentWrong": "कुछ गलत हुआ। फिर से कोशिश करें।"
+  }
+}
