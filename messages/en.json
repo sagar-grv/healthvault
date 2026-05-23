@@ -22,6 +22,8 @@
     "processingReport": "Processing your report...",
     "reportSaved": "Report saved! Open it to get AI explanation.",
     "uploadFailed": "Upload failed. Try again.",
-    "somethingWentWrong": "Something went wrong. Try again."
+    "somethingWentWrong": "Something went wrong. Try again.",
+    "switchLanguage": "हिंदी",
+    "currentLocale": "EN"
   }
 }

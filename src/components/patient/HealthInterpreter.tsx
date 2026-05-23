@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { setPreferredLanguage } from '@/lib/utils/language';
+import { setAiLanguage } from '@/lib/utils/language';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -134,8 +134,8 @@ export default function HealthInterpreter({
 
   const handleLanguageChange = (lang: string) => {
     setLanguage(lang);
-    // Persist preference to localStorage + cookie + DB (background)
-    setPreferredLanguage(lang);
+    // Persist AI language preference (does NOT affect app UI language)
+    setAiLanguage(lang);
     if (result) {
       // Re-interpret in new language
       interpret(lang);

@@ -22,6 +22,8 @@
     "processingReport": "आपकी रिपोर्ट प्रोसेस हो रही है...",
     "reportSaved": "रिपोर्ट सेव हुई! AI समझाने के लिए खोलें।",
     "uploadFailed": "अपलोड विफल। फिर से कोशिश करें।",
-    "somethingWentWrong": "कुछ गलत हुआ। फिर से कोशिश करें।"
+    "somethingWentWrong": "कुछ गलत हुआ। फिर से कोशिश करें।",
+    "switchLanguage": "English",
+    "currentLocale": "HI"
   }
 }

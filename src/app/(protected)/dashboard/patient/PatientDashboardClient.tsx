@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
@@ -15,7 +15,6 @@ import Chip from '@mui/material/Chip';
 import Switch from '@mui/material/Switch';
 import SpeedDial from '@mui/material/SpeedDial';
 import SpeedDialAction from '@mui/material/SpeedDialAction';
-import SpeedDialIcon from '@mui/material/SpeedDialIcon';
 import Tooltip from '@mui/material/Tooltip';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
@@ -42,9 +41,8 @@ import PersonIcon from '@mui/icons-material/PersonOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import CameraAltIcon from '@mui/icons-material/CameraAlt';
-import FolderOpenIcon from '@mui/icons-material/FolderOpen';
-import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
+import DocumentScannerIcon from '@mui/icons-material/DocumentScanner';
+import FavoriteIcon from '@mui/icons-material/Favorite';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { QRCodeSVG } from 'qrcode.react';
 import { useTranslations } from 'next-intl';
@@ -52,7 +50,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Profile, Report } from '@/types';
 import { REPORT_TYPES, REPORT_TYPE_COLORS } from '@/constants';
 import { optimizeImage, isOptimizableImage } from '@/lib/utils/image-optimizer';
-import { getPreferredLanguage, syncLanguageFromProfile } from '@/lib/utils/language';
+import { getAiLanguage, syncLanguageFromProfile } from '@/lib/utils/language';
 
 // Lazy load heavy dialog components — only loaded when user clicks
 const ReportDetailDialog = dynamic(() => import('@/components/patient/ReportDetailDialog'), {
@@ -276,6 +274,19 @@ export default function PatientDashboardClient({
   const getReportTypeLabel = (type: string) =>
     REPORT_TYPES.find((t) => t.value === type)?.label || type;
 
+  // Toggle app UI language between en and hi, then refresh server components
+  const handleLocaleSwitch = useCallback(() => {
+    const current =
+      document.cookie
+        .split('; ')
+        .find((r) => r.startsWith('hv_locale='))
+        ?.split('=')[1] || 'en';
+    const next = current === 'en' ? 'hi' : 'en';
+    document.cookie = `hv_locale=${next}; path=/; max-age=31536000; SameSite=Lax`;
+    localStorage.setItem('hv_preferred_language', next);
+    router.refresh(); // re-runs server components → layout.tsx re-reads cookie → new messages
+  }, [router]);
+
   const shareableCount = reports.filter((r) => r.is_shareable).length;
 
   return (
@@ -304,6 +315,24 @@ export default function PatientDashboardClient({
               HealthVault
             </Typography>
           </Box>
+          {/* Language toggle chip — tap to switch between EN and HI */}
+          <Chip
+            label={t('currentLocale')}
+            onClick={handleLocaleSwitch}
+            size="small"
+            sx={{
+              mr: 0.5,
+              height: 26,
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+              bgcolor: '#EFF6FF',
+              color: '#2563EB',
+              border: '1px solid #BFDBFE',
+              cursor: 'pointer',
+              '&:hover': { bgcolor: '#DBEAFE' },
+            }}
+          />
           <IconButton
             onClick={() => router.push('/dashboard/patient/profile')}
             aria-label="Profile"
@@ -695,42 +724,69 @@ export default function PatientDashboardClient({
         open={speedDialOpen}
         onOpen={() => setSpeedDialOpen(true)}
         onClose={() => setSpeedDialOpen(false)}
-        icon={<SpeedDialIcon openIcon={<AddIcon />} />}
-        FabProps={{ disabled: uploadingCamera }}
+        icon={<AddIcon />}
+        FabProps={{
+          disabled: uploadingCamera,
+          sx: { boxShadow: '0 8px 24px rgba(37,99,235,0.35)' },
+        }}
         sx={{
           position: 'fixed',
           bottom: 'calc(88px + env(safe-area-inset-bottom, 0px))',
           right: 20,
-          '& .MuiFab-primary': {
-            boxShadow: '0 8px 24px rgba(37,99,235,0.35)',
-          },
         }}
       >
+        {/* Scan Report — blue */}
         <SpeedDialAction
-          icon={<CameraAltIcon />}
-          title="Take Photo"
+          icon={<DocumentScannerIcon sx={{ fontSize: 20 }} />}
+          slotProps={{
+            tooltip: { title: 'Scan Report' },
+            fab: {
+              sx: {
+                bgcolor: '#EFF6FF',
+                color: '#2563EB',
+                '&:hover': { bgcolor: '#DBEAFE' },
+              },
+            },
+          }}
           onClick={() => {
             setSpeedDialOpen(false);
             setShowCamera(true);
           }}
         />
+        {/* Upload File — green */}
         <SpeedDialAction
-          icon={<FolderOpenIcon />}
-          title="From Files"
+          icon={<UploadFileIcon sx={{ fontSize: 20 }} />}
+          slotProps={{
+            tooltip: { title: 'Upload File' },
+            fab: {
+              sx: {
+                bgcolor: '#F0FDF4',
+                color: '#059669',
+                '&:hover': { bgcolor: '#DCFCE7' },
+              },
+            },
+          }}
           onClick={() => {
             setSpeedDialOpen(false);
             router.push('/dashboard/patient/upload');
           }}
         />
+        {/* Emergency Card — red */}
         <SpeedDialAction
-          icon={<LocalHospitalIcon />}
-          title="Emergency Card"
+          icon={<FavoriteIcon sx={{ fontSize: 20 }} />}
+          slotProps={{
+            tooltip: { title: 'Emergency Card' },
+            fab: {
+              sx: {
+                bgcolor: '#FEF2F2',
+                color: '#DC2626',
+                '&:hover': { bgcolor: '#FEE2E2' },
+              },
+            },
+          }}
           onClick={() => {
             setSpeedDialOpen(false);
             setShowEmergencySetup(true);
-          }}
-          sx={{
-            '& .MuiFab-root': { bgcolor: '#FEF2F2', color: '#DC2626' },
           }}
         />
       </SpeedDial>
@@ -806,7 +862,7 @@ export default function PatientDashboardClient({
         <HealthInterpreter
           reportId={interpretingReport.id}
           reportTitle={interpretingReport.title}
-          defaultLanguage={getPreferredLanguage()}
+          defaultLanguage={getAiLanguage()}
           open={!!interpretingReport}
           onClose={() => setInterpretingReport(null)}
         />
