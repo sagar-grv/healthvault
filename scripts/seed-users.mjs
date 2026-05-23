@@ -6,41 +6,22 @@
  *
  * Usage: npm run db:seed
  *
+ * Env vars are loaded by Node via --env-file=.env.local (see package.json).
+ * No file reads — credentials come from process.env only.
+ *
  * Test accounts created:
  *   patient@test.com / Test1234!  (role: patient)
  *   doctor@test.com  / Test1234!  (role: doctor)
  */
 
-import { readFileSync } from 'fs';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-const __dir = dirname(fileURLToPath(import.meta.url));
-
-// Read env from .env.local (which should be pointing to Docker)
-function readEnv() {
-  try {
-    const env = readFileSync(resolve(__dir, '../.env.local'), 'utf8');
-    const vars = {};
-    for (const line of env.split('\n')) {
-      const [key, ...rest] = line.split('=');
-      if (key && !key.startsWith('#')) {
-        vars[key.trim()] = rest.join('=').trim();
-      }
-    }
-    return vars;
-  } catch {
-    return {};
-  }
-}
-
-const env = readEnv();
-const SUPABASE_URL = env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:56321';
-const SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
+// Credentials from process.env — loaded by Node's --env-file flag
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:56321';
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SERVICE_ROLE_KEY) {
-  console.error('ERROR: SUPABASE_SERVICE_ROLE_KEY not found in .env.local');
-  console.error('Run: npm run dev:local (to switch to Docker env) then try again.');
+  console.error('ERROR: SUPABASE_SERVICE_ROLE_KEY not found in environment.');
+  console.error('Make sure .env.local contains SUPABASE_SERVICE_ROLE_KEY.');
+  console.error('Run: npm run dev:local first to set up .env.local for Docker.');
   process.exit(1);
 }
 

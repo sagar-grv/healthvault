@@ -106,6 +106,12 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
           }
         };
 
+        /**
+         * Sequential camera fallback chain.
+         * Each strategy is guarded by `!started` so earlier strategies
+         * take priority. `started` prevents double-initialization and
+         * short-circuits remaining strategies once one succeeds.
+         */
         let started = false;
 
         // Strategy 1: rear camera by facingMode (best for phones)
@@ -141,6 +147,7 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
             throw Object.assign(new Error('No camera'), { name: 'NotFoundError' });
           setCameraCount(freshCams.length);
           await scanner.start(freshCams[0].id, upiConfig, onDecode, () => {});
+          started = true; // consistent with strategies 1-3
         }
 
         if (mounted) setScanState('scanning');
