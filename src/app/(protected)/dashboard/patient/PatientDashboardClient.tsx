@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
@@ -52,7 +52,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Profile, Report } from '@/types';
 import { REPORT_TYPES, REPORT_TYPE_COLORS } from '@/constants';
 import { optimizeImage, isOptimizableImage } from '@/lib/utils/image-optimizer';
-import { getPreferredLanguage } from '@/lib/utils/language';
+import { getPreferredLanguage, syncLanguageFromProfile } from '@/lib/utils/language';
 
 // Lazy load heavy dialog components — only loaded when user clicks
 const ReportDetailDialog = dynamic(() => import('@/components/patient/ReportDetailDialog'), {
@@ -100,6 +100,11 @@ export default function PatientDashboardClient({
   const [showEmergencySetup, setShowEmergencySetup] = useState(false);
   const [interpretingReport, setInterpretingReport] = useState<Report | null>(null);
   const [uploadingCamera, setUploadingCamera] = useState(false);
+
+  // Sync language preference from DB profile on mount (cross-device sync)
+  useEffect(() => {
+    syncLanguageFromProfile(profile.preferred_language);
+  }, [profile.preferred_language]);
 
   const handleCopyId = async () => {
     if (profile.health_id) {
