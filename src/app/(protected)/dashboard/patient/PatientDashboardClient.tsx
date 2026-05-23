@@ -13,7 +13,9 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Switch from '@mui/material/Switch';
-import Fab from '@mui/material/Fab';
+import SpeedDial from '@mui/material/SpeedDial';
+import SpeedDialAction from '@mui/material/SpeedDialAction';
+import SpeedDialIcon from '@mui/material/SpeedDialIcon';
 import Tooltip from '@mui/material/Tooltip';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
@@ -24,13 +26,6 @@ import Checkbox from '@mui/material/Checkbox';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Collapse from '@mui/material/Collapse';
-import BottomSheet from '@mui/material/Drawer';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import Divider from '@mui/material/Divider';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AddIcon from '@mui/icons-material/Add';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -98,7 +93,7 @@ export default function PatientDashboardClient({
   const [viewingReport, setViewingReport] = useState<Report | null>(null);
   const [showAISummary, setShowAISummary] = useState(false);
   // New P0 feature states
-  const [showAddSheet, setShowAddSheet] = useState(false);
+  const [speedDialOpen, setSpeedDialOpen] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [showEmergencySetup, setShowEmergencySetup] = useState(false);
   const [interpretingReport, setInterpretingReport] = useState<Report | null>(null);
@@ -685,121 +680,51 @@ export default function PatientDashboardClient({
         )}
       </Box>
 
-      {/* FAB — opens add sheet */}
-      <Fab
-        color="primary"
-        aria-label="Add report"
-        onClick={() => setShowAddSheet(true)}
-        disabled={uploadingCamera}
+      {/* Speed Dial — Add Report or Emergency Card */}
+      <SpeedDial
+        ariaLabel="Quick actions"
+        open={speedDialOpen}
+        onOpen={() => setSpeedDialOpen(true)}
+        onClose={() => setSpeedDialOpen(false)}
+        icon={<SpeedDialIcon openIcon={<AddIcon />} />}
+        FabProps={{ disabled: uploadingCamera }}
         sx={{
           position: 'fixed',
-          bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))',
+          bottom: 'calc(88px + env(safe-area-inset-bottom, 0px))',
           right: 20,
-          boxShadow: '0 8px 24px rgba(37,99,235,0.35)',
+          '& .MuiFab-primary': {
+            boxShadow: '0 8px 24px rgba(37,99,235,0.35)',
+          },
         }}
       >
-        <AddIcon />
-      </Fab>
-
-      {/* Emergency Card quick button */}
-      <Tooltip title="Set up Emergency Card">
-        <Fab
-          size="small"
-          aria-label="Emergency Card"
-          onClick={() => setShowEmergencySetup(true)}
-          sx={{
-            position: 'fixed',
-            bottom: 'calc(140px + env(safe-area-inset-bottom, 0px))',
-            right: 20,
-            bgcolor: '#FEF2F2',
-            color: '#DC2626',
-            boxShadow: '0 4px 12px rgba(220,38,38,0.2)',
-            '&:hover': { bgcolor: '#FEE2E2' },
+        <SpeedDialAction
+          icon={<CameraAltIcon />}
+          title="Take Photo"
+          onClick={() => {
+            setSpeedDialOpen(false);
+            setShowCamera(true);
           }}
-        >
-          <LocalHospitalIcon sx={{ fontSize: 20 }} />
-        </Fab>
-      </Tooltip>
-
-      {/* Add Report Bottom Sheet */}
-      <BottomSheet
-        anchor="bottom"
-        open={showAddSheet}
-        onClose={() => setShowAddSheet(false)}
-        sx={{ '& .MuiDrawer-paper': { borderRadius: '16px 16px 0 0', pb: 2 } }}
-      >
-        <Box sx={{ px: 2, pt: 2, pb: 1 }}>
-          <Box
-            sx={{ width: 40, height: 4, bgcolor: '#E5E7EB', borderRadius: 2, mx: 'auto', mb: 2 }}
-          />
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
-            Add Report
-          </Typography>
-        </Box>
-        <List disablePadding>
-          <ListItem disablePadding>
-            <ListItemButton
-              onClick={() => {
-                setShowAddSheet(false);
-                setShowCamera(true);
-              }}
-              sx={{ px: 2, py: 1.5 }}
-            >
-              <ListItemIcon sx={{ minWidth: 44 }}>
-                <Box
-                  sx={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 2,
-                    bgcolor: '#EFF6FF',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <CameraAltIcon sx={{ fontSize: 20, color: '#2563EB' }} />
-                </Box>
-              </ListItemIcon>
-              <ListItemText
-                primary="Take Photo"
-                secondary="Scan report with camera"
-                slotProps={{ primary: { sx: { fontWeight: 600 } } }}
-              />
-            </ListItemButton>
-          </ListItem>
-          <Divider sx={{ mx: 2 }} />
-          <ListItem disablePadding>
-            <ListItemButton
-              onClick={() => {
-                setShowAddSheet(false);
-                router.push('/dashboard/patient/upload');
-              }}
-              sx={{ px: 2, py: 1.5 }}
-            >
-              <ListItemIcon sx={{ minWidth: 44 }}>
-                <Box
-                  sx={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 2,
-                    bgcolor: '#F0FDF4',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <FolderOpenIcon sx={{ fontSize: 20, color: '#059669' }} />
-                </Box>
-              </ListItemIcon>
-              <ListItemText
-                primary="Choose from Phone"
-                secondary="Upload PDF, JPG or PNG"
-                slotProps={{ primary: { sx: { fontWeight: 600 } } }}
-              />
-            </ListItemButton>
-          </ListItem>
-        </List>
-      </BottomSheet>
+        />
+        <SpeedDialAction
+          icon={<FolderOpenIcon />}
+          title="From Files"
+          onClick={() => {
+            setSpeedDialOpen(false);
+            router.push('/dashboard/patient/upload');
+          }}
+        />
+        <SpeedDialAction
+          icon={<LocalHospitalIcon />}
+          title="Emergency Card"
+          onClick={() => {
+            setSpeedDialOpen(false);
+            setShowEmergencySetup(true);
+          }}
+          sx={{
+            '& .MuiFab-root': { bgcolor: '#FEF2F2', color: '#DC2626' },
+          }}
+        />
+      </SpeedDial>
 
       {/* Bottom Navigation */}
       <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={0}>
