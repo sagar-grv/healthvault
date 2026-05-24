@@ -67,6 +67,7 @@
   },
   "upload": {
     "pageTitle": "Upload Report",
+    "scanInstead": "Scan Report",
     "dropPrompt": "Tap to upload or drop here",
     "dropHint": "PDF, JPG, or PNG — Max 10MB",
     "tapToChange": "Tap to change",

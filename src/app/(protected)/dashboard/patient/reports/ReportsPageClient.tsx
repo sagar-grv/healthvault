@@ -25,7 +25,6 @@ import HomeIcon from '@mui/icons-material/Home';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import HistoryIcon from '@mui/icons-material/History';
 import PersonIcon from '@mui/icons-material/PersonOutlined';
-import BiotechIcon from '@mui/icons-material/Biotech';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import TranslateIcon from '@mui/icons-material/Translate';
 import LockIcon from '@mui/icons-material/Lock';
@@ -307,22 +306,14 @@ export default function ReportsPageClient({ reports: initialReports }: ReportsPa
                       )}
                     </IconButton>
 
-                    {/* AI Interpret */}
+                    {/* Explain */}
                     <IconButton
                       size="small"
                       onClick={() => setInterpretingReport(report)}
-                      sx={{ color: '#059669' }}
+                      sx={{ color: '#2563EB' }}
+                      aria-label="Explain in my language"
                     >
                       <TranslateIcon sx={{ fontSize: 18 }} />
-                    </IconButton>
-
-                    {/* AI Analyze */}
-                    <IconButton
-                      size="small"
-                      onClick={() => setViewingReport(report)}
-                      sx={{ color: '#7C3AED' }}
-                    >
-                      <BiotechIcon sx={{ fontSize: 18 }} />
                     </IconButton>
 
                     {/* Delete */}
