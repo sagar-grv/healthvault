@@ -7,38 +7,48 @@ export const dynamic = 'force-dynamic';
 export default async function DoctorDashboardPage() {
   const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  // Fetch profile + doctor profile + recent access in parallel
+  // Fetch profile, doctor profile, and recent access logs with embedded patient profiles
+  // Single query for recent access + patient names — eliminates the waterfall
   const [{ data: profile, error: profileError }, { data: doctorProfile }, { data: recentAccess }] =
     await Promise.all([
-      supabase.from('profiles').select('*').eq('id', user.id).single(),
+      supabase
+        .from('profiles')
+        .select(
+          'id, role, full_name, email, health_id, phone, preferred_language, onboarding_complete, created_at, updated_at'
+        )
+        .eq('id', user.id)
+        .single(),
       supabase.from('doctor_profiles').select('*').eq('id', user.id).single(),
       supabase
         .from('access_logs')
-        .select('patient_id, searched_at')
+        // Embed patient profile in the same query — no second round-trip
+        .select(
+          'patient_id, searched_at, patient:profiles!access_logs_patient_id_fkey(id, full_name, health_id)'
+        )
         .eq('doctor_id', user.id)
         .order('searched_at', { ascending: false })
         .limit(10),
     ]);
 
-  // No profile or wrong role → go back to role router
   if (profileError || !profile) redirect('/dashboard');
   if (profile.role !== 'doctor') redirect('/dashboard');
 
-  // Get unique patient IDs from recent access
-  const uniquePatientIds = [
-    ...new Set((recentAccess || []).map((a) => a.patient_id)),
-  ].slice(0, 5);
+  // Deduplicate recent patients from embedded data — no extra DB call
+  const seen = new Set<string>();
+  const recentPatients: { id: string; full_name: string; health_id: string | null }[] = [];
 
-  let recentPatients: { id: string; full_name: string; health_id: string | null }[] = [];
-  if (uniquePatientIds.length > 0) {
-    const { data: patients } = await supabase
-      .from('profiles')
-      .select('id, full_name, health_id')
-      .in('id', uniquePatientIds);
-    recentPatients = patients || [];
+  for (const log of recentAccess ?? []) {
+    const patient = Array.isArray(log.patient) ? log.patient[0] : log.patient;
+    if (patient && !seen.has(patient.id)) {
+      seen.add(patient.id);
+      recentPatients.push(patient);
+      if (recentPatients.length === 5) break;
+    }
   }
 
   return (
