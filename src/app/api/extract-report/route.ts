@@ -103,23 +103,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call Gemini
-    const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'AI extraction not configured' }, { status: 503 });
+    // Multi-provider AI: Gemini → NVIDIA (vision fallback)
+    const { callVisionAI } = await import('@/lib/ai/provider-router');
+    let responseText = '';
+
+    try {
+      const aiResult = await callVisionAI(EXTRACTION_PROMPT, image, mimeType);
+      responseText = aiResult.text;
+    } catch (e) {
+      const err = e as { message?: string };
+      if (
+        err.message?.includes('429') ||
+        err.message?.includes('quota') ||
+        err.message?.includes('rate')
+      ) {
+        return NextResponse.json(
+          { error: 'AI service is busy. Please try again in a minute.' },
+          { status: 429 }
+        );
+      }
+      throw e;
     }
-
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(apiKey);
-
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
-    const result = await model.generateContent([
-      EXTRACTION_PROMPT,
-      { inlineData: { data: image, mimeType } },
-    ]);
-
-    const responseText = result.response.text();
 
     // Parse JSON from response (strip any markdown code fences if present)
     let parsed;
