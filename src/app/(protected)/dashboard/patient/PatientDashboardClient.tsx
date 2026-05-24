@@ -20,28 +20,20 @@ import Alert from '@mui/material/Alert';
 import BottomNavigation from '@mui/material/BottomNavigation';
 import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 import Paper from '@mui/material/Paper';
-import Checkbox from '@mui/material/Checkbox';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
-import Collapse from '@mui/material/Collapse';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AddIcon from '@mui/icons-material/Add';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import ShareIcon from '@mui/icons-material/Share';
 import HomeIcon from '@mui/icons-material/Home';
 import HistoryIcon from '@mui/icons-material/History';
-import QrCode2Icon from '@mui/icons-material/QrCode2';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 import LockIcon from '@mui/icons-material/Lock';
 import PublicIcon from '@mui/icons-material/Public';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import PersonIcon from '@mui/icons-material/PersonOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
-import BiotechIcon from '@mui/icons-material/Biotech';
 import TranslateIcon from '@mui/icons-material/Translate';
 import LanguageIcon from '@mui/icons-material/Language';
-import { QRCodeSVG } from 'qrcode.react';
+import MedicalServicesIcon from '@mui/icons-material/MedicalServicesOutlined';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, Report } from '@/types';
@@ -54,9 +46,6 @@ import ThemeToggle from '@/components/ThemeToggle';
 const ReportDetailDialog = dynamic(() => import('@/components/patient/ReportDetailDialog'), {
   ssr: false,
 });
-const AISummaryDialog = dynamic(() => import('@/components/patient/AISummaryDialog'), {
-  ssr: false,
-});
 const CameraCapture = dynamic(() => import('@/components/patient/CameraCapture'), {
   ssr: false,
 });
@@ -67,6 +56,9 @@ const AddReportSheet = dynamic(() => import('@/components/patient/AddReportSheet
   ssr: false,
 });
 const LanguagePicker = dynamic(() => import('@/components/patient/LanguagePicker'), {
+  ssr: false,
+});
+const AppointmentShareSheet = dynamic(() => import('@/components/patient/AppointmentShareSheet'), {
   ssr: false,
 });
 
@@ -82,23 +74,19 @@ export default function PatientDashboardClient({
   const router = useRouter();
   const t = useTranslations('dashboard');
   const [reports, setReports] = useState<Report[]>(initialReports);
-  const [showQR, setShowQR] = useState(false);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
     severity: 'success' | 'error' | 'info';
   }>({ open: false, message: '', severity: 'success' });
-  const [selectedReports, setSelectedReports] = useState<Set<string>>(new Set());
-  const [bulkMenuAnchor, setBulkMenuAnchor] = useState<null | HTMLElement>(null);
   const [navValue, setNavValue] = useState(0);
   const [viewingReport, setViewingReport] = useState<Report | null>(null);
-  const [showAISummary, setShowAISummary] = useState(false);
-  // New P0 feature states
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [interpretingReport, setInterpretingReport] = useState<Report | null>(null);
   const [uploadingCamera, setUploadingCamera] = useState(false);
   const [langPickerOpen, setLangPickerOpen] = useState(false);
+  const [shareSheetOpen, setShareSheetOpen] = useState(false);
 
   // Sync language preference from DB profile on mount (cross-device sync)
   useEffect(() => {
@@ -145,26 +133,6 @@ export default function PatientDashboardClient({
     });
   };
 
-  const handleBulkAction = async (makeSharable: boolean) => {
-    const supabase = createClient();
-    const ids = Array.from(selectedReports);
-    const { error } = await supabase
-      .from('reports')
-      .update({ is_shareable: makeSharable })
-      .in('id', ids);
-    if (error) {
-      setSnackbar({ open: true, message: 'Failed to update. Try again.', severity: 'error' });
-      setBulkMenuAnchor(null);
-    } else {
-      setReports((prev) =>
-        prev.map((r) => (ids.includes(r.id) ? { ...r, is_shareable: makeSharable } : r))
-      );
-      setSnackbar({ open: true, message: `${ids.length} reports updated`, severity: 'success' });
-      setSelectedReports(new Set());
-      setBulkMenuAnchor(null);
-    }
-  };
-
   const handleDeleteReport = async (reportId: string, filePath: string) => {
     const supabase = createClient();
     const [, dbResult] = await Promise.all([
@@ -187,7 +155,8 @@ export default function PatientDashboardClient({
     window.location.replace('/login');
   };
 
-  // Handle camera capture — optimize image then upload directly (no form needed)
+  // Handle camera capture — A6: use profile.id instead of auth.getUser()
+  //                         A7: parallel thumbnail upload + DB insert
   const handleCameraCapture = async (images: Blob[]) => {
     setShowCamera(false);
     if (!images.length) return;
@@ -196,10 +165,8 @@ export default function PatientDashboardClient({
 
     try {
       const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
+      // A6: profile.id is already available as a prop — no getUser() needed
+      const userId = profile.id;
 
       const rawBlob = images[0];
       const rawFile = new File([rawBlob], 'camera-capture.jpg', { type: 'image/jpeg' });
@@ -209,8 +176,10 @@ export default function PatientDashboardClient({
       const uploadMime = optimized?.mimeType ?? 'image/jpeg';
 
       const reportId = crypto.randomUUID();
-      const filePath = `${user.id}/${reportId}/${uploadName}`;
+      const filePath = `${userId}/${reportId}/${uploadName}`;
+      const thumbnailPath = optimized?.thumbnail ? `${userId}/${reportId}/thumb.jpg` : null;
 
+      // Upload main file
       const { error: uploadErr } = await supabase.storage
         .from('reports')
         .upload(filePath, uploadBlob, { contentType: uploadMime, upsert: false });
@@ -220,32 +189,36 @@ export default function PatientDashboardClient({
         return;
       }
 
-      let thumbnailPath: string | null = null;
-      if (optimized?.thumbnail) {
-        thumbnailPath = `${user.id}/${reportId}/thumb.jpg`;
-        await supabase.storage
-          .from('reports')
-          .upload(thumbnailPath, optimized.thumbnail, { contentType: 'image/jpeg', upsert: false });
-      }
-
       const today = new Date().toISOString().split('T')[0];
-      const { data: newReport, error: dbErr } = await supabase
-        .from('reports')
-        .insert({
-          id: reportId,
-          patient_id: user.id,
-          title: 'Captured Report',
-          report_type: 'other',
-          file_path: filePath,
-          file_name: uploadName,
-          file_size: uploadBlob.size,
-          mime_type: uploadMime,
-          report_date: today,
-          is_shareable: false,
-          thumbnail_path: thumbnailPath,
-        })
-        .select()
-        .single();
+
+      // A7: Run thumbnail upload + DB insert in parallel
+      const [, { data: newReport, error: dbErr }] = await Promise.all([
+        thumbnailPath && optimized?.thumbnail
+          ? supabase.storage
+              .from('reports')
+              .upload(thumbnailPath, optimized.thumbnail, {
+                contentType: 'image/jpeg',
+                upsert: false,
+              })
+          : Promise.resolve({ error: null }),
+        supabase
+          .from('reports')
+          .insert({
+            id: reportId,
+            patient_id: userId,
+            title: 'Captured Report',
+            report_type: 'other',
+            file_path: filePath,
+            file_name: uploadName,
+            file_size: uploadBlob.size,
+            mime_type: uploadMime,
+            report_date: today,
+            is_shareable: false,
+            thumbnail_path: thumbnailPath,
+          })
+          .select()
+          .single(),
+      ]);
 
       if (dbErr) {
         setSnackbar({ open: true, message: 'Failed to save. Try again.', severity: 'error' });
@@ -289,7 +262,6 @@ export default function PatientDashboardClient({
   );
 
   const shareableCount = reports.filter((r) => r.is_shareable).length;
-  const starredReports = reports.filter((r) => r.is_starred);
 
   return (
     <Box sx={{ pb: 10, minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -397,125 +369,57 @@ export default function PatientDashboardClient({
               {profile.full_name}
             </Typography>
 
-            <Collapse in={showQR}>
-              <Box
-                sx={{
-                  bgcolor: 'white',
-                  borderRadius: 2,
-                  p: 1.5,
-                  display: 'inline-block',
-                  mb: 2.5,
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                }}
-                className="animate-scale-in"
-              >
-                <QRCodeSVG value={profile.health_id || ''} size={130} level="M" />
-              </Box>
-            </Collapse>
-
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              {[
-                {
-                  icon: <ContentCopyIcon sx={{ fontSize: 15 }} />,
-                  label: t('copyId'),
-                  action: handleCopyId,
-                },
-                {
-                  icon: <QrCode2Icon sx={{ fontSize: 15 }} />,
-                  label: showQR ? t('hideQr') : t('showQr'),
-                  action: () => setShowQR(!showQR),
-                },
-                {
-                  icon: <ShareIcon sx={{ fontSize: 15 }} />,
-                  label: t('share'),
-                  action: handleWhatsAppShare,
-                },
-              ].map((btn) => (
-                <Button
-                  key={btn.label}
-                  size="small"
-                  startIcon={btn.icon}
-                  onClick={btn.action}
-                  sx={{
-                    color: 'white',
-                    bgcolor: 'rgba(255,255,255,0.15)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    backdropFilter: 'blur(4px)',
-                    borderRadius: 2,
-                    '&:hover': { bgcolor: 'rgba(255,255,255,0.25)', transform: 'translateY(-1px)' },
-                    fontSize: '0.75rem',
-                    py: 0.6,
-                  }}
-                >
-                  {btn.label}
-                </Button>
-              ))}
+              <Button
+                size="small"
+                startIcon={<ContentCopyIcon sx={{ fontSize: 15 }} />}
+                onClick={handleCopyId}
+                sx={{
+                  color: 'white',
+                  bgcolor: 'rgba(255,255,255,0.15)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  backdropFilter: 'blur(4px)',
+                  borderRadius: 2,
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.25)', transform: 'translateY(-1px)' },
+                  fontSize: '0.75rem',
+                  py: 0.6,
+                }}
+              >
+                {t('copyId')}
+              </Button>
+              <Button
+                size="small"
+                startIcon={<MedicalServicesIcon sx={{ fontSize: 15 }} />}
+                onClick={() => setShareSheetOpen(true)}
+                sx={{
+                  color: 'white',
+                  bgcolor: 'rgba(255,255,255,0.20)',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  backdropFilter: 'blur(4px)',
+                  borderRadius: 2,
+                  fontWeight: 700,
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.30)', transform: 'translateY(-1px)' },
+                  fontSize: '0.75rem',
+                  py: 0.6,
+                }}
+              >
+                Share with Doctor
+              </Button>
             </Box>
           </CardContent>
         </Card>
 
-        {/* Starred Reports Section */}
+        {/* Recent Reports Section */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Box>
-            <Typography variant="h5">
-              {starredReports.length > 0 ? '⭐ Starred Reports' : t('myReports')}
-            </Typography>
+            <Typography variant="h5">Recent Reports</Typography>
             <Typography variant="body2" color="text.secondary">
-              {reports.length} total · {shareableCount} shareable
+              {reports.length} loaded · {shareableCount} shareable
             </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            {reports.length > 0 && (
-              <Tooltip title="AI summary of all reports">
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<BiotechIcon sx={{ fontSize: 16 }} />}
-                  onClick={() => setShowAISummary(true)}
-                  sx={{
-                    borderColor: 'secondary.main',
-                    color: 'secondary.main',
-                    borderRadius: 2,
-                    fontSize: '0.75rem',
-                    py: 0.5,
-                    '&:hover': { bgcolor: 'rgba(124,58,237,0.08)', borderColor: 'secondary.dark' },
-                  }}
-                >
-                  AI Insights
-                </Button>
-              </Tooltip>
-            )}
-            {selectedReports.size > 0 && (
-              <Box>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={(e) => setBulkMenuAnchor(e.currentTarget)}
-                  startIcon={<MoreVertIcon />}
-                  sx={{ borderRadius: 2 }}
-                >
-                  {selectedReports.size} selected
-                </Button>
-                <Menu
-                  anchorEl={bulkMenuAnchor}
-                  open={Boolean(bulkMenuAnchor)}
-                  onClose={() => setBulkMenuAnchor(null)}
-                >
-                  <MenuItem onClick={() => handleBulkAction(true)}>
-                    <PublicIcon sx={{ mr: 1, fontSize: 18, color: 'secondary.main' }} />
-                    {t('shareableWithDoctors')}
-                  </MenuItem>
-                  <MenuItem onClick={() => handleBulkAction(false)}>
-                    <LockIcon sx={{ mr: 1, fontSize: 18, color: 'text.secondary' }} />
-                    {t('privateOnlyYou')}
-                  </MenuItem>
-                </Menu>
-              </Box>
-            )}
           </Box>
         </Box>
 
-        {/* Reports List — shows starred reports on home, or empty state */}
+        {/* Reports List — shows 3 most recent reports, or empty state */}
         {reports.length === 0 ? (
           <Card
             className="animate-fade-in-up"
@@ -564,41 +468,12 @@ export default function PatientDashboardClient({
               </Button>
             </CardContent>
           </Card>
-        ) : starredReports.length === 0 ? (
-          /* No starred reports — show hint to star + View All */
-          <Card
-            sx={{
-              textAlign: 'center',
-              py: 4,
-              border: '1.5px dashed',
-              borderColor: 'divider',
-              bgcolor: 'transparent',
-              boxShadow: 'none',
-              borderRadius: 3,
-            }}
-          >
-            <CardContent>
-              <Typography variant="body1" sx={{ mb: 0.5, fontWeight: 600 }}>
-                No starred reports yet
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Star your important reports to pin them here
-              </Typography>
-              <Button
-                variant="contained"
-                size="small"
-                onClick={() => router.push('/dashboard/patient/reports')}
-              >
-                View All {reports.length} Reports
-              </Button>
-            </CardContent>
-          </Card>
         ) : (
           <Box
             sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}
             className="stagger-children"
           >
-            {starredReports.map((report) => {
+            {reports.slice(0, 3).map((report) => {
               const typeColor = REPORT_TYPE_COLORS[report.report_type] || REPORT_TYPE_COLORS.other;
               return (
                 <Card
@@ -620,21 +495,6 @@ export default function PatientDashboardClient({
                       '&:last-child': { pb: 2 },
                     }}
                   >
-                    <Checkbox
-                      checked={selectedReports.has(report.id)}
-                      onChange={(e) => {
-                        const next = new Set(selectedReports);
-                        if (e.target.checked) {
-                          next.add(report.id);
-                        } else {
-                          next.delete(report.id);
-                        }
-                        setSelectedReports(next);
-                      }}
-                      size="small"
-                      sx={{ p: 0.5 }}
-                    />
-
                     {/* Type icon */}
                     <Box
                       sx={{
@@ -822,13 +682,6 @@ export default function PatientDashboardClient({
         }}
       />
 
-      {/* AI Summary Dialog */}
-      <AISummaryDialog
-        open={showAISummary}
-        onClose={() => setShowAISummary(false)}
-        reports={reports}
-      />
-
       {/* Health Interpreter */}
       {interpretingReport && (
         <HealthInterpreter
@@ -844,7 +697,7 @@ export default function PatientDashboardClient({
         <CameraCapture onCapture={handleCameraCapture} onClose={() => setShowCamera(false)} />
       )}
 
-      {/* Add Report Sheet (Scan + Upload — no Emergency Card) */}
+      {/* Add Report Sheet (Scan + Upload) */}
       <AddReportSheet
         open={addSheetOpen}
         onClose={() => setAddSheetOpen(false)}
@@ -858,6 +711,15 @@ export default function PatientDashboardClient({
         currentLocale={getCurrentLocale()}
         onClose={() => setLangPickerOpen(false)}
         onSelect={handleLocaleSelect}
+      />
+
+      {/* Share with Doctor sheet */}
+      <AppointmentShareSheet
+        open={shareSheetOpen}
+        onClose={() => setShareSheetOpen(false)}
+        healthId={profile.health_id || ''}
+        onCopy={handleCopyId}
+        onWhatsApp={handleWhatsAppShare}
       />
     </Box>
   );

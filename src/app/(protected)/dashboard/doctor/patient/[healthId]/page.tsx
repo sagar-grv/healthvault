@@ -14,14 +14,20 @@ export default async function DoctorPatientViewPage({
 
   const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  // Fetch doctor profile + patient search in parallel
+  // Fetch doctor profile + patient in parallel
   const [{ data: doctorProfile }, { data: patient }] = await Promise.all([
     supabase.from('profiles').select('id, role, full_name').eq('id', user.id).single(),
-    supabase.from('profiles').select('id, full_name, health_id')
-      .eq('health_id', decodedHealthId).eq('role', 'patient').single(),
+    supabase
+      .from('profiles')
+      .select('id, full_name, health_id')
+      .eq('health_id', decodedHealthId)
+      .eq('role', 'patient')
+      .single(),
   ]);
 
   if (!doctorProfile || doctorProfile.role !== 'doctor') redirect('/dashboard');
@@ -39,24 +45,26 @@ export default async function DoctorPatientViewPage({
     );
   }
 
-  // Fetch reports
+  // Fetch columns matching Report type for the doctor's view
   const { data: reports } = await supabase
     .from('reports')
-    .select('*')
+    .select(
+      'id, title, report_type, file_path, file_name, file_size, mime_type, report_date, notes, thumbnail_path, uploaded_at, updated_at, is_shareable, is_starred, patient_id'
+    )
     .eq('patient_id', patient.id)
     .eq('is_shareable', true)
     .order('report_date', { ascending: false });
 
-  // Log access + update search attempt in parallel (non-blocking — don't await)
-  // Fire and forget so it doesn't delay the page render
+  // Log access — fire and forget, does not block page render
   Promise.all([
     supabase.from('access_logs').insert({
       patient_id: patient.id,
       doctor_id: user.id,
       doctor_name: doctorProfile.full_name,
-      reports_viewed: (reports || []).map((r) => r.id),
+      reports_viewed: (reports ?? []).map((r) => r.id),
     }),
-    supabase.from('search_attempts')
+    supabase
+      .from('search_attempts')
       .update({ found: true })
       .eq('doctor_id', user.id)
       .eq('searched_health_id', decodedHealthId)
@@ -69,7 +77,7 @@ export default async function DoctorPatientViewPage({
       found={true}
       healthId={decodedHealthId}
       patientName={patient.full_name}
-      reports={reports || []}
+      reports={reports ?? []}
       doctorId={user.id}
       doctorName={doctorProfile.full_name}
     />

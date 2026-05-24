@@ -14,6 +14,8 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Paper from '@mui/material/Paper';
+import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
 import BottomNavigation from '@mui/material/BottomNavigation';
 import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 import Alert from '@mui/material/Alert';
@@ -42,15 +44,24 @@ const HealthInterpreter = dynamic(() => import('@/components/patient/HealthInter
 });
 
 const FILTER_ALL = 'all';
+const PAGE_SIZE = 20;
 
 interface ReportsPageClientProps {
   reports: Report[];
+  totalCount: number;
+  initialHasMore: boolean;
 }
 
-export default function ReportsPageClient({ reports: initialReports }: ReportsPageClientProps) {
+export default function ReportsPageClient({
+  reports: initialReports,
+  totalCount,
+  initialHasMore,
+}: ReportsPageClientProps) {
   const router = useRouter();
   const tc = useTranslations('common');
   const [reports, setReports] = useState<Report[]>(initialReports);
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState(FILTER_ALL);
   const [viewingReport, setViewingReport] = useState<Report | null>(null);
@@ -60,6 +71,24 @@ export default function ReportsPageClient({ reports: initialReports }: ReportsPa
     message: '',
     severity: 'success' as const,
   });
+
+  const handleLoadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const supabase = createClient();
+      const { data: more } = await supabase
+        .from('reports')
+        .select('*')
+        .order('uploaded_at', { ascending: false })
+        .range(reports.length, reports.length + PAGE_SIZE - 1);
+      if (more) {
+        setReports((prev) => [...prev, ...more]);
+        setHasMore(more.length === PAGE_SIZE);
+      }
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   // Filtered + searched reports
   const filtered = useMemo(() => {
@@ -107,8 +136,11 @@ export default function ReportsPageClient({ reports: initialReports }: ReportsPa
 
   const handleDelete = async (reportId: string, filePath: string) => {
     const supabase = createClient();
-    await supabase.storage.from('reports').remove([filePath]);
-    await supabase.from('reports').delete().eq('id', reportId);
+    // Run storage remove + DB delete in parallel (was sequential — risk of orphan rows)
+    await Promise.all([
+      supabase.storage.from('reports').remove([filePath]),
+      supabase.from('reports').delete().eq('id', reportId),
+    ]);
     setReports((prev) => prev.filter((r) => r.id !== reportId));
     setSnackbar({ open: true, message: 'Report deleted', severity: 'success' });
   };
@@ -127,7 +159,7 @@ export default function ReportsPageClient({ reports: initialReports }: ReportsPa
           </Typography>
           <ThemeToggle />
           <Typography variant="body2" color="text.secondary">
-            {reports.length} total
+            {totalCount} total
           </Typography>
         </Toolbar>
         {/* Search bar */}
@@ -332,6 +364,20 @@ export default function ReportsPageClient({ reports: initialReports }: ReportsPa
             </Card>
           );
         })}
+
+        {/* Load more */}
+        {hasMore && !search && filterType === FILTER_ALL && (
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            sx={{ mt: 1, mb: 2, borderRadius: 3, borderColor: 'divider', color: 'text.secondary' }}
+            startIcon={loadingMore ? <CircularProgress size={16} /> : undefined}
+          >
+            {loadingMore ? 'Loading…' : `Load more (${totalCount - reports.length} remaining)`}
+          </Button>
+        )}
       </Box>
 
       {/* Bottom Navigation */}

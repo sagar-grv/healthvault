@@ -4,6 +4,8 @@ import ReportsPageClient from './ReportsPageClient';
 
 export const dynamic = 'force-dynamic';
 
+const PAGE_SIZE = 20;
+
 export default async function ReportsPage() {
   const supabase = await createClient();
   const {
@@ -12,11 +14,22 @@ export default async function ReportsPage() {
 
   if (!user) redirect('/login');
 
-  const { data: reports } = await supabase
-    .from('reports')
-    .select('*')
-    .eq('patient_id', user.id)
-    .order('uploaded_at', { ascending: false });
+  // Fetch first page + total count in parallel
+  const [{ data: reports }, { count }] = await Promise.all([
+    supabase
+      .from('reports')
+      .select('*')
+      .eq('patient_id', user.id)
+      .order('uploaded_at', { ascending: false })
+      .limit(PAGE_SIZE),
+    supabase.from('reports').select('*', { count: 'exact', head: true }).eq('patient_id', user.id),
+  ]);
 
-  return <ReportsPageClient reports={reports || []} />;
+  return (
+    <ReportsPageClient
+      reports={reports || []}
+      totalCount={count ?? 0}
+      initialHasMore={(reports?.length ?? 0) === PAGE_SIZE}
+    />
+  );
 }
