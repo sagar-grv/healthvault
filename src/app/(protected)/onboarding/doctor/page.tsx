@@ -8,14 +8,62 @@ import CardContent from '@mui/material/CardContent';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
+import Avatar from '@mui/material/Avatar';
 import MenuItem from '@mui/material/MenuItem';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
+import SearchIcon from '@mui/icons-material/Search';
+import VerifiedIcon from '@mui/icons-material/Verified';
 import { MEDICAL_COUNCILS } from '@/constants';
 import { createClient } from '@/lib/supabase/client';
 
+// ── Welcome slides data ─────────────────────────────────────────────────────
+
+const welcomeSteps = [
+  {
+    icon: <MedicalServicesIcon sx={{ fontSize: 48, color: 'white' }} />,
+    gradient: 'linear-gradient(135deg, #047857, #10B981)',
+    glow: 'rgba(5,150,105,0.30)',
+    badge: 'rgba(5,150,105,0.12)',
+    badgeText: 'success.main',
+    title: 'Welcome to HealthVault',
+    description:
+      "See your patient's complete medical history — prescriptions, lab reports, and scans from any clinic. All in one search.",
+  },
+  {
+    icon: <SearchIcon sx={{ fontSize: 48, color: 'white' }} />,
+    gradient: 'linear-gradient(135deg, #047857, #10B981)',
+    glow: 'rgba(5,150,105,0.30)',
+    badge: 'rgba(5,150,105,0.12)',
+    badgeText: 'success.main',
+    title: 'Search Any Patient',
+    description:
+      "Ask your patient for their Health ID. Type it in. Instantly see all the records they've chosen to share with you. Every access is logged.",
+  },
+  {
+    icon: <VerifiedIcon sx={{ fontSize: 48, color: 'white' }} />,
+    gradient: 'linear-gradient(135deg, #1D4ED8, #3B82F6)',
+    glow: 'rgba(37,99,235,0.30)',
+    badge: 'rgba(37,99,235,0.12)',
+    badgeText: 'primary.main',
+    title: 'Complete Your Profile',
+    description:
+      'Add your registration number, council, and qualification. This gets you verified — and patients will trust you with their records.',
+  },
+];
+
+// ── Page ────────────────────────────────────────────────────────────────────
+
 export default function DoctorOnboardingPage() {
   const router = useRouter();
+
+  // Welcome slides state
+  const [showWelcome, setShowWelcome] = useState(true);
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  // Profile form state — unchanged from original
   const [registrationNumber, setRegistrationNumber] = useState('');
   const [councilName, setCouncilName] = useState('');
   const [qualification, setQualification] = useState('');
@@ -24,6 +72,8 @@ export default function DoctorOnboardingPage() {
   const [city, setCity] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // ── Existing handlers — untouched ────────────────────────────────────────
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +91,6 @@ export default function DoctorOnboardingPage() {
         return;
       }
 
-      // Update doctor profile
       const { error: updateError } = await supabase
         .from('doctor_profiles')
         .update({
@@ -59,11 +108,7 @@ export default function DoctorOnboardingPage() {
         return;
       }
 
-      // Mark onboarding as complete
-      await supabase
-        .from('profiles')
-        .update({ onboarding_complete: true })
-        .eq('id', user.id);
+      await supabase.from('profiles').update({ onboarding_complete: true }).eq('id', user.id);
 
       router.push('/dashboard/doctor');
       router.refresh();
@@ -83,10 +128,7 @@ export default function DoctorOnboardingPage() {
       } = await supabase.auth.getUser();
 
       if (user) {
-        await supabase
-          .from('profiles')
-          .update({ onboarding_complete: true })
-          .eq('id', user.id);
+        await supabase.from('profiles').update({ onboarding_complete: true }).eq('id', user.id);
       }
 
       router.push('/dashboard/doctor');
@@ -97,6 +139,138 @@ export default function DoctorOnboardingPage() {
       setLoading(false);
     }
   };
+
+  // ── Welcome slides ───────────────────────────────────────────────────────
+
+  if (showWelcome) {
+    const s = welcomeSteps[activeSlide];
+    const isLast = activeSlide === welcomeSteps.length - 1;
+
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          bgcolor: 'background.default',
+          display: 'flex',
+          flexDirection: 'column',
+          px: 3,
+          pt: 5,
+          pb: 4,
+          maxWidth: 430,
+          mx: 'auto',
+          width: '100%',
+        }}
+      >
+        {/* Progress dots */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.5, mb: 2 }}>
+          {welcomeSteps.map((_, i) => (
+            <Box
+              key={i}
+              sx={{
+                height: 5,
+                width: i === activeSlide ? 28 : 8,
+                borderRadius: 99,
+                bgcolor: i === activeSlide ? 'secondary.main' : 'divider',
+                transition: 'all 0.3s ease',
+              }}
+            />
+          ))}
+        </Box>
+
+        {/* Main content */}
+        <Box
+          key={activeSlide}
+          className="animate-fade-in-up"
+          sx={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            py: 4,
+          }}
+        >
+          {/* Icon Avatar */}
+          <Avatar
+            sx={{
+              width: 104,
+              height: 104,
+              background: s.gradient,
+              boxShadow: `0 16px 48px ${s.glow}`,
+              mb: 4,
+            }}
+          >
+            {s.icon}
+          </Avatar>
+
+          {/* Step badge */}
+          <Box
+            sx={{
+              display: 'inline-flex',
+              bgcolor: s.badge,
+              color: s.badgeText,
+              borderRadius: 99,
+              px: 2,
+              py: 0.5,
+              mb: 2.5,
+            }}
+          >
+            <Typography
+              variant="caption"
+              sx={{ fontWeight: 700, letterSpacing: '0.08em', fontSize: '0.72rem' }}
+            >
+              {String(activeSlide + 1).padStart(2, '0')} OF {welcomeSteps.length}
+            </Typography>
+          </Box>
+
+          <Typography variant="h3" sx={{ fontWeight: 800, mb: 2, lineHeight: 1.2 }}>
+            {s.title}
+          </Typography>
+          <Typography
+            variant="body1"
+            color="text.secondary"
+            sx={{ lineHeight: 1.75, maxWidth: 320, mx: 'auto' }}
+          >
+            {s.description}
+          </Typography>
+        </Box>
+
+        {/* Bottom actions */}
+        <Box>
+          <Button
+            variant="contained"
+            color="secondary"
+            fullWidth
+            size="large"
+            endIcon={!isLast ? <ArrowForwardIcon /> : null}
+            onClick={isLast ? () => setShowWelcome(false) : () => setActiveSlide((p) => p + 1)}
+            sx={{
+              py: 1.875,
+              borderRadius: 3,
+              fontSize: '1rem',
+              fontWeight: 700,
+              boxShadow: '0 4px 16px rgba(5,150,105,0.30)',
+              mb: 1,
+            }}
+          >
+            {isLast ? 'Set Up Profile →' : 'Next'}
+          </Button>
+          <Button
+            variant="text"
+            fullWidth
+            onClick={handleSkip}
+            disabled={loading}
+            sx={{ color: 'text.disabled', '&:hover': { transform: 'none' } }}
+          >
+            Skip for now
+          </Button>
+        </Box>
+      </Box>
+    );
+  }
+
+  // ── Profile form — exactly as original, with styled green header ─────────
 
   return (
     <Box
@@ -111,23 +285,30 @@ export default function DoctorOnboardingPage() {
       }}
     >
       <Card sx={{ width: '100%', maxWidth: 480 }}>
-        <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
-          {/* Header */}
-          <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+        {/* Green header — matches doctor profile hero */}
+        <Box
+          sx={{
+            background: 'linear-gradient(135deg, #047857 0%, #059669 50%, #10B981 100%)',
+            px: 3,
+            pt: 3,
+            pb: 2.5,
+          }}
+        >
+          <Typography variant="h5" sx={{ color: 'white', fontWeight: 700, mb: 0.5 }}>
             Complete Your Profile
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            This helps patients trust their data with verified professionals.
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.75)' }}>
+            Required to get verified by admin
           </Typography>
+        </Box>
 
-          {/* Error Alert */}
+        <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
           {error && (
             <Alert severity="error" sx={{ mb: 3 }}>
               {error}
             </Alert>
           )}
 
-          {/* Profile Form */}
           <Box component="form" onSubmit={handleSubmit}>
             <TextField
               fullWidth
@@ -190,16 +371,13 @@ export default function DoctorOnboardingPage() {
             <Button
               type="submit"
               variant="contained"
+              color="secondary"
               fullWidth
               size="large"
               disabled={loading}
               sx={{ mb: 1 }}
             >
-              {loading ? (
-                <CircularProgress size={24} color="inherit" />
-              ) : (
-                'Save & Continue'
-              )}
+              {loading ? <CircularProgress size={24} color="inherit" /> : 'Save & Continue'}
             </Button>
 
             <Button
