@@ -32,6 +32,7 @@ import PublicIcon from '@mui/icons-material/Public';
 import { createClient } from '@/lib/supabase/client';
 import { Report } from '@/types';
 import { REPORT_TYPES, REPORT_TYPE_COLORS } from '@/constants';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const ReportDetailDialog = dynamic(() => import('@/components/patient/ReportDetailDialog'), {
   ssr: false,
@@ -117,13 +118,14 @@ export default function ReportsPageClient({ reports: initialReports }: ReportsPa
   const getTypeLabel = (type: string) => REPORT_TYPES.find((t) => t.value === type)?.label || type;
 
   return (
-    <Box sx={{ pb: 10, minHeight: '100vh', bgcolor: '#F9FAFB' }}>
+    <Box sx={{ pb: 10, minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* AppBar */}
       <AppBar position="sticky" color="inherit" elevation={0}>
         <Toolbar>
           <Typography variant="h6" sx={{ fontWeight: 700, flexGrow: 1 }}>
             My Reports
           </Typography>
+          <ThemeToggle />
           <Typography variant="body2" color="text.secondary">
             {reports.length} total
           </Typography>

@@ -17,6 +17,16 @@
   --color-surface: #ffffff;
 }
 
+/* Dark mode CSS variables — applied via data-theme="dark" on <html> */
+[data-theme='dark'] {
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+  --color-border: #334155;
+  --color-surface: #1e293b;
+  --color-primary-light: #1e3a5f;
+  --color-secondary-light: #064e3b;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

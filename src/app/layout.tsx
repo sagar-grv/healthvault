@@ -47,16 +47,27 @@ export default async function RootLayout({
 }>) {
   const cookieStore = await cookies();
   const locale = cookieStore.get('hv_locale')?.value || 'en';
-  const supported = ['en', 'hi'];
+  const supported = ['en', 'hi', 'ta', 'te', 'mr', 'bn', 'gu', 'kn', 'ml', 'pa', 'or', 'as'];
   const resolvedLocale = supported.includes(locale) ? locale : 'en';
   const messages = (await import(`../../messages/${resolvedLocale}.json`)).default;
   return (
     <html
-      lang="en"
+      lang={resolvedLocale}
       className={`${plusJakarta.variable} ${inter.variable}`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen bg-[#F9FAFB] antialiased">
+      {/* Anti-flash: apply saved theme before React hydrates to prevent white flash in dark mode */}
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('hv_theme')||'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`,
+          }}
+        />
+      </head>
+      <body
+        className="min-h-screen antialiased"
+        style={{ background: 'var(--background)', color: 'var(--foreground)' }}
+      >
         <EmotionRegistry>
           <ThemeProvider>
             <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
