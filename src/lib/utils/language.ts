@@ -81,12 +81,21 @@ export function syncLanguageFromProfile(profileLanguage: string | null | undefin
 
 /**
  * Get AI explanation language.
- * Falls back to UI locale, then 'en'.
- * This is SEPARATE from the app UI language.
+ * Priority: hv_ai_language → hv_preferred_language localStorage → hv_locale cookie → 'en'
+ * This ensures first-session users (empty localStorage) still get the right language.
  */
 export function getAiLanguage(): string {
   if (typeof window === 'undefined') return 'en';
-  return localStorage.getItem(AI_LANGUAGE_KEY) || localStorage.getItem(STORAGE_KEY) || 'en';
+  const aiLang = localStorage.getItem(AI_LANGUAGE_KEY);
+  if (aiLang) return aiLang;
+  const uiLang = localStorage.getItem(STORAGE_KEY);
+  if (uiLang) return uiLang;
+  // Fallback: read cookie directly (first session, localStorage not yet populated)
+  const cookieLang = document.cookie
+    .split('; ')
+    .find((r) => r.startsWith(`${LOCALE_COOKIE}=`))
+    ?.split('=')[1];
+  return cookieLang || 'en';
 }
 
 /**

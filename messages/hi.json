@@ -34,6 +34,21 @@
       "profile": "प्रोफ़ाइल"
     }
   },
+  "languages": {
+    "title": "भाषा चुनें",
+    "en": "English",
+    "hi": "हिंदी",
+    "ta": "தமிழ்",
+    "te": "తెలుగు",
+    "mr": "मराठी",
+    "bn": "বাংলা",
+    "gu": "ગુજરાતી",
+    "kn": "ಕನ್ನಡ",
+    "ml": "മലയാളം",
+    "pa": "ਪੰਜਾਬੀ",
+    "or": "ଓଡ଼ିଆ",
+    "as": "অসমীয়া"
+  },
   "profile": {
     "pageTitle": "मेरी प्रोफ़ाइल",
     "totalReports": "कुल रिपोर्ट्स",
@@ -50,6 +65,7 @@
     "emailHelperText": "ईमेल बदला नहीं जा सकता",
     "phone": "फ़ोन नंबर (वैकल्पिक)",
     "phonePlaceholder": "+91 XXXXX XXXXX",
+    "languagePreference": "भाषा",
     "saveChanges": "बदलाव सेव करें",
     "nameFallback": "आपका नाम",
     "account": "अकाउंट",
@@ -58,7 +74,10 @@
     "comingSoon": "जल्द आ रहा है",
     "emergencyCard": "इमरजेंसी कार्ड",
     "emergencyCardDesc": "बिना फ़ोन के भी फ़र्स्ट रेस्पोंडर आपका QR स्कैन कर सकते हैं",
+    "emergencyCardConfigured": "इमरजेंसी कार्ड तैयार है",
+    "emergencyCardConfiguredDesc": "आपकी इमरजेंसी जानकारी सेट है",
     "setupEmergencyCard": "इमरजेंसी कार्ड बनाएं",
+    "updateEmergencyCard": "इमरजेंसी कार्ड अपडेट करें",
     "saveSuccess": "प्रोफ़ाइल सफलतापूर्वक अपडेट हुई।",
     "saveError": "बदलाव सेव नहीं हुए।",
     "saveUnknownError": "कुछ गलत हुआ।",

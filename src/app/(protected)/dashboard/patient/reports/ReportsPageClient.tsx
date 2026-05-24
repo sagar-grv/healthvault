@@ -32,7 +32,6 @@ import PublicIcon from '@mui/icons-material/Public';
 import { createClient } from '@/lib/supabase/client';
 import { Report } from '@/types';
 import { REPORT_TYPES, REPORT_TYPE_COLORS } from '@/constants';
-import { getAiLanguage } from '@/lib/utils/language';
 
 const ReportDetailDialog = dynamic(() => import('@/components/patient/ReportDetailDialog'), {
   ssr: false,
@@ -366,7 +365,6 @@ export default function ReportsPageClient({ reports: initialReports }: ReportsPa
         <HealthInterpreter
           reportId={interpretingReport.id}
           reportTitle={interpretingReport.title}
-          defaultLanguage={getAiLanguage()}
           open={!!interpretingReport}
           onClose={() => setInterpretingReport(null)}
         />
