@@ -229,7 +229,16 @@ export default function UploadReportPage() {
       </AppBar>
 
       {uploading && (
-        <Box sx={{ position: 'sticky', top: 64, zIndex: 10, bgcolor: 'white', px: 2, py: 1 }}>
+        <Box
+          sx={{
+            position: 'sticky',
+            top: 64,
+            zIndex: 10,
+            bgcolor: 'background.paper',
+            px: 2,
+            py: 1,
+          }}
+        >
           <LinearProgress
             variant="determinate"
             value={progress}
@@ -259,15 +268,21 @@ export default function UploadReportPage() {
             onDrop={handleDrop}
             onClick={() => document.getElementById('file-input')?.click()}
             sx={{
-              border: `2px dashed ${dragOver ? '#2563EB' : file ? '#059669' : '#E5E7EB'}`,
+              border: `2px dashed ${dragOver ? '#2563EB' : file ? '#059669' : 'transparent'}`,
+              outline: `${dragOver || file ? 0 : 1}px solid`,
+              outlineColor: 'divider',
               borderRadius: 3,
               p: 4,
               textAlign: 'center',
-              bgcolor: dragOver ? '#EFF6FF' : file ? '#F0FDF4' : '#FAFAFA',
+              bgcolor: dragOver
+                ? 'rgba(37,99,235,0.08)'
+                : file
+                  ? 'rgba(5,150,105,0.08)'
+                  : 'action.hover',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               mb: 3,
-              '&:hover': { borderColor: '#2563EB', bgcolor: '#EFF6FF' },
+              '&:hover': { borderColor: '#2563EB', bgcolor: 'rgba(37,99,235,0.08)' },
             }}
           >
             {file ? (
@@ -285,14 +300,14 @@ export default function UploadReportPage() {
                     icon={<CompressIcon sx={{ fontSize: 14 }} />}
                     label={`${formatFileSize(compressionInfo.original)} → ${formatFileSize(compressionInfo.compressed)} (${Math.round((1 - compressionInfo.compressed / compressionInfo.original) * 100)}% smaller)`}
                     size="small"
-                    sx={{ mt: 1, bgcolor: '#D1FAE5', color: '#065F46' }}
+                    sx={{ mt: 1, bgcolor: 'rgba(5,150,105,0.12)', color: 'success.dark' }}
                   />
                 )}
                 {!compressionInfo && (
                   <Chip
                     label={t('tapToChange')}
                     size="small"
-                    sx={{ mt: 1.5, bgcolor: '#D1FAE5', color: '#065F46' }}
+                    sx={{ mt: 1.5, bgcolor: 'rgba(5,150,105,0.12)', color: 'success.dark' }}
                   />
                 )}
               </Box>
@@ -303,7 +318,7 @@ export default function UploadReportPage() {
                     width: 56,
                     height: 56,
                     borderRadius: 3,
-                    bgcolor: '#EFF6FF',
+                    bgcolor: 'rgba(37,99,235,0.10)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -401,8 +416,8 @@ export default function UploadReportPage() {
           <Card
             sx={{
               mb: 3,
-              bgcolor: isShareable ? '#F0FDF4' : '#F9FAFB',
-              border: `1px solid ${isShareable ? '#A7F3D0' : '#E5E7EB'}`,
+              bgcolor: isShareable ? 'rgba(5,150,105,0.08)' : 'background.default',
+              border: `1px solid ${isShareable ? 'rgba(5,150,105,0.35)' : 'transparent'}`,
             }}
           >
             <CardContent sx={{ p: 2.5 }}>

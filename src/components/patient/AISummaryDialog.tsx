@@ -123,7 +123,7 @@ export default function AISummaryDialog({ open, onClose, reports }: AISummaryDia
         position="sticky"
         color="inherit"
         elevation={0}
-        sx={{ borderBottom: '1px solid #E5E7EB' }}
+        sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
       >
         <Toolbar>
           <IconButton edge="start" onClick={handleClose} aria-label="Close">
@@ -141,7 +141,7 @@ export default function AISummaryDialog({ open, onClose, reports }: AISummaryDia
             icon={<AutoAwesomeIcon sx={{ fontSize: 13 }} />}
             label="Gemini AI"
             size="small"
-            sx={{ bgcolor: '#EDE9FE', color: '#6D28D9', fontWeight: 600 }}
+            sx={{ bgcolor: 'rgba(124,58,237,0.12)', color: 'secondary.main', fontWeight: 600 }}
           />
         </Toolbar>
       </AppBar>
@@ -149,14 +149,20 @@ export default function AISummaryDialog({ open, onClose, reports }: AISummaryDia
       <Box sx={{ px: 2, py: 3, maxWidth: 600, mx: 'auto', pb: 10 }}>
         {/* Not started yet */}
         {!started && (
-          <Card sx={{ mb: 3, border: '1px solid #C4B5FD', bgcolor: '#F5F3FF' }}>
+          <Card
+            sx={{
+              mb: 3,
+              border: '1px solid rgba(124,58,237,0.35)',
+              bgcolor: 'rgba(124,58,237,0.06)',
+            }}
+          >
             <CardContent sx={{ p: 3, textAlign: 'center' }}>
               <Box
                 sx={{
                   width: 64,
                   height: 64,
                   borderRadius: 4,
-                  bgcolor: '#EDE9FE',
+                  bgcolor: 'rgba(124,58,237,0.12)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -186,7 +192,7 @@ export default function AISummaryDialog({ open, onClose, reports }: AISummaryDia
                 size="large"
                 startIcon={<AutoAwesomeIcon />}
                 onClick={handleAnalyzeAll}
-                sx={{ bgcolor: '#7C3AED', '&:hover': { bgcolor: '#6D28D9' }, px: 4 }}
+                sx={{ bgcolor: 'secondary.main', '&:hover': { bgcolor: 'secondary.dark' }, px: 4 }}
               >
                 Start AI Analysis
               </Button>
@@ -203,20 +209,33 @@ export default function AISummaryDialog({ open, onClose, reports }: AISummaryDia
 
         {/* Loading progress */}
         {loading && (
-          <Card sx={{ mb: 3, border: '1px solid #C4B5FD', bgcolor: '#F5F3FF' }}>
+          <Card
+            sx={{
+              mb: 3,
+              border: '1px solid rgba(124,58,237,0.35)',
+              bgcolor: 'rgba(124,58,237,0.06)',
+            }}
+          >
             <CardContent sx={{ p: 2.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-                <CircularProgress size={20} sx={{ color: '#7C3AED' }} />
-                <Typography variant="body2" sx={{ fontWeight: 600, color: '#7C3AED' }}>
+                <CircularProgress size={20} sx={{ color: 'secondary.main' }} />
+                <Typography variant="body2" sx={{ fontWeight: 600, color: 'secondary.main' }}>
                   Analyzing reports… {summaries.length}/{reports.length}
                 </Typography>
               </Box>
-              <Box sx={{ height: 6, bgcolor: '#EDE9FE', borderRadius: 3, overflow: 'hidden' }}>
+              <Box
+                sx={{
+                  height: 6,
+                  bgcolor: 'rgba(124,58,237,0.15)',
+                  borderRadius: 3,
+                  overflow: 'hidden',
+                }}
+              >
                 <Box
                   sx={{
                     height: '100%',
                     width: `${progress}%`,
-                    bgcolor: '#7C3AED',
+                    bgcolor: 'secondary.main',
                     borderRadius: 3,
                     transition: 'width 0.4s ease',
                   }}
@@ -240,13 +259,13 @@ export default function AISummaryDialog({ open, onClose, reports }: AISummaryDia
               sx={{
                 flex: 1,
                 textAlign: 'center',
-                bgcolor: '#F0FDF4',
-                border: '1px solid #A7F3D0',
+                bgcolor: 'rgba(5,150,105,0.08)',
+                border: '1px solid rgba(5,150,105,0.35)',
                 boxShadow: 'none',
               }}
             >
               <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Typography variant="h4" sx={{ fontWeight: 800, color: '#059669' }}>
+                <Typography variant="h4" sx={{ fontWeight: 800, color: 'success.main' }}>
                   {analyzedCount}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
@@ -258,15 +277,18 @@ export default function AISummaryDialog({ open, onClose, reports }: AISummaryDia
               sx={{
                 flex: 1,
                 textAlign: 'center',
-                bgcolor: totalAbnormal > 0 ? '#FFF7ED' : '#F0FDF4',
-                border: `1px solid ${totalAbnormal > 0 ? '#FED7AA' : '#A7F3D0'}`,
+                bgcolor: totalAbnormal > 0 ? 'rgba(234,88,12,0.08)' : 'rgba(5,150,105,0.08)',
+                border: `1px solid ${totalAbnormal > 0 ? 'rgba(234,88,12,0.35)' : 'rgba(5,150,105,0.35)'}`,
                 boxShadow: 'none',
               }}
             >
               <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                 <Typography
                   variant="h4"
-                  sx={{ fontWeight: 800, color: totalAbnormal > 0 ? '#EA580C' : '#059669' }}
+                  sx={{
+                    fontWeight: 800,
+                    color: totalAbnormal > 0 ? 'warning.main' : 'success.main',
+                  }}
                 >
                   {totalAbnormal}
                 </Typography>
@@ -279,13 +301,13 @@ export default function AISummaryDialog({ open, onClose, reports }: AISummaryDia
               sx={{
                 flex: 1,
                 textAlign: 'center',
-                bgcolor: '#EFF6FF',
-                border: '1px solid #BFDBFE',
+                bgcolor: 'rgba(37,99,235,0.08)',
+                border: '1px solid rgba(37,99,235,0.25)',
                 boxShadow: 'none',
               }}
             >
               <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Typography variant="h4" sx={{ fontWeight: 800, color: '#2563EB' }}>
+                <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.main' }}>
                   {totalMeds}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
@@ -319,10 +341,10 @@ export default function AISummaryDialog({ open, onClose, reports }: AISummaryDia
                     key={s.reportId}
                     sx={{
                       border: s.error
-                        ? '1px solid #FCA5A5'
+                        ? '1px solid rgba(239,68,68,0.5)'
                         : s.abnormalCount > 0
-                          ? '1px solid #FED7AA'
-                          : '1px solid #E5E7EB',
+                          ? '1px solid rgba(234,88,12,0.5)'
+                          : undefined,
                     }}
                   >
                     <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
@@ -371,8 +393,8 @@ export default function AISummaryDialog({ open, onClose, reports }: AISummaryDia
                                   label={`${s.abnormalCount} abnormal`}
                                   size="small"
                                   sx={{
-                                    bgcolor: '#FFF7ED',
-                                    color: '#EA580C',
+                                    bgcolor: 'rgba(234,88,12,0.12)',
+                                    color: 'warning.main',
                                     fontSize: '0.65rem',
                                     height: 18,
                                   }}
@@ -383,8 +405,8 @@ export default function AISummaryDialog({ open, onClose, reports }: AISummaryDia
                                   label={`${s.medicationsCount} medication${s.medicationsCount !== 1 ? 's' : ''}`}
                                   size="small"
                                   sx={{
-                                    bgcolor: '#EFF6FF',
-                                    color: '#2563EB',
+                                    bgcolor: 'rgba(37,99,235,0.10)',
+                                    color: 'primary.main',
                                     fontSize: '0.65rem',
                                     height: 18,
                                   }}
@@ -421,7 +443,7 @@ export default function AISummaryDialog({ open, onClose, reports }: AISummaryDia
               variant="outlined"
               startIcon={<AutoAwesomeIcon />}
               onClick={handleAnalyzeAll}
-              sx={{ borderColor: '#7C3AED', color: '#7C3AED' }}
+              sx={{ borderColor: 'secondary.main', color: 'secondary.main' }}
             >
               Re-analyze All
             </Button>

@@ -19,18 +19,18 @@ const ACTIONS = [
     icon: (color: string) => <ScanReportIcon size={40} color={color} />,
     title: 'Scan Report',
     subtitle: 'Point camera at your medical report',
-    bg: '#EFF6FF',
-    iconColor: '#2563EB',
-    borderColor: '#BFDBFE',
+    bg: 'rgba(37,99,235,0.08)',
+    iconColor: '#3B82F6',
+    borderColor: 'rgba(37,99,235,0.25)',
   },
   {
     id: 'upload',
     icon: (color: string) => <UploadCloudIcon size={40} color={color} />,
     title: 'Upload from Phone',
     subtitle: 'Choose a PDF or image from gallery',
-    bg: '#F0FDF4',
-    iconColor: '#059669',
-    borderColor: '#A7F3D0',
+    bg: 'rgba(5,150,105,0.08)',
+    iconColor: '#10B981',
+    borderColor: 'rgba(5,150,105,0.25)',
   },
 ] as const;
 
@@ -66,18 +66,11 @@ export default function AddReportSheet({
     >
       {/* Drag handle */}
       <Box sx={{ pt: 1.5, pb: 1, display: 'flex', justifyContent: 'center' }}>
-        <Box
-          sx={{
-            width: 40,
-            height: 4,
-            borderRadius: 2,
-            bgcolor: '#D1D5DB',
-          }}
-        />
+        <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: 'rgba(150,150,150,0.35)' }} />
       </Box>
 
       {/* Title */}
-      <Typography variant="subtitle1" sx={{ fontWeight: 700, px: 3, pb: 2, color: '#111827' }}>
+      <Typography variant="subtitle1" sx={{ fontWeight: 700, px: 3, pb: 2 }}>
         Add Report
       </Typography>
 
@@ -116,12 +109,12 @@ export default function AddReportSheet({
                 width: 64,
                 height: 64,
                 borderRadius: 2.5,
-                bgcolor: 'white',
+                bgcolor: 'background.paper',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
-                boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
               }}
             >
               {action.icon(action.iconColor)}
@@ -129,13 +122,10 @@ export default function AddReportSheet({
 
             {/* Text */}
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography
-                variant="body1"
-                sx={{ fontWeight: 700, color: '#111827', lineHeight: 1.3 }}
-              >
+              <Typography variant="body1" sx={{ fontWeight: 700, lineHeight: 1.3 }}>
                 {action.title}
               </Typography>
-              <Typography variant="body2" sx={{ color: '#6B7280', mt: 0.3, lineHeight: 1.4 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.3, lineHeight: 1.4 }}>
                 {action.subtitle}
               </Typography>
             </Box>

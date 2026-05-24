@@ -248,7 +248,7 @@ export default function HealthInterpreter({
         {/* Loading */}
         {loading && (
           <Box sx={{ textAlign: 'center', py: 4 }}>
-            <CircularProgress size={32} sx={{ color: '#7C3AED' }} />
+            <CircularProgress size={32} sx={{ color: 'secondary.main' }} />
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
               Reading your report...
             </Typography>
@@ -290,10 +290,10 @@ export default function HealthInterpreter({
                 onClick={speak}
                 size="small"
                 sx={{
-                  bgcolor: speaking ? '#7C3AED' : '#F5F3FF',
-                  color: speaking ? 'white' : '#7C3AED',
+                  bgcolor: speaking ? 'secondary.main' : 'rgba(124,58,237,0.10)',
+                  color: speaking ? 'secondary.contrastText' : 'secondary.main',
                   flexShrink: 0,
-                  '&:hover': { bgcolor: speaking ? '#6D28D9' : '#EDE9FE' },
+                  '&:hover': { bgcolor: speaking ? 'secondary.dark' : 'rgba(124,58,237,0.18)' },
                 }}
               >
                 {speaking ? <StopIcon fontSize="small" /> : <VolumeUpIcon fontSize="small" />}
@@ -301,7 +301,7 @@ export default function HealthInterpreter({
             </Box>
 
             {/* Explanation */}
-            <Typography variant="body2" sx={{ lineHeight: 1.7, color: '#374151', mb: 2 }}>
+            <Typography variant="body2" sx={{ lineHeight: 1.7, color: 'text.primary', mb: 2 }}>
               {result.explanation}
             </Typography>
 
@@ -312,7 +312,7 @@ export default function HealthInterpreter({
                   variant="caption"
                   sx={{
                     fontWeight: 600,
-                    color: '#6B7280',
+                    color: 'text.secondary',
                     textTransform: 'uppercase',
                     letterSpacing: 0.5,
                   }}
@@ -344,7 +344,7 @@ export default function HealthInterpreter({
                   variant="caption"
                   sx={{
                     fontWeight: 600,
-                    color: '#6B7280',
+                    color: 'text.secondary',
                     textTransform: 'uppercase',
                     letterSpacing: 0.5,
                   }}
@@ -359,8 +359,8 @@ export default function HealthInterpreter({
                         p: 1.5,
                         mb: 1,
                         borderRadius: 2,
-                        bgcolor: item.isHigh ? '#FEF2F2' : '#EFF6FF',
-                        border: `1px solid ${item.isHigh ? '#FECACA' : '#BFDBFE'}`,
+                        bgcolor: item.isHigh ? 'rgba(239,68,68,0.10)' : 'rgba(37,99,235,0.08)',
+                        border: `1px solid ${item.isHigh ? 'rgba(239,68,68,0.35)' : 'rgba(37,99,235,0.25)'}`,
                       }}
                     >
                       <Box
@@ -385,8 +385,8 @@ export default function HealthInterpreter({
                           label={item.yourValue}
                           size="small"
                           sx={{
-                            bgcolor: item.isHigh ? '#FEE2E2' : '#DBEAFE',
-                            color: item.isHigh ? '#DC2626' : '#1D4ED8',
+                            bgcolor: item.isHigh ? 'rgba(239,68,68,0.15)' : 'rgba(37,99,235,0.12)',
+                            color: item.isHigh ? 'error.main' : 'primary.main',
                             fontWeight: 700,
                             fontSize: '0.7rem',
                           }}
@@ -401,7 +401,7 @@ export default function HealthInterpreter({
                       </Typography>
                       <Typography
                         variant="body2"
-                        sx={{ fontSize: '0.8rem', mt: 0.5, color: '#374151' }}
+                        sx={{ fontSize: '0.8rem', mt: 0.5, color: 'text.primary' }}
                       >
                         {item.whatItMeans}
                       </Typography>
@@ -417,11 +417,11 @@ export default function HealthInterpreter({
                 sx={{
                   p: 2,
                   borderRadius: 2,
-                  bgcolor: '#F0FDF4',
-                  border: '1px solid #BBF7D0',
+                  bgcolor: 'rgba(5,150,105,0.08)',
+                  border: '1px solid rgba(5,150,105,0.35)',
                 }}
               >
-                <Typography variant="body2" sx={{ color: '#065F46', fontWeight: 500 }}>
+                <Typography variant="body2" sx={{ color: 'success.dark', fontWeight: 500 }}>
                   💡 {result.actionAdvice}
                 </Typography>
               </Box>

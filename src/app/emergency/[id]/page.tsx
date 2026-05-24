@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import { ThemeProvider as MUIThemeProvider } from '@mui/material/styles';
+import { lightTheme } from '@/lib/theme';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Card from '@mui/material/Card';
@@ -138,233 +140,245 @@ export default function EmergencyPage() {
 
   if (loading) {
     return (
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: '#FEF2F2',
-        }}
-      >
-        <CircularProgress color="error" />
-      </Box>
+      <MUIThemeProvider theme={lightTheme}>
+        <Box
+          sx={{
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: '#FEF2F2',
+          }}
+        >
+          <CircularProgress color="error" />
+        </Box>
+      </MUIThemeProvider>
     );
   }
 
   if (error || !data) {
     return (
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: '#F9FAFB',
-          p: 3,
-        }}
-      >
-        <Typography variant="h6" color="text.secondary" sx={{ textAlign: 'center' }}>
-          {error || 'Emergency card not found.'}
-        </Typography>
-      </Box>
+      <MUIThemeProvider theme={lightTheme}>
+        <Box
+          sx={{
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: '#F9FAFB',
+            p: 3,
+          }}
+        >
+          <Typography variant="h6" color="text.secondary" sx={{ textAlign: 'center' }}>
+            {error || 'Emergency card not found.'}
+          </Typography>
+        </Box>
+      </MUIThemeProvider>
     );
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        bgcolor: '#FEF2F2',
-        p: 2,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-      }}
-    >
-      {/* Header */}
-      <Box sx={{ width: '100%', maxWidth: 420, textAlign: 'center', py: 3 }}>
-        <LocalHospitalIcon sx={{ fontSize: 52, color: '#DC2626' }} />
-        <Typography variant="h5" sx={{ fontWeight: 700, color: '#DC2626', mt: 1 }}>
-          EMERGENCY INFO
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Medical information for first responders
-        </Typography>
-      </Box>
-
-      {/* Main Card */}
-      <Card
+    <MUIThemeProvider theme={lightTheme}>
+      <Box
         sx={{
-          width: '100%',
-          maxWidth: 420,
-          borderRadius: 3,
-          boxShadow: '0 4px 20px rgba(220,38,38,0.15)',
-          border: '2px solid #FECACA',
+          minHeight: '100vh',
+          bgcolor: '#FEF2F2',
+          p: 2,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
         }}
       >
-        <CardContent sx={{ p: 3 }}>
-          {/* Patient Name */}
-          <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, textAlign: 'center' }}>
-            {data.name}
+        {/* Header */}
+        <Box sx={{ width: '100%', maxWidth: 420, textAlign: 'center', py: 3 }}>
+          <LocalHospitalIcon sx={{ fontSize: 52, color: '#DC2626' }} />
+          <Typography variant="h5" sx={{ fontWeight: 700, color: '#DC2626', mt: 1 }}>
+            EMERGENCY INFO
           </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Medical information for first responders
+          </Typography>
+        </Box>
 
-          {/* Blood Group */}
-          {data.bloodGroup && (
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.5,
-                mb: 2,
-                p: 2,
-                bgcolor: '#FEF2F2',
-                borderRadius: 2,
-              }}
-            >
-              <BloodtypeIcon sx={{ color: '#DC2626', fontSize: 28 }} />
-              <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Blood Group
-                </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1 }}>
-                  {data.bloodGroup}
-                </Typography>
-              </Box>
-            </Box>
-          )}
-
-          {/* Allergies */}
-          {data.allergies.length > 0 && (
-            <Box sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <WarningAmberIcon sx={{ color: '#F59E0B', fontSize: 20 }} />
-                <Typography variant="body2" sx={{ fontWeight: 600, color: '#92400E' }}>
-                  Allergies
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                {data.allergies.map((allergy, i) => (
-                  <Chip
-                    key={i}
-                    label={allergy}
-                    size="small"
-                    sx={{ bgcolor: '#FEF3C7', color: '#92400E', fontWeight: 600 }}
-                  />
-                ))}
-              </Box>
-            </Box>
-          )}
-
-          {/* Conditions */}
-          {data.conditions.length > 0 && (
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', mb: 1 }}>
-                Medical Conditions
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                {data.conditions.map((condition, i) => (
-                  <Chip
-                    key={i}
-                    label={condition}
-                    size="small"
-                    sx={{ bgcolor: '#EFF6FF', color: '#1D4ED8', fontWeight: 600 }}
-                  />
-                ))}
-              </Box>
-            </Box>
-          )}
-
-          {/* Emergency Contact */}
-          {data.emergencyContact.phone && (
-            <Box
-              sx={{ mt: 2, p: 2, bgcolor: '#F0FDF4', borderRadius: 2, border: '1px solid #BBF7D0' }}
-            >
-              <Typography variant="body2" sx={{ fontWeight: 600, color: '#065F46', mb: 1 }}>
-                Emergency Contact
-              </Typography>
-              {data.emergencyContact.name && (
-                <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                  {data.emergencyContact.name}
-                </Typography>
-              )}
-              <Button
-                variant="contained"
-                color="success"
-                startIcon={<PhoneIcon />}
-                fullWidth
-                href={`tel:${data.emergencyContact.phone}`}
-                sx={{ mt: 1, py: 1.5, fontWeight: 700, fontSize: '1rem' }}
-              >
-                Call {data.emergencyContact.phone}
-              </Button>
-            </Box>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* SOS Button */}
-      <Box sx={{ width: '100%', maxWidth: 420, mt: 3 }}>
-        <Button
-          variant="contained"
-          fullWidth
-          disabled={sosState === 'locating'}
-          onClick={handleSOS}
-          startIcon={
-            sosState === 'locating' ? (
-              <LocationOnIcon />
-            ) : sosState === 'sent' ? (
-              <CheckmarkIcon />
-            ) : (
-              <SosIcon />
-            )
-          }
+        {/* Main Card */}
+        <Card
           sx={{
-            py: 2,
-            fontSize: '1.2rem',
-            fontWeight: 800,
+            width: '100%',
+            maxWidth: 420,
             borderRadius: 3,
-            bgcolor: sosState === 'sent' ? '#059669' : '#DC2626',
-            '&:hover': { bgcolor: sosState === 'sent' ? '#047857' : '#B91C1C' },
-            boxShadow: '0 8px 24px rgba(220,38,38,0.4)',
-            letterSpacing: '0.05em',
+            boxShadow: '0 4px 20px rgba(220,38,38,0.15)',
+            border: '2px solid #FECACA',
           }}
         >
-          {sosState === 'idle' && '🆘 SEND SOS'}
-          {sosState === 'locating' && 'Getting Location...'}
-          {sosState === 'sent' && '✓ SOS Sent'}
-        </Button>
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ display: 'block', textAlign: 'center', mt: 1 }}
-        >
-          Sends name, blood group, allergies and GPS location to emergency contact
-        </Typography>
-      </Box>
+          <CardContent sx={{ p: 3 }}>
+            {/* Patient Name */}
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, textAlign: 'center' }}>
+              {data.name}
+            </Typography>
 
-      {/* Footer */}
-      <Box sx={{ mt: 3, textAlign: 'center' }}>
-        <Typography variant="caption" color="text.secondary">
-          Powered by HealthVault
-        </Typography>
-      </Box>
+            {/* Blood Group */}
+            {data.bloodGroup && (
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  mb: 2,
+                  p: 2,
+                  bgcolor: '#FEF2F2',
+                  borderRadius: 2,
+                }}
+              >
+                <BloodtypeIcon sx={{ color: '#DC2626', fontSize: 28 }} />
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Blood Group
+                  </Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1 }}>
+                    {data.bloodGroup}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert
-          severity={snackbar.severity}
+            {/* Allergies */}
+            {data.allergies.length > 0 && (
+              <Box sx={{ mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <WarningAmberIcon sx={{ color: '#F59E0B', fontSize: 20 }} />
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#92400E' }}>
+                    Allergies
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                  {data.allergies.map((allergy, i) => (
+                    <Chip
+                      key={i}
+                      label={allergy}
+                      size="small"
+                      sx={{ bgcolor: '#FEF3C7', color: '#92400E', fontWeight: 600 }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+            )}
+
+            {/* Conditions */}
+            {data.conditions.length > 0 && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', mb: 1 }}>
+                  Medical Conditions
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                  {data.conditions.map((condition, i) => (
+                    <Chip
+                      key={i}
+                      label={condition}
+                      size="small"
+                      sx={{ bgcolor: '#EFF6FF', color: '#1D4ED8', fontWeight: 600 }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+            )}
+
+            {/* Emergency Contact */}
+            {data.emergencyContact.phone && (
+              <Box
+                sx={{
+                  mt: 2,
+                  p: 2,
+                  bgcolor: '#F0FDF4',
+                  borderRadius: 2,
+                  border: '1px solid #BBF7D0',
+                }}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 600, color: '#065F46', mb: 1 }}>
+                  Emergency Contact
+                </Typography>
+                {data.emergencyContact.name && (
+                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                    {data.emergencyContact.name}
+                  </Typography>
+                )}
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<PhoneIcon />}
+                  fullWidth
+                  href={`tel:${data.emergencyContact.phone}`}
+                  sx={{ mt: 1, py: 1.5, fontWeight: 700, fontSize: '1rem' }}
+                >
+                  Call {data.emergencyContact.phone}
+                </Button>
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* SOS Button */}
+        <Box sx={{ width: '100%', maxWidth: 420, mt: 3 }}>
+          <Button
+            variant="contained"
+            fullWidth
+            disabled={sosState === 'locating'}
+            onClick={handleSOS}
+            startIcon={
+              sosState === 'locating' ? (
+                <LocationOnIcon />
+              ) : sosState === 'sent' ? (
+                <CheckmarkIcon />
+              ) : (
+                <SosIcon />
+              )
+            }
+            sx={{
+              py: 2,
+              fontSize: '1.2rem',
+              fontWeight: 800,
+              borderRadius: 3,
+              bgcolor: sosState === 'sent' ? '#059669' : '#DC2626',
+              '&:hover': { bgcolor: sosState === 'sent' ? '#047857' : '#B91C1C' },
+              boxShadow: '0 8px 24px rgba(220,38,38,0.4)',
+              letterSpacing: '0.05em',
+            }}
+          >
+            {sosState === 'idle' && '🆘 SEND SOS'}
+            {sosState === 'locating' && 'Getting Location...'}
+            {sosState === 'sent' && '✓ SOS Sent'}
+          </Button>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: 'block', textAlign: 'center', mt: 1 }}
+          >
+            Sends name, blood group, allergies and GPS location to emergency contact
+          </Typography>
+        </Box>
+
+        {/* Footer */}
+        <Box sx={{ mt: 3, textAlign: 'center' }}>
+          <Typography variant="caption" color="text.secondary">
+            Powered by HealthVault
+          </Typography>
+        </Box>
+
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={4000}
           onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Box>
+          <Alert
+            severity={snackbar.severity}
+            onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+      </Box>
+    </MUIThemeProvider>
   );
 }
 

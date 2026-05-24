@@ -319,7 +319,7 @@ export default function PatientDashboardClient({
           </Box>
           {/* Language picker chip — tap to open full language selector */}
           <Chip
-            icon={<LanguageIcon sx={{ fontSize: '14px !important', color: '#2563EB' }} />}
+            icon={<LanguageIcon sx={{ fontSize: '14px !important', color: 'primary.main' }} />}
             label={getCurrentLocale().toUpperCase()}
             onClick={() => setLangPickerOpen(true)}
             size="small"
@@ -329,11 +329,11 @@ export default function PatientDashboardClient({
               fontSize: '0.7rem',
               fontWeight: 700,
               letterSpacing: '0.05em',
-              bgcolor: '#EFF6FF',
-              color: '#2563EB',
-              border: '1px solid #BFDBFE',
+              bgcolor: 'rgba(37,99,235,0.08)',
+              color: 'primary.main',
+              border: '1px solid rgba(37,99,235,0.25)',
               cursor: 'pointer',
-              '&:hover': { bgcolor: '#DBEAFE' },
+              '&:hover': { bgcolor: 'rgba(37,99,235,0.14)' },
             }}
           />
           <ThemeToggle />
@@ -473,12 +473,12 @@ export default function PatientDashboardClient({
                   startIcon={<BiotechIcon sx={{ fontSize: 16 }} />}
                   onClick={() => setShowAISummary(true)}
                   sx={{
-                    borderColor: '#7C3AED',
-                    color: '#7C3AED',
+                    borderColor: 'secondary.main',
+                    color: 'secondary.main',
                     borderRadius: 2,
                     fontSize: '0.75rem',
                     py: 0.5,
-                    '&:hover': { bgcolor: '#F5F3FF', borderColor: '#6D28D9' },
+                    '&:hover': { bgcolor: 'rgba(124,58,237,0.08)', borderColor: 'secondary.dark' },
                   }}
                 >
                   AI Insights
@@ -522,7 +522,8 @@ export default function PatientDashboardClient({
             sx={{
               textAlign: 'center',
               py: 7,
-              border: '2px dashed #E5E7EB',
+              border: '2px dashed',
+              borderColor: 'divider',
               bgcolor: 'transparent',
               boxShadow: 'none',
             }}
@@ -533,7 +534,7 @@ export default function PatientDashboardClient({
                   width: 72,
                   height: 72,
                   borderRadius: 4,
-                  bgcolor: '#EFF6FF',
+                  bgcolor: 'rgba(37,99,235,0.10)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -569,7 +570,8 @@ export default function PatientDashboardClient({
             sx={{
               textAlign: 'center',
               py: 4,
-              border: '1.5px dashed #E5E7EB',
+              border: '1.5px dashed',
+              borderColor: 'divider',
               bgcolor: 'transparent',
               boxShadow: 'none',
               borderRadius: 3,
@@ -687,7 +689,7 @@ export default function PatientDashboardClient({
                         {report.is_shareable ? (
                           <PublicIcon sx={{ fontSize: 16, color: 'secondary.main', mr: 0.25 }} />
                         ) : (
-                          <LockIcon sx={{ fontSize: 16, color: '#D1D5DB', mr: 0.25 }} />
+                          <LockIcon sx={{ fontSize: 16, color: 'text.disabled', mr: 0.25 }} />
                         )}
                         <Switch
                           checked={report.is_shareable}
@@ -706,7 +708,10 @@ export default function PatientDashboardClient({
                           e.stopPropagation();
                           setInterpretingReport(report);
                         }}
-                        sx={{ color: '#2563EB', '&:hover': { bgcolor: '#EFF6FF' } }}
+                        sx={{
+                          color: 'primary.main',
+                          '&:hover': { bgcolor: 'rgba(37,99,235,0.08)' },
+                        }}
                         aria-label="Explain in my language"
                       >
                         <TranslateIcon sx={{ fontSize: 18 }} />
@@ -722,8 +727,8 @@ export default function PatientDashboardClient({
                           handleDeleteReport(report.id, report.file_path);
                         }}
                         sx={{
-                          color: '#D1D5DB',
-                          '&:hover': { color: '#EF4444', bgcolor: '#FEF2F2' },
+                          color: 'text.disabled',
+                          '&:hover': { color: 'error.main', bgcolor: 'rgba(239,68,68,0.08)' },
                         }}
                       >
                         <DeleteOutlinedIcon fontSize="small" />
@@ -738,7 +743,7 @@ export default function PatientDashboardClient({
               fullWidth
               variant="outlined"
               onClick={() => router.push('/dashboard/patient/reports')}
-              sx={{ borderRadius: 3, mt: 0.5, color: '#6B7280', borderColor: '#E5E7EB' }}
+              sx={{ borderRadius: 3, mt: 0.5, color: 'text.secondary', borderColor: 'divider' }}
             >
               View All {reports.length} Reports →
             </Button>
