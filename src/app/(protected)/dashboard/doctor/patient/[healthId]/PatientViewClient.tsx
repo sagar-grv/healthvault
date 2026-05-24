@@ -51,13 +51,13 @@ export default function PatientViewClient({
 
   const handleViewReport = async (report: Report) => {
     setViewingReport(report);
-    setFileUrl(null); // Reset before loading
+    setFileUrl(null);
     setLoadingFile(true);
     try {
       const supabase = createClient();
       const { data } = await supabase.storage
         .from('reports')
-        .createSignedUrl(report.file_path, 3600); // 1 hour TTL
+        .createSignedUrl(report.file_path, 3600);
       setFileUrl(data?.signedUrl || null);
     } catch {
       setFileUrl(null);
@@ -66,7 +66,8 @@ export default function PatientViewClient({
     }
   };
 
-  const getReportTypeLabel = (type: string) => REPORT_TYPES.find(t => t.value === type)?.label || type;
+  const getReportTypeLabel = (type: string) =>
+    REPORT_TYPES.find((t) => t.value === type)?.label || type;
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -78,7 +79,16 @@ export default function PatientViewClient({
           <Box sx={{ ml: 1 }}>
             <Typography variant="h6">Patient Records</Typography>
             {found && (
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1, mt: -0.25, fontFamily: 'var(--font-mono)' }}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{
+                  display: 'block',
+                  lineHeight: 1,
+                  mt: -0.25,
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
                 {healthId}
               </Typography>
             )}
@@ -89,16 +99,48 @@ export default function PatientViewClient({
       <Box sx={{ px: 2, py: 3, maxWidth: 600, mx: 'auto' }}>
         {/* Not Found */}
         {!found && (
-          <Card className="animate-fade-in-up" sx={{ textAlign: 'center', py: 7, border: '2px dashed #E5E7EB', bgcolor: 'transparent', boxShadow: 'none' }}>
+          <Card
+            className="animate-fade-in-up"
+            sx={{
+              textAlign: 'center',
+              py: 7,
+              border: '2px dashed',
+              borderColor: 'divider',
+              bgcolor: 'transparent',
+              boxShadow: 'none',
+            }}
+          >
             <CardContent>
-              <Box sx={{ width: 72, height: 72, borderRadius: 4, bgcolor: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2.5 }}>
-                <ErrorOutlineIcon sx={{ fontSize: 32, color: '#EF4444' }} />
+              <Box
+                sx={{
+                  width: 72,
+                  height: 72,
+                  borderRadius: 4,
+                  bgcolor: 'rgba(239,68,68,0.10)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mx: 'auto',
+                  mb: 2.5,
+                }}
+              >
+                <ErrorOutlineIcon sx={{ fontSize: 32, color: 'error.main' }} />
               </Box>
-              <Typography variant="h4" sx={{ mb: 1 }}>Patient Not Found</Typography>
+              <Typography variant="h4" sx={{ mb: 1 }}>
+                Patient Not Found
+              </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                 No patient found with Health ID:
               </Typography>
-              <Typography sx={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '1.1rem', mb: 3, color: '#374151' }}>
+              <Typography
+                sx={{
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 700,
+                  fontSize: '1.1rem',
+                  mb: 3,
+                  color: 'text.primary',
+                }}
+              >
                 {healthId}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
@@ -117,111 +159,196 @@ export default function PatientViewClient({
             {/* Patient Info Card */}
             <Card
               className="animate-fade-in-up"
-              sx={{ mb: 3, background: 'linear-gradient(135deg, #F0FDF4, #DCFCE7)', border: '1px solid #A7F3D0' }}
+              sx={{
+                mb: 3,
+                bgcolor: 'rgba(5,150,105,0.08)',
+                border: '1px solid rgba(5,150,105,0.30)',
+              }}
             >
               <CardContent sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Avatar
                   sx={{
-                    width: 48, height: 48,
+                    width: 48,
+                    height: 48,
                     background: 'linear-gradient(135deg, #047857, #10B981)',
-                    fontWeight: 700, fontSize: '1.1rem',
-                    boxShadow: '0 4px 12px rgba(5,150,105,0.3)',
+                    fontWeight: 700,
+                    fontSize: '1.1rem',
+                    boxShadow: '0 4px 12px rgba(5,150,105,0.40)',
                   }}
                 >
                   {patientName.charAt(0).toUpperCase()}
                 </Avatar>
                 <Box sx={{ flexGrow: 1 }}>
-                  <Typography variant="h5" sx={{ mb: 0.25 }}>{patientName}</Typography>
-                  <Typography variant="caption" sx={{ fontFamily: 'var(--font-mono)', color: '#065F46', fontWeight: 600 }}>
+                  <Typography variant="h5" sx={{ mb: 0.25 }}>
+                    {patientName}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontFamily: 'var(--font-mono)',
+                      color: 'success.dark',
+                      fontWeight: 600,
+                    }}
+                  >
                     {healthId}
                   </Typography>
                 </Box>
                 <Chip
                   label={`${reports.length} report${reports.length !== 1 ? 's' : ''}`}
                   size="small"
-                  sx={{ bgcolor: '#D1FAE5', color: '#065F46', fontWeight: 600 }}
+                  sx={{
+                    bgcolor: 'rgba(5,150,105,0.15)',
+                    color: 'success.dark',
+                    fontWeight: 600,
+                  }}
                 />
               </CardContent>
             </Card>
 
-            {/* Access logged — always visible when patient is found */}
+            {/* Access logged notice */}
             <Alert severity="info" icon={<InfoOutlinedIcon />} sx={{ mb: 2.5 }}>
-              This access is logged. {patientName.split(' ')[0]} can see that you viewed their records.
+              This access is logged. {patientName.split(' ')[0]} can see that you viewed their
+              records.
             </Alert>
 
-            {/* AI Clinical Insights — above report list */}
+            {/* AI Clinical Insights */}
             {reports.length > 0 && (
               <PatientInsightsCard reports={reports} patientName={patientName} />
             )}
 
             {/* No Shareable Reports */}
             {reports.length === 0 && (
-              <Card sx={{ textAlign: 'center', py: 6, border: '2px dashed #E5E7EB', bgcolor: 'transparent', boxShadow: 'none' }}>
+              <Card
+                sx={{
+                  textAlign: 'center',
+                  py: 6,
+                  border: '2px dashed',
+                  borderColor: 'divider',
+                  bgcolor: 'transparent',
+                  boxShadow: 'none',
+                }}
+              >
                 <CardContent>
-                  <Box sx={{ width: 64, height: 64, borderRadius: 4, bgcolor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2 }}>
-                    <InfoOutlinedIcon sx={{ fontSize: 28, color: '#2563EB' }} />
+                  <Box
+                    sx={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: 4,
+                      bgcolor: 'rgba(37,99,235,0.10)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mx: 'auto',
+                      mb: 2,
+                    }}
+                  >
+                    <InfoOutlinedIcon sx={{ fontSize: 28, color: 'primary.main' }} />
                   </Box>
-                  <Typography variant="h5" sx={{ mb: 1 }}>No Shared Reports</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 280, mx: 'auto' }}>
-                    Ask {patientName.split(' ')[0]} to open HealthVault and share reports before your appointment.
+                  <Typography variant="h5" sx={{ mb: 1 }}>
+                    No Shared Reports
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ maxWidth: 280, mx: 'auto' }}
+                  >
+                    Ask {patientName.split(' ')[0]} to open HealthVault and share reports before
+                    your appointment.
                   </Typography>
                 </CardContent>
               </Card>
             )}
 
-            {/* Reports */}
+            {/* Reports list */}
             {reports.length > 0 && (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }} className="stagger-children">
-                {reports.map(report => {
-                    const typeColor = REPORT_TYPE_COLORS[report.report_type] || REPORT_TYPE_COLORS.other;
-                    return (
-                      <Card
-                        key={report.id}
-                        onClick={() => handleViewReport(report)}
+              <Box
+                sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}
+                className="stagger-children"
+              >
+                {reports.map((report) => {
+                  const typeColor =
+                    REPORT_TYPE_COLORS[report.report_type] || REPORT_TYPE_COLORS.other;
+                  return (
+                    <Card
+                      key={report.id}
+                      onClick={() => handleViewReport(report)}
+                      sx={{
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          transform: 'translateY(-1px)',
+                          boxShadow: '0 8px 24px rgba(0,0,0,0.22)',
+                        },
+                      }}
+                    >
+                      <CardContent
                         sx={{
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          '&:hover': { transform: 'translateY(-1px)', boxShadow: '0 8px 24px rgba(0,0,0,0.08)' },
+                          p: 2,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 2,
+                          '&:last-child': { pb: 2 },
                         }}
                       >
-                        <CardContent sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, '&:last-child': { pb: 2 } }}>
-                          <Box
-                            sx={{
-                              width: 44, height: 44, borderRadius: 2.5, flexShrink: 0,
-                              bgcolor: typeColor.bg,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}
-                          >
-                            <DescriptionIcon sx={{ fontSize: 22, color: typeColor.color }} />
-                          </Box>
-                          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                            <Typography variant="body1" sx={{ fontWeight: 600 }} noWrap>
-                              {report.title}
-                            </Typography>
-                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.25 }}>
-                              <Chip
-                                label={getReportTypeLabel(report.report_type)}
-                                size="small"
-                                sx={{ bgcolor: typeColor.bg, color: typeColor.color, fontWeight: 600, fontSize: '0.68rem', height: 20 }}
-                              />
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <CalendarTodayIcon sx={{ fontSize: 11, color: '#9CA3AF' }} />
-                                <Typography variant="caption" color="text.secondary">
-                                  {new Date(report.report_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                </Typography>
-                              </Box>
-                            </Box>
-                            {report.notes && (
-                              <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', mt: 0.25 }}>
-                                {report.notes}
+                        <Box
+                          sx={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: 2.5,
+                            flexShrink: 0,
+                            bgcolor: typeColor.bg,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <DescriptionIcon sx={{ fontSize: 22, color: typeColor.color }} />
+                        </Box>
+                        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                          <Typography variant="body1" sx={{ fontWeight: 600 }} noWrap>
+                            {report.title}
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.25 }}>
+                            <Chip
+                              label={getReportTypeLabel(report.report_type)}
+                              size="small"
+                              sx={{
+                                bgcolor: typeColor.bg,
+                                color: typeColor.color,
+                                fontWeight: 600,
+                                fontSize: '0.68rem',
+                                height: 20,
+                              }}
+                            />
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <CalendarTodayIcon sx={{ fontSize: 11, color: 'text.disabled' }} />
+                              <Typography variant="caption" color="text.secondary">
+                                {new Date(report.report_date).toLocaleDateString('en-IN', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                })}
                               </Typography>
-                            )}
+                            </Box>
                           </Box>
-                          <OpenInNewIcon sx={{ fontSize: 18, color: '#9CA3AF', flexShrink: 0 }} />
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                          {report.notes && (
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              noWrap
+                              sx={{ display: 'block', mt: 0.25 }}
+                            >
+                              {report.notes}
+                            </Typography>
+                          )}
+                        </Box>
+                        <OpenInNewIcon
+                          sx={{ fontSize: 18, color: 'text.disabled', flexShrink: 0 }}
+                        />
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </Box>
             )}
           </>
@@ -231,21 +358,31 @@ export default function PatientViewClient({
       {/* Report Viewer Dialog */}
       <Dialog
         open={!!viewingReport}
-        onClose={() => { setViewingReport(null); setFileUrl(null); }}
+        onClose={() => {
+          setViewingReport(null);
+          setFileUrl(null);
+        }}
         fullScreen
       >
         <AppBar position="sticky" color="inherit" elevation={0}>
           <Toolbar>
-            <IconButton edge="start" onClick={() => { setViewingReport(null); setFileUrl(null); }}>
+            <IconButton
+              edge="start"
+              onClick={() => {
+                setViewingReport(null);
+                setFileUrl(null);
+              }}
+            >
               <CloseIcon />
             </IconButton>
             <Box sx={{ ml: 1, flexGrow: 1, minWidth: 0 }}>
-              <Typography variant="h6" noWrap>{viewingReport?.title}</Typography>
+              <Typography variant="h6" noWrap>
+                {viewingReport?.title}
+              </Typography>
               <Typography variant="caption" color="text.secondary">
                 {viewingReport ? getReportTypeLabel(viewingReport.report_type) : ''}
               </Typography>
             </Box>
-            {/* Open in new tab / download */}
             {fileUrl && (
               <IconButton
                 component="a"
@@ -277,16 +414,19 @@ export default function PatientViewClient({
           {!loadingFile && fileUrl && viewingReport?.mime_type?.startsWith('image/') && (
             <Box sx={{ p: 2, textAlign: 'center' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={fileUrl} alt={viewingReport?.title || 'Report'} style={{ maxWidth: '100%', height: 'auto', borderRadius: 12 }} />
+              <img
+                src={fileUrl}
+                alt={viewingReport?.title || 'Report'}
+                style={{ maxWidth: '100%', height: 'auto', borderRadius: 12 }}
+              />
             </Box>
           )}
           {!loadingFile && !fileUrl && viewingReport !== null && (
             <Box sx={{ p: 6, textAlign: 'center' }}>
-              <ErrorOutlineIcon sx={{ fontSize: 48, color: '#EF4444', mb: 2 }} />
+              <ErrorOutlineIcon sx={{ fontSize: 48, color: 'error.main', mb: 2 }} />
               <Typography color="error">Unable to load document. Please try again.</Typography>
             </Box>
           )}
-          {/* AI Analysis — always show for any viewed report */}
           {!loadingFile && viewingReport && (
             <Box sx={{ px: 2, pb: 3 }}>
               <ReportAnalysisCard reportId={viewingReport.id} />
