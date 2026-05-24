@@ -161,25 +161,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call Gemini
-    const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'AI interpretation not configured' }, { status: 503 });
-    }
-
+    // Multi-provider AI: Gemini → NVIDIA (vision fallback)
     const base64 = Buffer.from(arrayBuffer).toString('base64');
     const mimeType = report.mime_type as string;
 
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const { callVisionAI } = await import('@/lib/ai/provider-router');
+    let responseText = '';
 
-    const result = await model.generateContent([
-      buildInterpretPrompt(language),
-      { inlineData: { data: base64, mimeType } },
-    ]);
-
-    const responseText = result.response.text();
+    try {
+      const aiResult = await callVisionAI(buildInterpretPrompt(language), base64, mimeType);
+      responseText = aiResult.text;
+    } catch (e) {
+      const err = e as { message?: string };
+      if (
+        err.message?.includes('429') ||
+        err.message?.includes('quota') ||
+        err.message?.includes('rate')
+      ) {
+        return NextResponse.json(
+          { error: 'AI service is busy. Please try again in a minute.' },
+          { status: 429 }
+        );
+      }
+      throw e;
+    }
 
     // Parse JSON response
     let parsed;

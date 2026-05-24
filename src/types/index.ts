@@ -40,6 +40,7 @@ export interface Report {
   notes: string | null;
   report_date: string;
   is_shareable: boolean;
+  is_starred: boolean;
   uploaded_at: string;
   updated_at: string;
 }

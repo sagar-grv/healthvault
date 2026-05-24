@@ -13,8 +13,7 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Switch from '@mui/material/Switch';
-import SpeedDial from '@mui/material/SpeedDial';
-import SpeedDialAction from '@mui/material/SpeedDialAction';
+import Fab from '@mui/material/Fab';
 import Tooltip from '@mui/material/Tooltip';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
@@ -30,7 +29,6 @@ import AddIcon from '@mui/icons-material/Add';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
 import HomeIcon from '@mui/icons-material/Home';
-import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined';
 import HistoryIcon from '@mui/icons-material/History';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -41,8 +39,6 @@ import PersonIcon from '@mui/icons-material/PersonOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import BiotechIcon from '@mui/icons-material/Biotech';
-import DocumentScannerOutlinedIcon from '@mui/icons-material/DocumentScannerOutlined';
-import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import TranslateIcon from '@mui/icons-material/Translate';
 import LanguageIcon from '@mui/icons-material/Language';
 import { QRCodeSVG } from 'qrcode.react';
@@ -67,6 +63,9 @@ const EmergencyCardSetup = dynamic(() => import('@/components/patient/EmergencyC
   ssr: false,
 });
 const HealthInterpreter = dynamic(() => import('@/components/patient/HealthInterpreter'), {
+  ssr: false,
+});
+const AddReportSheet = dynamic(() => import('@/components/patient/AddReportSheet'), {
   ssr: false,
 });
 
@@ -94,7 +93,7 @@ export default function PatientDashboardClient({
   const [viewingReport, setViewingReport] = useState<Report | null>(null);
   const [showAISummary, setShowAISummary] = useState(false);
   // New P0 feature states
-  const [speedDialOpen, setSpeedDialOpen] = useState(false);
+  const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [showEmergencySetup, setShowEmergencySetup] = useState(false);
   const [interpretingReport, setInterpretingReport] = useState<Report | null>(null);
@@ -289,6 +288,7 @@ export default function PatientDashboardClient({
   }, [router]);
 
   const shareableCount = reports.filter((r) => r.is_shareable).length;
+  const starredReports = reports.filter((r) => r.is_starred);
 
   return (
     <Box sx={{ pb: 10, minHeight: '100vh', bgcolor: '#F9FAFB' }}>
@@ -452,10 +452,12 @@ export default function PatientDashboardClient({
           </CardContent>
         </Card>
 
-        {/* Reports Header */}
+        {/* Starred Reports Section */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Box>
-            <Typography variant="h5">{t('myReports')}</Typography>
+            <Typography variant="h5">
+              {starredReports.length > 0 ? '⭐ Starred Reports' : t('myReports')}
+            </Typography>
             <Typography variant="body2" color="text.secondary">
               {reports.length} total · {shareableCount} shareable
             </Typography>
@@ -511,7 +513,7 @@ export default function PatientDashboardClient({
           </Box>
         </Box>
 
-        {/* Reports List */}
+        {/* Reports List — shows starred reports on home, or empty state */}
         {reports.length === 0 ? (
           <Card
             className="animate-fade-in-up"
@@ -559,12 +561,40 @@ export default function PatientDashboardClient({
               </Button>
             </CardContent>
           </Card>
+        ) : starredReports.length === 0 ? (
+          /* No starred reports — show hint to star + View All */
+          <Card
+            sx={{
+              textAlign: 'center',
+              py: 4,
+              border: '1.5px dashed #E5E7EB',
+              bgcolor: 'transparent',
+              boxShadow: 'none',
+              borderRadius: 3,
+            }}
+          >
+            <CardContent>
+              <Typography variant="body1" sx={{ mb: 0.5, fontWeight: 600 }}>
+                No starred reports yet
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Star your important reports to pin them here
+              </Typography>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => router.push('/dashboard/patient/reports')}
+              >
+                View All {reports.length} Reports
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
           <Box
             sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}
             className="stagger-children"
           >
-            {reports.map((report) => {
+            {starredReports.map((report) => {
               const typeColor = REPORT_TYPE_COLORS[report.report_type] || REPORT_TYPE_COLORS.other;
               return (
                 <Card
@@ -716,82 +746,38 @@ export default function PatientDashboardClient({
                 </Card>
               );
             })}
+            {/* View All Reports button */}
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => router.push('/dashboard/patient/reports')}
+              sx={{ borderRadius: 3, mt: 0.5, color: '#6B7280', borderColor: '#E5E7EB' }}
+            >
+              View All {reports.length} Reports →
+            </Button>
           </Box>
         )}
       </Box>
 
-      {/* Speed Dial — Add Report or Emergency Card */}
-      <SpeedDial
-        ariaLabel="Quick actions"
-        open={speedDialOpen}
-        onOpen={() => setSpeedDialOpen(true)}
-        onClose={() => setSpeedDialOpen(false)}
-        icon={<AddIcon />}
-        FabProps={{
-          disabled: uploadingCamera,
-          sx: { boxShadow: '0 8px 24px rgba(37,99,235,0.35)' },
-        }}
+      {/* FAB — opens bottom sheet */}
+      <Fab
+        color="primary"
+        aria-label="Add report"
+        disabled={uploadingCamera}
+        onClick={() => setAddSheetOpen(true)}
         sx={{
           position: 'fixed',
           bottom: 'calc(88px + env(safe-area-inset-bottom, 0px))',
           right: 20,
+          width: 60,
+          height: 60,
+          boxShadow: '0 8px 24px rgba(37,99,235,0.35)',
+          '&:hover': { transform: 'scale(1.05)' },
+          transition: 'transform 0.15s ease',
         }}
       >
-        {/* Scan Report — blue */}
-        <SpeedDialAction
-          icon={<DocumentScannerOutlinedIcon sx={{ fontSize: 20 }} />}
-          slotProps={{
-            tooltip: { title: 'Scan Report' },
-            fab: {
-              sx: {
-                bgcolor: '#EFF6FF',
-                color: '#2563EB',
-                '&:hover': { bgcolor: '#DBEAFE' },
-              },
-            },
-          }}
-          onClick={() => {
-            setSpeedDialOpen(false);
-            setShowCamera(true);
-          }}
-        />
-        {/* Upload File — green */}
-        <SpeedDialAction
-          icon={<FileUploadOutlinedIcon sx={{ fontSize: 20 }} />}
-          slotProps={{
-            tooltip: { title: 'Upload File' },
-            fab: {
-              sx: {
-                bgcolor: '#F0FDF4',
-                color: '#059669',
-                '&:hover': { bgcolor: '#DCFCE7' },
-              },
-            },
-          }}
-          onClick={() => {
-            setSpeedDialOpen(false);
-            router.push('/dashboard/patient/upload');
-          }}
-        />
-        {/* Emergency Card — red */}
-        <SpeedDialAction
-          icon={<MonitorHeartIcon sx={{ fontSize: 20 }} />}
-          slotProps={{
-            tooltip: { title: 'Emergency Card' },
-            fab: {
-              sx: {
-                bgcolor: '#FEF2F2',
-                color: '#DC2626',
-                '&:hover': { bgcolor: '#FEE2E2' },
-              },
-            },
-          }}
-          onClick={() => {
-            setSpeedDialOpen(false);
-            setShowEmergencySetup(true);
-          }}
-        />
-      </SpeedDial>
+        <AddIcon sx={{ fontSize: 28 }} />
+      </Fab>
 
       {/* Bottom Navigation */}
       <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={0}>
@@ -800,14 +786,14 @@ export default function PatientDashboardClient({
           onChange={(_, v) => {
             setNavValue(v);
             if (v === 0) router.push('/dashboard/patient');
-            if (v === 1) router.push('/dashboard/patient/upload');
+            if (v === 1) router.push('/dashboard/patient/reports');
             if (v === 2) router.push('/dashboard/patient/access-log');
             if (v === 3) router.push('/dashboard/patient/profile');
           }}
           showLabels
         >
           <BottomNavigationAction label={t('home')} icon={<HomeIcon />} />
-          <BottomNavigationAction label={t('upload')} icon={<FileUploadOutlinedIcon />} />
+          <BottomNavigationAction label="Reports" icon={<AssignmentOutlinedIcon />} />
           <BottomNavigationAction label={t('accessLog')} icon={<HistoryIcon />} />
           <BottomNavigationAction label={t('profile')} icon={<PersonIcon />} />
         </BottomNavigation>
@@ -869,6 +855,15 @@ export default function PatientDashboardClient({
           onClose={() => setInterpretingReport(null)}
         />
       )}
+
+      {/* Add Report Bottom Sheet */}
+      <AddReportSheet
+        open={addSheetOpen}
+        onClose={() => setAddSheetOpen(false)}
+        onScanReport={() => setShowCamera(true)}
+        onUploadFile={() => router.push('/dashboard/patient/upload')}
+        onEmergencyCard={() => setShowEmergencySetup(true)}
+      />
     </Box>
   );
 }
