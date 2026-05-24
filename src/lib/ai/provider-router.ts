@@ -31,7 +31,9 @@ export interface AIResponse {
 
 // NVIDIA API config (OpenAI-compatible)
 const NVIDIA_BASE_URL = 'https://integrate.api.nvidia.com/v1';
-const NVIDIA_VISION_MODEL = 'mistralai/mistral-small-3.1-24b-instruct';
+// phi-4-multimodal: free endpoint, supports images (vision)
+const NVIDIA_VISION_MODEL = 'microsoft/phi-4-multimodal-instruct';
+// nemotron-super: free endpoint, excellent text quality
 const NVIDIA_TEXT_MODEL = 'nvidia/llama-3.3-nemotron-super-49b-v1';
 
 /**
@@ -116,13 +118,20 @@ export async function callVisionAI(
     );
     return { text, provider: 'gemini', model: 'gemini-2.5-flash' };
   } catch (err) {
-    const error = err as { message?: string };
-    const is429 = error.message?.includes('429') || error.message?.includes('quota');
+    const error = err as { message?: string; status?: number; toString?: () => string };
+    const errStr = error.message || error.toString?.() || '';
+    const is429 =
+      error.status === 429 ||
+      errStr.includes('429') ||
+      errStr.includes('quota') ||
+      errStr.includes('rate') ||
+      errStr.includes('RESOURCE_EXHAUSTED') ||
+      errStr.includes('Too Many Requests');
     if (!is429) throw err; // Only fallback on rate limit errors
     console.warn('[AI] Gemini rate limited, falling back to NVIDIA');
   }
 
-  // Fallback: NVIDIA mistral-small-3.1 (vision capable, free endpoint)
+  // Fallback: NVIDIA phi-4-multimodal (vision capable, free endpoint)
   try {
     // NVIDIA vision: encode image as data URL in message
     const dataUrl = `data:${imageMimeType};base64,${imageBase64}`;
@@ -152,8 +161,15 @@ export async function callTextAI(messages: AIMessage[], maxTokens = 2048): Promi
     const text = await callGemini(messages);
     return { text, provider: 'gemini', model: 'gemini-2.5-flash' };
   } catch (err) {
-    const error = err as { message?: string };
-    const is429 = error.message?.includes('429') || error.message?.includes('quota');
+    const error = err as { message?: string; status?: number; toString?: () => string };
+    const errStr = error.message || error.toString?.() || '';
+    const is429 =
+      error.status === 429 ||
+      errStr.includes('429') ||
+      errStr.includes('quota') ||
+      errStr.includes('rate') ||
+      errStr.includes('RESOURCE_EXHAUSTED') ||
+      errStr.includes('Too Many Requests');
     if (!is429) throw err;
     console.warn('[AI] Gemini rate limited, falling back to NVIDIA');
   }
