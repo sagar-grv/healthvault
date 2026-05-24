@@ -307,9 +307,9 @@ export default function DoctorAIAssistant({
             {messages.length === 0 && (
               <Box
                 sx={{
-                  bgcolor: 'white',
+                  bgcolor: 'background.paper',
                   borderRadius: 2,
-                  border: '1px solid #D1FAE5',
+                  border: '1px solid rgba(5,150,105,0.25)',
                   p: 1.5,
                   display: 'flex',
                   gap: 1,
@@ -317,10 +317,7 @@ export default function DoctorAIAssistant({
                 }}
               >
                 <AutoAwesomeIcon sx={{ fontSize: 16, color: '#059669', flexShrink: 0, mt: 0.2 }} />
-                <Typography
-                  variant="body2"
-                  sx={{ color: '#374151', fontSize: '0.82rem', lineHeight: 1.5 }}
-                >
+                <Typography variant="body2" sx={{ fontSize: '0.82rem', lineHeight: 1.5 }}>
                   {hasPatients
                     ? `Hello Dr. ${firstName}! I have access to your ${recentPatients.length} recent patient${recentPatients.length > 1 ? 's' : ''}'s shared records. Ask me anything.`
                     : `Hello Dr. ${firstName}! I don't have any patient data yet — search for a patient first to unlock patient-specific insights. I can still answer general medical questions.`}
@@ -339,14 +336,14 @@ export default function DoctorAIAssistant({
                     onClick={() => handleSend(q)}
                     sx={{
                       fontSize: '0.72rem',
-                      bgcolor: '#ECFDF5',
-                      color: '#065F46',
-                      border: '1px solid #A7F3D0',
+                      bgcolor: 'rgba(5,150,105,0.10)',
+                      color: 'success.dark',
+                      border: '1px solid rgba(5,150,105,0.25)',
                       cursor: 'pointer',
                       height: 'auto',
                       py: 0.5,
                       '& .MuiChip-label': { whiteSpace: 'normal', textAlign: 'left' },
-                      '&:hover': { bgcolor: '#D1FAE5' },
+                      '&:hover': { bgcolor: 'rgba(5,150,105,0.18)' },
                     }}
                   />
                 ))}
@@ -386,13 +383,14 @@ export default function DoctorAIAssistant({
                 <Box
                   sx={{
                     maxWidth: '78%',
-                    bgcolor: msg.role === 'user' ? '#059669' : 'white',
-                    color: msg.role === 'user' ? 'white' : '#1F2937',
+                    bgcolor: msg.role === 'user' ? '#059669' : 'background.paper',
+                    color: msg.role === 'user' ? 'white' : 'text.primary',
                     borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                     px: 1.5,
                     py: 1,
-                    border: msg.role === 'ai' ? '1px solid #E5E7EB' : 'none',
-                    boxShadow: msg.role === 'ai' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                    border: msg.role === 'ai' ? '1px solid' : 'none',
+                    borderColor: msg.role === 'ai' ? 'divider' : 'transparent',
+                    boxShadow: msg.role === 'ai' ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
                   }}
                 >
                   <Typography
@@ -439,8 +437,9 @@ export default function DoctorAIAssistant({
                 </Box>
                 <Box
                   sx={{
-                    bgcolor: 'white',
-                    border: '1px solid #E5E7EB',
+                    bgcolor: 'background.paper',
+                    border: '1px solid',
+                    borderColor: 'divider',
                     borderRadius: '16px 16px 16px 4px',
                     px: 1.5,
                     py: 0.5,
@@ -455,14 +454,14 @@ export default function DoctorAIAssistant({
             {error && !loading && (
               <Box
                 sx={{
-                  bgcolor: '#FEF2F2',
-                  border: '1px solid #FECACA',
+                  bgcolor: 'rgba(239,68,68,0.10)',
+                  border: '1px solid rgba(239,68,68,0.35)',
                   borderRadius: 2,
                   px: 1.5,
                   py: 1,
                 }}
               >
-                <Typography sx={{ fontSize: '0.78rem', color: '#DC2626' }}>{error}</Typography>
+                <Typography sx={{ fontSize: '0.78rem', color: 'error.main' }}>{error}</Typography>
               </Box>
             )}
 
@@ -474,8 +473,9 @@ export default function DoctorAIAssistant({
             sx={{
               px: 1.5,
               py: 1.25,
-              borderTop: '1px solid #E5E7EB',
-              bgcolor: 'white',
+              borderTop: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
               display: 'flex',
               alignItems: 'flex-end',
               gap: 1,
@@ -499,7 +499,7 @@ export default function DoctorAIAssistant({
                 '& .MuiOutlinedInput-root': {
                   fontSize: '0.83rem',
                   borderRadius: 3,
-                  bgcolor: '#F9FAFB',
+                  bgcolor: 'background.default',
                   '&.Mui-focused fieldset': { borderColor: '#059669' },
                 },
               }}
@@ -511,17 +511,19 @@ export default function DoctorAIAssistant({
                 width: 38,
                 height: 38,
                 flexShrink: 0,
-                bgcolor: input.trim() && !loading ? '#059669' : '#E5E7EB',
-                color: input.trim() && !loading ? 'white' : '#9CA3AF',
+                bgcolor: input.trim() && !loading ? '#059669' : 'action.disabledBackground',
+                color: input.trim() && !loading ? 'white' : 'text.disabled',
                 borderRadius: 2,
                 transition: 'all 0.15s',
-                '&:hover': { bgcolor: input.trim() && !loading ? '#047857' : '#E5E7EB' },
-                '&.Mui-disabled': { bgcolor: '#E5E7EB', color: '#9CA3AF' },
+                '&:hover': {
+                  bgcolor: input.trim() && !loading ? '#047857' : 'action.disabledBackground',
+                },
+                '&.Mui-disabled': { bgcolor: 'action.disabledBackground', color: 'text.disabled' },
               }}
               aria-label="Send message"
             >
               {loading ? (
-                <CircularProgress size={16} sx={{ color: '#9CA3AF' }} />
+                <CircularProgress size={16} sx={{ color: 'text.disabled' }} />
               ) : (
                 <SendIcon sx={{ fontSize: 16 }} />
               )}
@@ -530,9 +532,12 @@ export default function DoctorAIAssistant({
 
           {/* Character counter */}
           {input.length > 400 && (
-            <Box sx={{ px: 2, pb: 0.5, bgcolor: 'white' }}>
+            <Box sx={{ px: 2, pb: 0.5, bgcolor: 'background.paper' }}>
               <Typography
-                sx={{ fontSize: '0.68rem', color: input.length >= 500 ? '#DC2626' : '#9CA3AF' }}
+                sx={{
+                  fontSize: '0.68rem',
+                  color: input.length >= 500 ? 'error.main' : 'text.disabled',
+                }}
               >
                 {input.length}/500
               </Typography>

@@ -180,13 +180,13 @@ export default function PatientProfilePage() {
   }
 
   return (
-    <Box sx={{ pb: 12, minHeight: '100vh', bgcolor: '#F9FAFB' }}>
+    <Box sx={{ pb: 12, minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* App Bar */}
       <AppBar
         position="sticky"
         color="inherit"
         elevation={0}
-        sx={{ borderBottom: '1px solid #F3F4F6' }}
+        sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
       >
         <Toolbar>
           <IconButton
@@ -356,7 +356,7 @@ export default function PatientProfilePage() {
         {/* ── Personal Details ─────────────────────────────────────────── */}
         <Card sx={{ mb: 2, borderRadius: 3 }}>
           <CardContent sx={{ p: 3 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: '#111827' }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
               {t('personalDetails')}
             </Typography>
             <TextField
@@ -366,7 +366,7 @@ export default function PatientProfilePage() {
               onChange={(e) => setFullName(e.target.value)}
               sx={{ mb: 2 }}
               slotProps={{
-                input: { endAdornment: <EditIcon sx={{ fontSize: 16, color: '#9CA3AF' }} /> },
+                input: { endAdornment: <EditIcon sx={{ fontSize: 16, color: 'text.disabled' }} /> },
               }}
             />
             <TextField
@@ -393,7 +393,9 @@ export default function PatientProfilePage() {
                 value={language}
                 label={t('languagePreference')}
                 onChange={(e) => handleLanguageChange(e.target.value)}
-                startAdornment={<LanguageIcon sx={{ fontSize: 18, color: '#2563EB', mr: 1 }} />}
+                startAdornment={
+                  <LanguageIcon sx={{ fontSize: 18, color: 'primary.main', mr: 1 }} />
+                }
               >
                 {ALL_LANGUAGES.map((l) => (
                   <MenuItem key={l.code} value={l.code}>
@@ -426,8 +428,10 @@ export default function PatientProfilePage() {
           sx={{
             mb: 2,
             borderRadius: 3,
-            border: hasEmergencyCard ? '1.5px solid #BBF7D0' : '1.5px solid #FECACA',
-            bgcolor: hasEmergencyCard ? '#F0FDF4' : '#FFF5F5',
+            border: hasEmergencyCard
+              ? '1.5px solid rgba(5,150,105,0.4)'
+              : '1.5px solid rgba(239,68,68,0.4)',
+            bgcolor: hasEmergencyCard ? 'rgba(5,150,105,0.08)' : 'rgba(239,68,68,0.06)',
           }}
         >
           <CardContent sx={{ p: 2.5 }}>
@@ -437,7 +441,7 @@ export default function PatientProfilePage() {
                   width: 44,
                   height: 44,
                   borderRadius: 2.5,
-                  bgcolor: hasEmergencyCard ? '#DCFCE7' : '#FEE2E2',
+                  bgcolor: hasEmergencyCard ? 'rgba(5,150,105,0.15)' : 'rgba(239,68,68,0.12)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -452,7 +456,7 @@ export default function PatientProfilePage() {
               </Box>
               <Box sx={{ flex: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.25 }}>
-                  <Typography variant="body1" sx={{ fontWeight: 700, color: '#111827' }}>
+                  <Typography variant="body1" sx={{ fontWeight: 700 }}>
                     {hasEmergencyCard ? t('emergencyCardConfigured') : t('emergencyCard')}
                   </Typography>
                   {hasEmergencyCard && (
@@ -460,8 +464,8 @@ export default function PatientProfilePage() {
                       label="Active"
                       size="small"
                       sx={{
-                        bgcolor: '#DCFCE7',
-                        color: '#15803D',
+                        bgcolor: 'rgba(5,150,105,0.15)',
+                        color: 'success.dark',
                         fontWeight: 700,
                         height: 20,
                         fontSize: '0.65rem',
@@ -486,7 +490,7 @@ export default function PatientProfilePage() {
                           borderColor: '#16A34A',
                           color: '#16A34A',
                           borderRadius: 2,
-                          '&:hover': { bgcolor: '#F0FDF4' },
+                          '&:hover': { bgcolor: 'rgba(5,150,105,0.08)' },
                         }
                       : { bgcolor: '#DC2626', borderRadius: 2, '&:hover': { bgcolor: '#B91C1C' } }
                   }
@@ -501,7 +505,7 @@ export default function PatientProfilePage() {
         {/* ── Account ─────────────────────────────────────────────────── */}
         <Card sx={{ borderRadius: 3 }}>
           <CardContent sx={{ p: 2.5 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5, color: '#111827' }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5 }}>
               {t('account')}
             </Typography>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -512,7 +516,7 @@ export default function PatientProfilePage() {
                 label={t('comingSoon')}
                 size="small"
                 variant="outlined"
-                sx={{ borderColor: '#E5E7EB', color: '#9CA3AF' }}
+                sx={{ borderColor: 'divider', color: 'text.disabled' }}
               />
             </Box>
             <Divider sx={{ my: 1.5 }} />

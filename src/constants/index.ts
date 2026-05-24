@@ -8,12 +8,12 @@ export const REPORT_TYPES = [
 ] as const;
 
 export const REPORT_TYPE_COLORS: Record<string, { bg: string; color: string }> = {
-  prescription: { bg: '#EFF6FF', color: '#1D4ED8' },
-  lab_report: { bg: '#F0FDF4', color: '#047857' },
-  scan: { bg: '#FDF4FF', color: '#7C3AED' },
-  discharge_summary: { bg: '#FFF7ED', color: '#C2410C' },
-  vaccination: { bg: '#ECFDF5', color: '#065F46' },
-  other: { bg: '#F9FAFB', color: '#374151' },
+  prescription: { bg: 'rgba(37,99,235,0.10)', color: '#3B82F6' },
+  lab_report: { bg: 'rgba(5,150,105,0.10)', color: '#10B981' },
+  scan: { bg: 'rgba(124,58,237,0.10)', color: '#A78BFA' },
+  discharge_summary: { bg: 'rgba(234,88,12,0.10)', color: '#FB923C' },
+  vaccination: { bg: 'rgba(5,150,105,0.08)', color: '#34D399' },
+  other: { bg: 'rgba(107,114,128,0.10)', color: '#9CA3AF' },
 };
 
 export const MEDICAL_COUNCILS = [
@@ -50,12 +50,7 @@ export const MEDICAL_COUNCILS = [
   'West Bengal Medical Council',
 ] as const;
 
-export const ACCEPTED_FILE_TYPES = [
-  'application/pdf',
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-];
+export const ACCEPTED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
