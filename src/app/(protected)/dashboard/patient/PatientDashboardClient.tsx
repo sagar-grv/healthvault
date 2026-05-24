@@ -46,7 +46,6 @@ import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, Report } from '@/types';
 import { REPORT_TYPES, REPORT_TYPE_COLORS } from '@/constants';
-import { optimizeImage, isOptimizableImage } from '@/lib/utils/image-optimizer';
 import { getAiLanguage, syncLanguageFromProfile } from '@/lib/utils/language';
 
 // Lazy load heavy dialog components — only loaded when user clicks
@@ -56,16 +55,7 @@ const ReportDetailDialog = dynamic(() => import('@/components/patient/ReportDeta
 const AISummaryDialog = dynamic(() => import('@/components/patient/AISummaryDialog'), {
   ssr: false,
 });
-const CameraCapture = dynamic(() => import('@/components/patient/CameraCapture'), {
-  ssr: false,
-});
-const EmergencyCardSetup = dynamic(() => import('@/components/patient/EmergencyCardSetup'), {
-  ssr: false,
-});
 const HealthInterpreter = dynamic(() => import('@/components/patient/HealthInterpreter'), {
-  ssr: false,
-});
-const AddReportSheet = dynamic(() => import('@/components/patient/AddReportSheet'), {
   ssr: false,
 });
 
@@ -93,11 +83,7 @@ export default function PatientDashboardClient({
   const [viewingReport, setViewingReport] = useState<Report | null>(null);
   const [showAISummary, setShowAISummary] = useState(false);
   // New P0 feature states
-  const [addSheetOpen, setAddSheetOpen] = useState(false);
-  const [showCamera, setShowCamera] = useState(false);
-  const [showEmergencySetup, setShowEmergencySetup] = useState(false);
   const [interpretingReport, setInterpretingReport] = useState<Report | null>(null);
-  const [uploadingCamera, setUploadingCamera] = useState(false);
 
   // Sync language preference from DB profile on mount (cross-device sync)
   useEffect(() => {
@@ -184,91 +170,6 @@ export default function PatientDashboardClient({
     const supabase = createClient();
     await supabase.auth.signOut();
     window.location.replace('/login');
-  };
-
-  // Handle camera capture — optimize then upload
-  const handleCameraCapture = async (images: Blob[]) => {
-    setShowCamera(false);
-    if (!images.length) return;
-    setUploadingCamera(true);
-    setSnackbar({ open: true, message: t('processingReport'), severity: 'info' });
-
-    try {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Use first image (multi-page: combine later)
-      const rawBlob = images[0];
-      const rawFile = new File([rawBlob], 'camera-capture.jpg', { type: 'image/jpeg' });
-
-      // Optimize
-      const optimized = isOptimizableImage(rawFile) ? await optimizeImage(rawFile) : null;
-
-      const uploadBlob = optimized?.blob ?? rawBlob;
-      const uploadName = optimized?.fileName ?? 'capture.jpg';
-      const uploadMime = optimized?.mimeType ?? 'image/jpeg';
-
-      const reportId = crypto.randomUUID();
-      const filePath = `${user.id}/${reportId}/${uploadName}`;
-
-      const { error: uploadErr } = await supabase.storage
-        .from('reports')
-        .upload(filePath, uploadBlob, { contentType: uploadMime, upsert: false });
-
-      if (uploadErr) {
-        setSnackbar({ open: true, message: t('uploadFailed'), severity: 'error' });
-        return;
-      }
-
-      // Upload thumbnail
-      let thumbnailPath: string | null = null;
-      if (optimized?.thumbnail) {
-        thumbnailPath = `${user.id}/${reportId}/thumb.jpg`;
-        await supabase.storage
-          .from('reports')
-          .upload(thumbnailPath, optimized.thumbnail, { contentType: 'image/jpeg', upsert: false });
-      }
-
-      // Save report record
-      const today = new Date().toISOString().split('T')[0];
-      const { data: newReport, error: dbErr } = await supabase
-        .from('reports')
-        .insert({
-          id: reportId,
-          patient_id: user.id,
-          title: 'Captured Report',
-          report_type: 'other',
-          file_path: filePath,
-          file_name: uploadName,
-          file_size: uploadBlob.size,
-          mime_type: uploadMime,
-          report_date: today,
-          is_shareable: false,
-          thumbnail_path: thumbnailPath,
-        })
-        .select()
-        .single();
-
-      if (dbErr) {
-        setSnackbar({ open: true, message: 'Failed to save. Try again.', severity: 'error' });
-        await supabase.storage.from('reports').remove([filePath]);
-        return;
-      }
-
-      setReports((prev) => [newReport, ...prev]);
-      setSnackbar({
-        open: true,
-        message: t('reportSaved'),
-        severity: 'success',
-      });
-    } catch {
-      setSnackbar({ open: true, message: t('somethingWentWrong'), severity: 'error' });
-    } finally {
-      setUploadingCamera(false);
-    }
   };
 
   const getReportTypeLabel = (type: string) =>
@@ -696,22 +597,7 @@ export default function PatientDashboardClient({
                       </Box>
                     </Tooltip>
 
-                    {/* AI Analyze (existing) */}
-                    <Tooltip title={t('analyzeWithAi')}>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setViewingReport(report);
-                        }}
-                        sx={{ color: '#7C3AED', '&:hover': { bgcolor: '#F5F3FF' } }}
-                        aria-label="Analyze report with AI"
-                      >
-                        <BiotechIcon sx={{ fontSize: 18 }} />
-                      </IconButton>
-                    </Tooltip>
-
-                    {/* Explain in my language (NEW) */}
+                    {/* Explain in my language */}
                     <Tooltip title={t('explainInMyLanguage')}>
                       <IconButton
                         size="small"
@@ -719,7 +605,7 @@ export default function PatientDashboardClient({
                           e.stopPropagation();
                           setInterpretingReport(report);
                         }}
-                        sx={{ color: '#059669', '&:hover': { bgcolor: '#F0FDF4' } }}
+                        sx={{ color: '#2563EB', '&:hover': { bgcolor: '#EFF6FF' } }}
                         aria-label="Explain in my language"
                       >
                         <TranslateIcon sx={{ fontSize: 18 }} />
@@ -759,12 +645,11 @@ export default function PatientDashboardClient({
         )}
       </Box>
 
-      {/* FAB — opens bottom sheet */}
+      {/* FAB — go directly to upload */}
       <Fab
         color="primary"
-        aria-label="Add report"
-        disabled={uploadingCamera}
-        onClick={() => setAddSheetOpen(true)}
+        aria-label="Upload report"
+        onClick={() => router.push('/dashboard/patient/upload')}
         sx={{
           position: 'fixed',
           bottom: 'calc(88px + env(safe-area-inset-bottom, 0px))',
@@ -837,14 +722,6 @@ export default function PatientDashboardClient({
         reports={reports}
       />
 
-      {/* Camera Capture (full screen) */}
-      {showCamera && (
-        <CameraCapture onCapture={handleCameraCapture} onClose={() => setShowCamera(false)} />
-      )}
-
-      {/* Emergency Card Setup */}
-      <EmergencyCardSetup open={showEmergencySetup} onClose={() => setShowEmergencySetup(false)} />
-
       {/* Health Interpreter */}
       {interpretingReport && (
         <HealthInterpreter
@@ -855,15 +732,6 @@ export default function PatientDashboardClient({
           onClose={() => setInterpretingReport(null)}
         />
       )}
-
-      {/* Add Report Bottom Sheet */}
-      <AddReportSheet
-        open={addSheetOpen}
-        onClose={() => setAddSheetOpen(false)}
-        onScanReport={() => setShowCamera(true)}
-        onUploadFile={() => router.push('/dashboard/patient/upload')}
-        onEmergencyCard={() => setShowEmergencySetup(true)}
-      />
     </Box>
   );
 }
