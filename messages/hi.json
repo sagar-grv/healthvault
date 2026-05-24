@@ -67,6 +67,7 @@
   },
   "upload": {
     "pageTitle": "रिपोर्ट अपलोड करें",
+    "scanInstead": "स्कैन करें",
     "dropPrompt": "अपलोड करने के लिए टैप करें या यहाँ छोड़ें",
     "dropHint": "PDF, JPG, या PNG — अधिकतम 10MB",
     "tapToChange": "बदलने के लिए टैप करें",

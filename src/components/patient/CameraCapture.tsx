@@ -181,9 +181,33 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
       canvas.toBlob(
         (blob) => {
           if (blob) {
-            const url = URL.createObjectURL(blob);
-            setRawImageUrl(url);
-            setStage('crop');
+            const rawUrl = URL.createObjectURL(blob);
+            setRawImageUrl(rawUrl);
+
+            if (detected) {
+              // Document clearly detected — silently apply crop and jump to preview
+              const cropped = perspectiveCrop(canvas, detected);
+              cropped.toBlob(
+                (croppedBlob) => {
+                  if (croppedBlob) {
+                    setCroppedUrl((prev) => {
+                      if (prev) URL.revokeObjectURL(prev);
+                      return URL.createObjectURL(croppedBlob);
+                    });
+                    setStage('preview');
+                  }
+                },
+                'image/jpeg',
+                0.92
+              );
+            } else {
+              // No clear document found — show raw image in preview (skip crop drag UI)
+              setCroppedUrl((prev) => {
+                if (prev) URL.revokeObjectURL(prev);
+                return rawUrl;
+              });
+              setStage('preview');
+            }
             setDetecting(false);
           }
         },
@@ -539,6 +563,18 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
               }}
             >
               Retake
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<CropIcon />}
+              onClick={() => setStage('crop')}
+              sx={{
+                color: 'rgba(255,255,255,0.75)',
+                borderColor: 'rgba(255,255,255,0.4)',
+                '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' },
+              }}
+            >
+              Adjust
             </Button>
             <Button
               variant="contained"

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import Box from '@mui/material/Box';
@@ -18,6 +19,7 @@ import Toolbar from '@mui/material/Toolbar';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
+import Tooltip from '@mui/material/Tooltip';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
@@ -26,9 +28,12 @@ import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFileOutlined';
 import ImageIcon from '@mui/icons-material/ImageOutlined';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdfOutlined';
 import CompressIcon from '@mui/icons-material/CompressOutlined';
+import DocumentScannerOutlinedIcon from '@mui/icons-material/DocumentScannerOutlined';
 import { createClient } from '@/lib/supabase/client';
 import { REPORT_TYPES, REPORT_TYPE_COLORS, ACCEPTED_FILE_TYPES, MAX_FILE_SIZE } from '@/constants';
 import { optimizeImage, isOptimizableImage, formatFileSize } from '@/lib/utils/image-optimizer';
+
+const CameraCapture = dynamic(() => import('@/components/patient/CameraCapture'), { ssr: false });
 
 export default function UploadReportPage() {
   const router = useRouter();
@@ -45,10 +50,23 @@ export default function UploadReportPage() {
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState('');
   const [dragOver, setDragOver] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
   const [compressionInfo, setCompressionInfo] = useState<{
     original: number;
     compressed: number;
   } | null>(null);
+
+  // Handle camera capture — pre-fills the file field with the first captured image
+  const handleCameraCapture = (images: Blob[]) => {
+    setShowCamera(false);
+    if (!images.length) return;
+    const blob = images[0];
+    const capturedFile = new File([blob], 'scanned-report.jpg', { type: 'image/jpeg' });
+    setFile(capturedFile);
+    setCompressionInfo(null);
+    if (!title) setTitle('Scanned Report');
+    if (!reportDate) setReportDate(new Date().toISOString().split('T')[0]);
+  };
 
   const handleFileChange = (selectedFile: File | null) => {
     if (!selectedFile) return;
@@ -196,9 +214,15 @@ export default function UploadReportPage() {
           <IconButton edge="start" onClick={() => router.push('/dashboard/patient')}>
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h6" sx={{ ml: 1 }}>
+          <Typography variant="h6" sx={{ ml: 1, flexGrow: 1 }}>
             {t('pageTitle')}
           </Typography>
+          {/* Scan Report — secondary action in the app bar */}
+          <Tooltip title={t('scanInstead')}>
+            <IconButton onClick={() => setShowCamera(true)} aria-label="Scan report with camera">
+              <DocumentScannerOutlinedIcon />
+            </IconButton>
+          </Tooltip>
         </Toolbar>
       </AppBar>
 
@@ -426,6 +450,11 @@ export default function UploadReportPage() {
           </Button>
         </Box>
       </Box>
+
+      {/* Camera Capture — full screen, triggered by Scan button */}
+      {showCamera && (
+        <CameraCapture onCapture={handleCameraCapture} onClose={() => setShowCamera(false)} />
+      )}
     </Box>
   );
 }
