@@ -28,6 +28,7 @@ import MedicalServicesIcon from '@mui/icons-material/MedicalServicesOutlined';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, DoctorProfile } from '@/types';
 import { isValidHealthId, normalizeHealthId } from '@/lib/utils/health-id';
+import ThemeToggle from '@/components/ThemeToggle';
 
 // Lazy load AI assistant — only loaded after page renders
 const DoctorAIAssistant = dynamic(() => import('@/components/doctor/DoctorAIAssistant'), {
@@ -144,6 +145,7 @@ export default function DoctorDashboardClient({
               size="small"
               sx={{ mr: 1, bgcolor: '#D1FAE5', color: '#065F46', fontWeight: 600, height: 26 }}
             />
+            <ThemeToggle />
             <IconButton
               onClick={() => router.push('/dashboard/doctor/profile')}
               size="small"

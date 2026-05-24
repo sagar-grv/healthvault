@@ -32,6 +32,7 @@ import DocumentScannerOutlinedIcon from '@mui/icons-material/DocumentScannerOutl
 import { createClient } from '@/lib/supabase/client';
 import { REPORT_TYPES, REPORT_TYPE_COLORS, ACCEPTED_FILE_TYPES, MAX_FILE_SIZE } from '@/constants';
 import { optimizeImage, isOptimizableImage, formatFileSize } from '@/lib/utils/image-optimizer';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const CameraCapture = dynamic(() => import('@/components/patient/CameraCapture'), { ssr: false });
 
@@ -217,6 +218,7 @@ export default function UploadReportPage() {
           <Typography variant="h6" sx={{ ml: 1, flexGrow: 1 }}>
             {t('pageTitle')}
           </Typography>
+          <ThemeToggle />
           {/* Scan Report — secondary action in the app bar */}
           <Tooltip title={t('scanInstead')}>
             <IconButton onClick={() => setShowCamera(true)} aria-label="Scan report with camera">
