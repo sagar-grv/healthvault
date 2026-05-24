@@ -40,6 +40,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@/lib/supabase/client';
 import { getAiLanguage, setAiLanguage, setPreferredLanguage } from '@/lib/utils/language';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const EmergencyCardSetup = dynamic(() => import('@/components/patient/EmergencyCardSetup'), {
   ssr: false,
@@ -198,6 +199,7 @@ export default function PatientProfilePage() {
           <Typography variant="h6" sx={{ ml: 1, fontWeight: 700, flexGrow: 1 }}>
             {t('pageTitle')}
           </Typography>
+          <ThemeToggle />
         </Toolbar>
       </AppBar>
 

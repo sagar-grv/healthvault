@@ -48,6 +48,7 @@ import { Profile, Report } from '@/types';
 import { REPORT_TYPES, REPORT_TYPE_COLORS } from '@/constants';
 import { setAiLanguage, syncLanguageFromProfile } from '@/lib/utils/language';
 import { optimizeImage, isOptimizableImage } from '@/lib/utils/image-optimizer';
+import ThemeToggle from '@/components/ThemeToggle';
 
 // Lazy load heavy dialog components — only loaded when user clicks
 const ReportDetailDialog = dynamic(() => import('@/components/patient/ReportDetailDialog'), {
@@ -291,7 +292,7 @@ export default function PatientDashboardClient({
   const starredReports = reports.filter((r) => r.is_starred);
 
   return (
-    <Box sx={{ pb: 10, minHeight: '100vh', bgcolor: '#F9FAFB' }}>
+    <Box sx={{ pb: 10, minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* Simple App Bar */}
       <AppBar position="sticky" color="inherit" elevation={0}>
         <Toolbar sx={{ minHeight: '56px !important' }}>
@@ -335,6 +336,7 @@ export default function PatientDashboardClient({
               '&:hover': { bgcolor: '#DBEAFE' },
             }}
           />
+          <ThemeToggle />
           <IconButton
             onClick={() => router.push('/dashboard/patient/profile')}
             aria-label="Profile"
