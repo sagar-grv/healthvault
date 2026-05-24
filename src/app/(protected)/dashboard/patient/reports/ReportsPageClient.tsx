@@ -136,13 +136,13 @@ export default function ReportsPageClient({ reports: initialReports }: ReportsPa
             sx={{
               display: 'flex',
               alignItems: 'center',
-              bgcolor: '#F3F4F6',
+              bgcolor: 'action.hover',
               borderRadius: 3,
               px: 1.5,
               py: 0.5,
             }}
           >
-            <SearchIcon sx={{ fontSize: 20, color: '#9CA3AF', mr: 1 }} />
+            <SearchIcon sx={{ fontSize: 20, color: 'text.disabled', mr: 1 }} />
             <InputBase
               placeholder="Search reports..."
               value={search}
@@ -196,7 +196,7 @@ export default function ReportsPageClient({ reports: initialReports }: ReportsPa
         {/* Empty state */}
         {filtered.length === 0 && (
           <Box sx={{ textAlign: 'center', py: 8 }}>
-            <AssignmentOutlinedIcon sx={{ fontSize: 56, color: '#D1D5DB', mb: 2 }} />
+            <AssignmentOutlinedIcon sx={{ fontSize: 56, color: 'text.disabled', mb: 2 }} />
             <Typography variant="h6" color="text.secondary">
               {search ? 'No reports match your search' : 'No reports yet'}
             </Typography>
@@ -215,7 +215,8 @@ export default function ReportsPageClient({ reports: initialReports }: ReportsPa
               sx={{
                 mb: 1.5,
                 borderRadius: 3,
-                border: report.is_starred ? '1.5px solid #FCD34D' : '1px solid #E5E7EB',
+                border: report.is_starred ? '1.5px solid' : '1px solid',
+                borderColor: report.is_starred ? 'warning.light' : 'divider',
                 boxShadow: report.is_starred ? '0 2px 8px rgba(251,191,36,0.15)' : 'none',
                 cursor: 'pointer',
               }}
@@ -285,7 +286,7 @@ export default function ReportsPageClient({ reports: initialReports }: ReportsPa
                     <IconButton
                       size="small"
                       onClick={() => handleToggleStar(report.id, report.is_starred)}
-                      sx={{ color: report.is_starred ? '#F59E0B' : '#D1D5DB' }}
+                      sx={{ color: report.is_starred ? 'warning.main' : 'text.disabled' }}
                     >
                       {report.is_starred ? (
                         <StarIcon sx={{ fontSize: 20 }} />
@@ -298,7 +299,7 @@ export default function ReportsPageClient({ reports: initialReports }: ReportsPa
                     <IconButton
                       size="small"
                       onClick={() => handleToggleShareable(report.id, report.is_shareable)}
-                      sx={{ color: report.is_shareable ? '#059669' : '#D1D5DB' }}
+                      sx={{ color: report.is_shareable ? 'success.main' : 'text.disabled' }}
                     >
                       {report.is_shareable ? (
                         <PublicIcon sx={{ fontSize: 18 }} />
@@ -311,7 +312,7 @@ export default function ReportsPageClient({ reports: initialReports }: ReportsPa
                     <IconButton
                       size="small"
                       onClick={() => setInterpretingReport(report)}
-                      sx={{ color: '#2563EB' }}
+                      sx={{ color: 'primary.main' }}
                       aria-label="Explain in my language"
                     >
                       <TranslateIcon sx={{ fontSize: 18 }} />
@@ -321,7 +322,7 @@ export default function ReportsPageClient({ reports: initialReports }: ReportsPa
                     <IconButton
                       size="small"
                       onClick={() => handleDelete(report.id, report.file_path)}
-                      sx={{ color: '#D1D5DB', '&:hover': { color: '#EF4444' } }}
+                      sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}
                     >
                       <DeleteOutlinedIcon sx={{ fontSize: 18 }} />
                     </IconButton>

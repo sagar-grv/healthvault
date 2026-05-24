@@ -94,13 +94,13 @@ export default function AccessLogClient({ logs }: AccessLogClientProps) {
             sx={{
               flex: 1,
               textAlign: 'center',
-              bgcolor: '#EFF6FF',
-              border: '1px solid #BFDBFE',
+              bgcolor: 'rgba(37,99,235,0.08)',
+              border: '1px solid rgba(37,99,235,0.25)',
               boxShadow: 'none',
             }}
           >
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-              <Typography variant="h3" sx={{ color: '#1D4ED8', mb: 0.25 }}>
+              <Typography variant="h3" sx={{ color: 'primary.main', mb: 0.25 }}>
                 {logs.length}
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
@@ -112,13 +112,13 @@ export default function AccessLogClient({ logs }: AccessLogClientProps) {
             sx={{
               flex: 1,
               textAlign: 'center',
-              bgcolor: '#F0FDF4',
-              border: '1px solid #A7F3D0',
+              bgcolor: 'rgba(5,150,105,0.08)',
+              border: '1px solid rgba(5,150,105,0.30)',
               boxShadow: 'none',
             }}
           >
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-              <Typography variant="h3" sx={{ color: '#047857', mb: 0.25 }}>
+              <Typography variant="h3" sx={{ color: 'success.dark', mb: 0.25 }}>
                 {new Set(logs.map((l) => l.doctor_id)).size}
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
@@ -135,7 +135,8 @@ export default function AccessLogClient({ logs }: AccessLogClientProps) {
             sx={{
               textAlign: 'center',
               py: 7,
-              border: '2px dashed #E5E7EB',
+              border: '2px dashed',
+              borderColor: 'divider',
               bgcolor: 'transparent',
               boxShadow: 'none',
             }}
@@ -146,7 +147,7 @@ export default function AccessLogClient({ logs }: AccessLogClientProps) {
                   width: 72,
                   height: 72,
                   borderRadius: 4,
-                  bgcolor: '#F0FDF4',
+                  bgcolor: 'rgba(5,150,105,0.10)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -213,8 +214,8 @@ export default function AccessLogClient({ logs }: AccessLogClientProps) {
                         label={formatRelativeTime(log.searched_at)}
                         size="small"
                         sx={{
-                          bgcolor: '#F3F4F6',
-                          color: '#6B7280',
+                          bgcolor: 'action.hover',
+                          color: 'text.secondary',
                           fontWeight: 500,
                           fontSize: '0.68rem',
                         }}
@@ -224,7 +225,7 @@ export default function AccessLogClient({ logs }: AccessLogClientProps) {
                       {formatFullTime(log.searched_at)}
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                      <VisibilityIcon sx={{ fontSize: 14, color: '#9CA3AF' }} />
+                      <VisibilityIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
                       <Typography variant="caption" color="text.secondary">
                         {t('viewedReports', { count: (log.reports_viewed || []).length })}
                       </Typography>

@@ -114,7 +114,7 @@ export default function DoctorDashboardClient({
 
   return (
     <>
-      <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB' }}>
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
         {/* App Bar */}
         <AppBar position="sticky" color="inherit" elevation={0}>
           <Toolbar sx={{ minHeight: '56px !important' }}>
@@ -143,7 +143,13 @@ export default function DoctorDashboardClient({
               icon={<MedicalServicesIcon sx={{ fontSize: 13 }} />}
               label="Doctor"
               size="small"
-              sx={{ mr: 1, bgcolor: '#D1FAE5', color: '#065F46', fontWeight: 600, height: 26 }}
+              sx={{
+                mr: 1,
+                bgcolor: 'rgba(5,150,105,0.15)',
+                color: 'success.dark',
+                fontWeight: 600,
+                height: 26,
+              }}
             />
             <ThemeToggle />
             <IconButton
@@ -216,13 +222,13 @@ export default function DoctorDashboardClient({
               sx={{
                 flex: 1,
                 textAlign: 'center',
-                bgcolor: '#F0FDF4',
-                border: '1px solid #A7F3D0',
+                bgcolor: 'rgba(5,150,105,0.08)',
+                border: '1px solid rgba(5,150,105,0.30)',
                 boxShadow: 'none',
               }}
             >
               <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Typography variant="h4" sx={{ color: '#059669', fontWeight: 800 }}>
+                <Typography variant="h4" sx={{ color: 'success.main', fontWeight: 800 }}>
                   {recentPatients.length}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
@@ -234,8 +240,10 @@ export default function DoctorDashboardClient({
               sx={{
                 flex: 1,
                 textAlign: 'center',
-                bgcolor: doctorProfile?.is_verified ? '#F0FDF4' : '#FFF7ED',
-                border: `1px solid ${doctorProfile?.is_verified ? '#A7F3D0' : '#FDE68A'}`,
+                bgcolor: doctorProfile?.is_verified
+                  ? 'rgba(5,150,105,0.08)'
+                  : 'rgba(245,158,11,0.08)',
+                border: `1px solid ${doctorProfile?.is_verified ? 'rgba(5,150,105,0.30)' : 'rgba(245,158,11,0.35)'}`,
                 boxShadow: 'none',
               }}
             >
@@ -243,7 +251,7 @@ export default function DoctorDashboardClient({
                 <Typography
                   variant="h4"
                   sx={{
-                    color: doctorProfile?.is_verified ? '#059669' : '#D97706',
+                    color: doctorProfile?.is_verified ? 'success.main' : 'warning.main',
                     fontWeight: 800,
                   }}
                 >
@@ -258,16 +266,16 @@ export default function DoctorDashboardClient({
               sx={{
                 flex: 1,
                 textAlign: 'center',
-                bgcolor: '#EFF6FF',
-                border: '1px solid #BFDBFE',
+                bgcolor: 'rgba(37,99,235,0.08)',
+                border: '1px solid rgba(37,99,235,0.25)',
                 boxShadow: 'none',
                 cursor: 'pointer',
-                '&:hover': { bgcolor: '#DBEAFE' },
+                '&:hover': { bgcolor: 'rgba(37,99,235,0.14)' },
               }}
               onClick={() => router.push('/dashboard/doctor/profile')}
             >
               <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Typography variant="h4" sx={{ color: '#2563EB', fontWeight: 800 }}>
+                <Typography variant="h4" sx={{ color: 'primary.main', fontWeight: 800 }}>
                   →
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
@@ -280,7 +288,11 @@ export default function DoctorDashboardClient({
           {/* Search Card — Primary Element */}
           <Card
             className="animate-fade-in-up"
-            sx={{ mb: 3, boxShadow: '0 2px 12px rgba(5,150,105,0.1)', border: '1px solid #A7F3D0' }}
+            sx={{
+              mb: 3,
+              boxShadow: '0 2px 12px rgba(5,150,105,0.1)',
+              border: '1px solid rgba(5,150,105,0.30)',
+            }}
           >
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h5" sx={{ mb: 0.5, fontWeight: 700 }}>
@@ -313,7 +325,7 @@ export default function DoctorDashboardClient({
                         fontSize: '1.1rem',
                         fontWeight: 700,
                         letterSpacing: '0.08em',
-                        bgcolor: '#F9FAFB',
+                        bgcolor: 'background.default',
                       },
                     },
                   }}
@@ -342,10 +354,18 @@ export default function DoctorDashboardClient({
           {/* First-time info for new doctors */}
           {recentPatients.length === 0 && (
             <Card
-              sx={{ mb: 3, bgcolor: '#FFFBEB', border: '1px solid #FDE68A', boxShadow: 'none' }}
+              sx={{
+                mb: 3,
+                bgcolor: 'rgba(245,158,11,0.08)',
+                border: '1px solid rgba(245,158,11,0.30)',
+                boxShadow: 'none',
+              }}
             >
               <CardContent sx={{ p: 2.5 }}>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: '#92400E', mb: 0.5 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ fontWeight: 600, color: 'warning.dark', mb: 0.5 }}
+                >
                   How it works
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -399,8 +419,8 @@ export default function DoctorDashboardClient({
                           sx={{
                             width: 38,
                             height: 38,
-                            bgcolor: '#D1FAE5',
-                            color: '#047857',
+                            bgcolor: 'rgba(5,150,105,0.15)',
+                            color: 'success.dark',
                             fontSize: '0.9rem',
                             fontWeight: 700,
                           }}
@@ -422,7 +442,7 @@ export default function DoctorDashboardClient({
                             {patient.health_id}
                           </Typography>
                         </Box>
-                        <ArrowForwardIcon sx={{ fontSize: 16, color: '#9CA3AF' }} />
+                        <ArrowForwardIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
                       </CardContent>
                     </CardActionArea>
                     {idx < recentPatients.length - 1 && <Divider />}

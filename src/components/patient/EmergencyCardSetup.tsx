@@ -244,7 +244,7 @@ export default function EmergencyCardSetup({ open, onClose }: EmergencyCardSetup
                     key={i}
                     label={a}
                     onDelete={() => setAllergies(allergies.filter((_, idx) => idx !== i))}
-                    sx={{ bgcolor: '#FEF3C7', color: '#92400E' }}
+                    sx={{ bgcolor: 'rgba(245,158,11,0.15)', color: 'warning.dark' }}
                   />
                 ))}
               </Box>
@@ -340,7 +340,7 @@ export default function EmergencyCardSetup({ open, onClose }: EmergencyCardSetup
               <Box
                 sx={{
                   p: 3,
-                  bgcolor: 'white',
+                  bgcolor: '#FFFFFF',
                   borderRadius: 3,
                   display: 'inline-block',
                   mb: 2,

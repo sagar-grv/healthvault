@@ -57,13 +57,13 @@ export default function LanguagePicker({
     >
       {/* Drag handle */}
       <Box sx={{ pt: 1.5, pb: 0.5, display: 'flex', justifyContent: 'center' }}>
-        <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#D1D5DB' }} />
+        <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: 'rgba(150,150,150,0.35)' }} />
       </Box>
 
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 3, pt: 1.5, pb: 2 }}>
-        <LanguageIcon sx={{ color: '#2563EB', fontSize: 22 }} />
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#111827' }}>
+        <LanguageIcon sx={{ color: 'primary.main', fontSize: 22 }} />
+        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
           Choose Language
         </Typography>
       </Box>
@@ -85,10 +85,10 @@ export default function LanguagePicker({
                 py: 1.5,
                 borderRadius: 2,
                 mb: 0.5,
-                bgcolor: isSelected ? '#EFF6FF' : 'transparent',
-                border: isSelected ? '1.5px solid #BFDBFE' : '1.5px solid transparent',
+                bgcolor: isSelected ? 'rgba(37,99,235,0.10)' : 'transparent',
+                border: isSelected ? '1.5px solid rgba(37,99,235,0.35)' : '1.5px solid transparent',
                 transition: 'all 0.15s ease',
-                '&:hover': { bgcolor: '#F9FAFB' },
+                '&:hover': { bgcolor: 'action.hover' },
                 '&:active': { transform: 'scale(0.99)' },
               }}
             >
@@ -97,7 +97,7 @@ export default function LanguagePicker({
                   variant="body1"
                   sx={{
                     fontWeight: isSelected ? 700 : 500,
-                    color: isSelected ? '#1D4ED8' : '#111827',
+                    color: isSelected ? 'primary.main' : 'text.primary',
                     lineHeight: 1.3,
                   }}
                 >
@@ -107,7 +107,7 @@ export default function LanguagePicker({
                   {lang.name}
                 </Typography>
               </Box>
-              {isSelected && <CheckIcon sx={{ color: '#2563EB', fontSize: 20 }} />}
+              {isSelected && <CheckIcon sx={{ color: 'primary.main', fontSize: 20 }} />}
             </ButtonBase>
           );
         })}
