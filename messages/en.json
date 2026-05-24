@@ -34,6 +34,21 @@
       "profile": "Profile"
     }
   },
+  "languages": {
+    "title": "Choose Language",
+    "en": "English",
+    "hi": "हिंदी",
+    "ta": "தமிழ்",
+    "te": "తెలుగు",
+    "mr": "मराठी",
+    "bn": "বাংলা",
+    "gu": "ગુજરાતી",
+    "kn": "ಕನ್ನಡ",
+    "ml": "മലയാളം",
+    "pa": "ਪੰਜਾਬੀ",
+    "or": "ଓଡ଼ିଆ",
+    "as": "অসমীয়া"
+  },
   "profile": {
     "pageTitle": "My Profile",
     "totalReports": "Total Reports",
@@ -50,6 +65,7 @@
     "emailHelperText": "Email cannot be changed",
     "phone": "Phone Number (Optional)",
     "phonePlaceholder": "+91 XXXXX XXXXX",
+    "languagePreference": "Language",
     "saveChanges": "Save Changes",
     "nameFallback": "Your Name",
     "account": "Account",
@@ -58,7 +74,10 @@
     "comingSoon": "Coming Soon",
     "emergencyCard": "Emergency Card",
     "emergencyCardDesc": "First responders can scan your QR even without your phone",
+    "emergencyCardConfigured": "Emergency Card Configured",
+    "emergencyCardConfiguredDesc": "Your emergency info is set up and ready",
     "setupEmergencyCard": "Set Up Emergency Card",
+    "updateEmergencyCard": "Update Emergency Card",
     "saveSuccess": "Profile updated successfully.",
     "saveError": "Failed to save changes.",
     "saveUnknownError": "Something went wrong.",

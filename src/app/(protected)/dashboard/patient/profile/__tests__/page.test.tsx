@@ -4,7 +4,7 @@ import PatientProfilePage from '../page';
 const mockPush = jest.fn();
 
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mockPush }),
+  useRouter: () => ({ push: mockPush, refresh: jest.fn() }),
 }));
 
 // next-intl is mocked via src/__mocks__/next-intl.ts
@@ -19,6 +19,12 @@ jest.mock('@/lib/supabase/client', () => ({
     auth: { getUser: mockGetUser },
     from: mockFrom,
   }),
+}));
+
+jest.mock('@/lib/utils/language', () => ({
+  getAiLanguage: () => 'en',
+  setAiLanguage: jest.fn(),
+  setPreferredLanguage: jest.fn().mockResolvedValue(undefined),
 }));
 
 const mockProfilesQuery = () => ({
@@ -38,8 +44,14 @@ const mockProfilesQuery = () => ({
 
 const mockReportsQuery = () => ({
   select: () => ({
-    eq: async () => ({
-      data: [],
+    eq: async () => ({ data: [] }),
+  }),
+});
+
+const mockEmergencyQuery = () => ({
+  select: () => ({
+    eq: () => ({
+      maybeSingle: async () => ({ data: null }),
     }),
   }),
 });
@@ -50,7 +62,8 @@ describe('PatientProfilePage', () => {
     mockFrom.mockImplementation((table: string) => {
       if (table === 'profiles') return mockProfilesQuery();
       if (table === 'reports') return mockReportsQuery();
-      return { select: () => ({ eq: async () => ({ data: [] }) }) };
+      if (table === 'emergency_profiles') return mockEmergencyQuery();
+      return { select: () => ({ eq: async () => ({ data: null }) }) };
     });
   });
 
@@ -61,7 +74,7 @@ describe('PatientProfilePage', () => {
   it('renders the emergency card section with translated keys', async () => {
     render(<PatientProfilePage />);
 
-    // Mock returns 'profile.<key>' — verifies translation keys are used
+    // No emergency card set up → shows setup key
     expect(await screen.findByText('profile.emergencyCard')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'profile.setupEmergencyCard' })).toBeInTheDocument();
   });
