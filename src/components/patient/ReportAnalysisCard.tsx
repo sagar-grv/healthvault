@@ -35,11 +35,12 @@ interface ReportAnalysisCardProps {
   cachedAnalysis?: AnalysisResult | null;
 }
 
+// rgba-based colors — work on both light and dark backgrounds
 const STATUS_COLORS: Record<string, { bg: string; color: string; label: string }> = {
-  high: { bg: '#FEF2F2', color: '#DC2626', label: 'High' },
-  low: { bg: '#EFF6FF', color: '#2563EB', label: 'Low' },
-  critical: { bg: '#FFF1F2', color: '#BE123C', label: 'Critical' },
-  normal: { bg: '#F0FDF4', color: '#15803D', label: 'Normal' },
+  high: { bg: 'rgba(239,68,68,0.12)', color: 'error.main', label: 'High' },
+  low: { bg: 'rgba(37,99,235,0.10)', color: 'primary.main', label: 'Low' },
+  critical: { bg: 'rgba(190,18,60,0.14)', color: 'error.dark', label: 'Critical' },
+  normal: { bg: 'rgba(5,150,105,0.10)', color: 'success.main', label: 'Normal' },
 };
 
 function AbnormalChip({ status }: { status: string }) {
@@ -85,11 +86,17 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
   // Loading skeleton
   if (loading) {
     return (
-      <Card sx={{ mt: 2, border: '1px solid #E0E7FF', bgcolor: '#F5F3FF' }}>
+      <Card
+        sx={{
+          mt: 2,
+          border: '1px solid rgba(124,58,237,0.25)',
+          bgcolor: 'rgba(124,58,237,0.06)',
+        }}
+      >
         <CardContent sx={{ p: 2.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-            <AutoAwesomeIcon sx={{ fontSize: 18, color: '#7C3AED' }} />
-            <Typography variant="body2" sx={{ fontWeight: 600, color: '#7C3AED' }}>
+            <AutoAwesomeIcon sx={{ fontSize: 18, color: 'secondary.main' }} />
+            <Typography variant="body2" sx={{ fontWeight: 600, color: 'secondary.main' }}>
               AI is reading your report…
             </Typography>
           </Box>
@@ -116,9 +123,12 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
           startIcon={<AutoAwesomeIcon />}
           onClick={handleAnalyze}
           sx={{
-            borderColor: '#7C3AED',
-            color: '#7C3AED',
-            '&:hover': { bgcolor: '#F5F3FF', borderColor: '#6D28D9' },
+            borderColor: 'secondary.main',
+            color: 'secondary.main',
+            '&:hover': {
+              bgcolor: 'rgba(124,58,237,0.08)',
+              borderColor: 'secondary.dark',
+            },
           }}
         >
           {error ? 'Retry Analysis' : 'Analyze with AI'}
@@ -141,21 +151,29 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
     <Card
       sx={{
         mt: 2,
-        border: `1px solid ${hasAbnormal ? '#FCA5A5' : '#C4B5FD'}`,
-        bgcolor: hasAbnormal ? '#FFF7F7' : '#F5F3FF',
+        border: `1px solid ${hasAbnormal ? 'rgba(239,68,68,0.40)' : 'rgba(124,58,237,0.35)'}`,
+        bgcolor: hasAbnormal ? 'rgba(239,68,68,0.06)' : 'rgba(124,58,237,0.06)',
       }}
     >
       <CardContent sx={{ p: 2.5 }}>
         {/* Header */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-          <AutoAwesomeIcon sx={{ fontSize: 18, color: '#7C3AED' }} />
-          <Typography variant="body2" sx={{ fontWeight: 700, color: '#7C3AED', flexGrow: 1 }}>
+          <AutoAwesomeIcon sx={{ fontSize: 18, color: 'secondary.main' }} />
+          <Typography
+            variant="body2"
+            sx={{ fontWeight: 700, color: 'secondary.main', flexGrow: 1 }}
+          >
             AI Analysis
           </Typography>
           <Chip
             label="Gemini"
             size="small"
-            sx={{ bgcolor: '#EDE9FE', color: '#6D28D9', fontSize: '0.65rem', height: 20 }}
+            sx={{
+              bgcolor: 'rgba(124,58,237,0.12)',
+              color: 'secondary.main',
+              fontSize: '0.65rem',
+              height: 20,
+            }}
           />
         </Box>
 
@@ -169,12 +187,12 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
           <>
             <Divider sx={{ my: 1.5 }} />
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
-              <WarningAmberIcon sx={{ fontSize: 15, color: '#D97706' }} />
+              <WarningAmberIcon sx={{ fontSize: 15, color: 'warning.main' }} />
               <Typography
                 variant="caption"
                 sx={{
                   fontWeight: 700,
-                  color: '#D97706',
+                  color: 'warning.main',
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                 }}
@@ -192,9 +210,9 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
                   mb: 0.75,
                   px: 1.5,
                   py: 0.75,
-                  bgcolor: 'white',
+                  bgcolor: 'background.paper',
                   borderRadius: 1.5,
-                  border: '1px solid #FEE2E2',
+                  border: '1px solid rgba(239,68,68,0.25)',
                 }}
               >
                 <Box sx={{ minWidth: 0, mr: 1 }}>
@@ -224,7 +242,7 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
               variant="caption"
               sx={{
                 fontWeight: 700,
-                color: '#374151',
+                color: 'text.primary',
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
                 display: 'block',
@@ -235,7 +253,10 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
             </Typography>
             {analysis.key_findings.map((f, i) => (
               <Box key={i} sx={{ display: 'flex', gap: 0.75, mb: 0.5 }}>
-                <Typography variant="caption" sx={{ color: '#7C3AED', mt: 0.1, flexShrink: 0 }}>
+                <Typography
+                  variant="caption"
+                  sx={{ color: 'secondary.main', mt: 0.1, flexShrink: 0 }}
+                >
                   •
                 </Typography>
                 <Typography variant="caption" sx={{ lineHeight: 1.5 }}>
@@ -251,12 +272,12 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
           <>
             <Divider sx={{ my: 1.5 }} />
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
-              <MedicationIcon sx={{ fontSize: 15, color: '#0369A1' }} />
+              <MedicationIcon sx={{ fontSize: 15, color: 'primary.main' }} />
               <Typography
                 variant="caption"
                 sx={{
                   fontWeight: 700,
-                  color: '#0369A1',
+                  color: 'primary.main',
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                 }}
@@ -270,7 +291,11 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
                   key={i}
                   label={med}
                   size="small"
-                  sx={{ bgcolor: '#E0F2FE', color: '#0369A1', fontSize: '0.72rem' }}
+                  sx={{
+                    bgcolor: 'rgba(37,99,235,0.10)',
+                    color: 'primary.main',
+                    fontSize: '0.72rem',
+                  }}
                 />
               ))}
             </Box>
@@ -282,7 +307,9 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
           <>
             <Divider sx={{ my: 1.5 }} />
             <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'flex-start' }}>
-              <InfoOutlinedIcon sx={{ fontSize: 14, color: '#6B7280', mt: 0.2, flexShrink: 0 }} />
+              <InfoOutlinedIcon
+                sx={{ fontSize: 14, color: 'text.disabled', mt: 0.2, flexShrink: 0 }}
+              />
               <Typography
                 variant="caption"
                 color="text.secondary"

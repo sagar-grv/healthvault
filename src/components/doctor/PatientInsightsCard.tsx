@@ -43,14 +43,11 @@ export default function PatientInsightsCard({ reports, patientName }: PatientIns
   const [started, setStarted] = useState(false);
   const [expanded, setExpanded] = useState(true);
 
-  // Deduplicated medications across all reports
   const allMedications = [...new Set(insights.flatMap((i) => i.medications).filter(Boolean))];
 
-  // All abnormal values across all reports
   const allAbnormal = insights.flatMap((i) =>
     (i.abnormalValues ?? []).filter((v) => v.status !== 'normal')
   );
-
   const criticalCount = allAbnormal.filter(
     (v) => v.status === 'critical' || v.status === 'high'
   ).length;
@@ -111,7 +108,6 @@ export default function PatientInsightsCard({ reports, patientName }: PatientIns
 
       setInsights([...results]);
 
-      // Brief pause between requests to respect rate limits
       if (i < reports.length - 1) {
         await new Promise((r) => setTimeout(r, 800));
       }
@@ -123,15 +119,14 @@ export default function PatientInsightsCard({ reports, patientName }: PatientIns
 
   if (reports.length === 0) return null;
 
-  // Not started yet — show CTA
+  // ── Not started — CTA card ─────────────────────────────────────────────────
   if (!started) {
     return (
       <Card
         sx={{
           mb: 2.5,
-          border: '1px solid #C4B5FD',
-          bgcolor: '#F5F3FF',
-          boxShadow: '0 2px 12px rgba(124,58,237,0.12)',
+          border: '1px solid rgba(124,58,237,0.35)',
+          bgcolor: 'rgba(124,58,237,0.06)',
         }}
       >
         <CardContent sx={{ p: 2.5 }}>
@@ -141,17 +136,17 @@ export default function PatientInsightsCard({ reports, patientName }: PatientIns
                 width: 36,
                 height: 36,
                 borderRadius: 2,
-                bgcolor: '#EDE9FE',
+                bgcolor: 'rgba(124,58,237,0.12)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
               }}
             >
-              <AutoAwesomeIcon sx={{ fontSize: 20, color: '#7C3AED' }} />
+              <AutoAwesomeIcon sx={{ fontSize: 20, color: 'secondary.main' }} />
             </Box>
             <Box>
-              <Typography variant="body1" sx={{ fontWeight: 700, color: '#4C1D95' }}>
+              <Typography variant="body1" sx={{ fontWeight: 700, color: 'text.primary' }}>
                 AI Clinical Insights
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -162,14 +157,11 @@ export default function PatientInsightsCard({ reports, patientName }: PatientIns
           </Box>
           <Button
             variant="contained"
+            color="secondary"
             fullWidth
             startIcon={<AutoAwesomeIcon />}
             onClick={analyzeReports}
-            sx={{
-              bgcolor: '#7C3AED',
-              '&:hover': { bgcolor: '#6D28D9' },
-              fontWeight: 700,
-            }}
+            sx={{ fontWeight: 700 }}
           >
             Generate AI Insights for {patientName.split(' ')[0]}
           </Button>
@@ -185,13 +177,14 @@ export default function PatientInsightsCard({ reports, patientName }: PatientIns
     );
   }
 
+  // ── Results / loading card ─────────────────────────────────────────────────
   return (
     <Card
       sx={{
         mb: 2.5,
-        border: `1px solid ${criticalCount > 0 ? '#FCA5A5' : '#C4B5FD'}`,
-        bgcolor: criticalCount > 0 ? '#FFF7F7' : '#F5F3FF',
-        boxShadow: `0 2px 12px ${criticalCount > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(124,58,237,0.1)'}`,
+        border: `1px solid ${criticalCount > 0 ? 'rgba(239,68,68,0.40)' : 'rgba(124,58,237,0.35)'}`,
+        bgcolor: criticalCount > 0 ? 'rgba(239,68,68,0.06)' : 'rgba(124,58,237,0.06)',
+        boxShadow: `0 2px 12px ${criticalCount > 0 ? 'rgba(239,68,68,0.10)' : 'rgba(124,58,237,0.10)'}`,
       }}
     >
       <CardContent sx={{ p: 2.5 }}>
@@ -206,35 +199,44 @@ export default function PatientInsightsCard({ reports, patientName }: PatientIns
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <AutoAwesomeIcon
-              sx={{ fontSize: 18, color: criticalCount > 0 ? '#DC2626' : '#7C3AED' }}
+              sx={{
+                fontSize: 18,
+                color: criticalCount > 0 ? 'error.main' : 'secondary.main',
+              }}
             />
-            <Typography
-              variant="body1"
-              sx={{ fontWeight: 700, color: criticalCount > 0 ? '#7F1D1D' : '#4C1D95' }}
-            >
+            <Typography variant="body1" sx={{ fontWeight: 700, color: 'text.primary' }}>
               AI Clinical Insights
             </Typography>
             {!loading && insights.length > 0 && (
               <Chip
                 label={`${insights.filter((i) => !i.error).length}/${reports.length} analyzed`}
                 size="small"
-                sx={{ bgcolor: '#EDE9FE', color: '#6D28D9', fontSize: '0.65rem', height: 18 }}
+                sx={{
+                  bgcolor: 'rgba(124,58,237,0.12)',
+                  color: 'secondary.main',
+                  fontSize: '0.65rem',
+                  height: 18,
+                }}
               />
             )}
           </Box>
-          <IconButton size="small" onClick={() => setExpanded((e) => !e)} sx={{ color: '#6D28D9' }}>
+          <IconButton
+            size="small"
+            onClick={() => setExpanded((e) => !e)}
+            sx={{ color: 'secondary.main' }}
+          >
             {expanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
           </IconButton>
         </Box>
 
-        {/* Progress bar while loading */}
+        {/* Progress bar */}
         {loading && (
           <Box sx={{ mb: 1.5 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-              <Typography variant="caption" sx={{ color: '#7C3AED', fontWeight: 600 }}>
+              <Typography variant="caption" sx={{ color: 'secondary.main', fontWeight: 600 }}>
                 Analyzing {insights.length + 1} of {reports.length}…
               </Typography>
-              <Typography variant="caption" sx={{ color: '#7C3AED' }}>
+              <Typography variant="caption" sx={{ color: 'secondary.main' }}>
                 {progress}%
               </Typography>
             </Box>
@@ -244,8 +246,8 @@ export default function PatientInsightsCard({ reports, patientName }: PatientIns
               sx={{
                 borderRadius: 2,
                 height: 5,
-                bgcolor: '#EDE9FE',
-                '& .MuiLinearProgress-bar': { bgcolor: '#7C3AED' },
+                bgcolor: 'rgba(124,58,237,0.15)',
+                '& .MuiLinearProgress-bar': { bgcolor: 'secondary.main' },
               }}
             />
           </Box>
@@ -261,15 +263,15 @@ export default function PatientInsightsCard({ reports, patientName }: PatientIns
                     display: 'flex',
                     alignItems: 'center',
                     gap: 0.75,
-                    bgcolor: '#FEF2F2',
-                    border: '1px solid #FCA5A5',
+                    bgcolor: 'rgba(239,68,68,0.10)',
+                    border: '1px solid rgba(239,68,68,0.35)',
                     borderRadius: 2,
                     px: 1.5,
                     py: 0.75,
                   }}
                 >
-                  <WarningAmberIcon sx={{ fontSize: 16, color: '#DC2626' }} />
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: '#DC2626' }}>
+                  <WarningAmberIcon sx={{ fontSize: 16, color: 'error.main' }} />
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: 'error.main' }}>
                     {criticalCount} abnormal value{criticalCount !== 1 ? 's' : ''}
                   </Typography>
                 </Box>
@@ -279,15 +281,15 @@ export default function PatientInsightsCard({ reports, patientName }: PatientIns
                     display: 'flex',
                     alignItems: 'center',
                     gap: 0.75,
-                    bgcolor: '#F0FDF4',
-                    border: '1px solid #A7F3D0',
+                    bgcolor: 'rgba(5,150,105,0.10)',
+                    border: '1px solid rgba(5,150,105,0.30)',
                     borderRadius: 2,
                     px: 1.5,
                     py: 0.75,
                   }}
                 >
-                  <TaskAltIcon sx={{ fontSize: 16, color: '#059669' }} />
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: '#059669' }}>
+                  <TaskAltIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: 'success.main' }}>
                     No critical values
                   </Typography>
                 </Box>
@@ -298,15 +300,15 @@ export default function PatientInsightsCard({ reports, patientName }: PatientIns
                     display: 'flex',
                     alignItems: 'center',
                     gap: 0.75,
-                    bgcolor: '#EFF6FF',
-                    border: '1px solid #BFDBFE',
+                    bgcolor: 'rgba(37,99,235,0.10)',
+                    border: '1px solid rgba(37,99,235,0.25)',
                     borderRadius: 2,
                     px: 1.5,
                     py: 0.75,
                   }}
                 >
-                  <MedicationIcon sx={{ fontSize: 16, color: '#2563EB' }} />
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: '#2563EB' }}>
+                  <MedicationIcon sx={{ fontSize: 16, color: 'primary.main' }} />
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: 'primary.main' }}>
                     {allMedications.length} medication{allMedications.length !== 1 ? 's' : ''}
                   </Typography>
                 </Box>
@@ -324,14 +326,21 @@ export default function PatientInsightsCard({ reports, patientName }: PatientIns
                 <Box
                   key={ins.reportId}
                   sx={{
-                    bgcolor: 'white',
+                    bgcolor: 'background.paper',
                     borderRadius: 2,
-                    border: `1px solid ${hasAbnormal ? '#FED7AA' : '#E5E7EB'}`,
+                    border: `1px solid ${hasAbnormal ? 'rgba(234,88,12,0.35)' : 'transparent'}`,
+                    outline: hasAbnormal ? 'none' : '1px solid',
+                    outlineColor: 'divider',
                     p: 1.5,
                   }}
                 >
                   <Box
-                    sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: ins.error ? 0 : 0.75 }}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      mb: ins.error ? 0 : 0.75,
+                    }}
                   >
                     <Chip
                       label={ins.reportType.replace('_', ' ')}
@@ -342,7 +351,9 @@ export default function PatientInsightsCard({ reports, patientName }: PatientIns
                       {ins.reportTitle}
                     </Typography>
                     {hasAbnormal && (
-                      <WarningAmberIcon sx={{ fontSize: 14, color: '#D97706', flexShrink: 0 }} />
+                      <WarningAmberIcon
+                        sx={{ fontSize: 14, color: 'warning.main', flexShrink: 0 }}
+                      />
                     )}
                   </Box>
 
@@ -375,8 +386,11 @@ export default function PatientInsightsCard({ reports, patientName }: PatientIns
                                 label={`${av.name}: ${av.value} (${av.status})`}
                                 size="small"
                                 sx={{
-                                  bgcolor: av.status === 'critical' ? '#FEE2E2' : '#FFF7ED',
-                                  color: av.status === 'critical' ? '#DC2626' : '#D97706',
+                                  bgcolor:
+                                    av.status === 'critical'
+                                      ? 'rgba(239,68,68,0.12)'
+                                      : 'rgba(234,88,12,0.10)',
+                                  color: av.status === 'critical' ? 'error.main' : 'warning.main',
                                   fontSize: '0.62rem',
                                   height: 18,
                                   fontWeight: 600,
@@ -393,8 +407,8 @@ export default function PatientInsightsCard({ reports, patientName }: PatientIns
                               label={med}
                               size="small"
                               sx={{
-                                bgcolor: '#EFF6FF',
-                                color: '#2563EB',
+                                bgcolor: 'rgba(37,99,235,0.10)',
+                                color: 'primary.main',
                                 fontSize: '0.62rem',
                                 height: 18,
                               }}
@@ -408,12 +422,18 @@ export default function PatientInsightsCard({ reports, patientName }: PatientIns
               );
             })}
 
-            {/* Loading skeletons for pending reports */}
+            {/* Loading skeletons */}
             {loading &&
               Array.from({ length: reports.length - insights.length }).map((_, i) => (
                 <Box
                   key={`sk-${i}`}
-                  sx={{ bgcolor: 'white', borderRadius: 2, border: '1px solid #E5E7EB', p: 1.5 }}
+                  sx={{
+                    bgcolor: 'background.paper',
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    p: 1.5,
+                  }}
                 >
                   <Skeleton variant="text" width="55%" height={14} sx={{ mb: 0.75 }} />
                   <Skeleton variant="text" width="90%" height={12} />
@@ -430,7 +450,7 @@ export default function PatientInsightsCard({ reports, patientName }: PatientIns
                 variant="caption"
                 sx={{
                   fontWeight: 700,
-                  color: '#374151',
+                  color: 'text.primary',
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                   display: 'block',
@@ -446,8 +466,8 @@ export default function PatientInsightsCard({ reports, patientName }: PatientIns
                     label={med}
                     size="small"
                     sx={{
-                      bgcolor: '#DBEAFE',
-                      color: '#1D4ED8',
+                      bgcolor: 'rgba(37,99,235,0.12)',
+                      color: 'primary.main',
                       fontWeight: 600,
                       fontSize: '0.72rem',
                     }}
@@ -464,7 +484,7 @@ export default function PatientInsightsCard({ reports, patientName }: PatientIns
                 size="small"
                 startIcon={<AutoAwesomeIcon sx={{ fontSize: 14 }} />}
                 onClick={analyzeReports}
-                sx={{ color: '#7C3AED', fontSize: '0.75rem' }}
+                sx={{ color: 'secondary.main', fontSize: '0.75rem' }}
               >
                 Re-analyze
               </Button>
