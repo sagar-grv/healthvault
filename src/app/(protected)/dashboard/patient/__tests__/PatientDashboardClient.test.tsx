@@ -33,9 +33,10 @@ describe('PatientDashboardClient translations', () => {
     // Mock returns 'dashboard.<key>' — verifies translation keys are used
     expect(screen.getByText('dashboard.yourHealthId')).toBeInTheDocument();
     expect(screen.getByText('dashboard.copyId')).toBeInTheDocument();
-    expect(screen.getByText('dashboard.showQr')).toBeInTheDocument();
-    expect(screen.getByText('dashboard.share')).toBeInTheDocument();
-    expect(screen.getByText('dashboard.myReports')).toBeInTheDocument();
+    // showQr + share buttons removed — replaced with "Share with Doctor" single button
+    expect(screen.getByText('Share with Doctor')).toBeInTheDocument();
+    // Section heading changed from t('myReports') to "Recent Reports"
+    expect(screen.getByText('Recent Reports')).toBeInTheDocument();
     expect(screen.getByText('dashboard.noReports')).toBeInTheDocument();
     expect(screen.getByText('dashboard.noReportsHint')).toBeInTheDocument();
     expect(screen.getAllByText('dashboard.upload').length).toBeGreaterThan(0);

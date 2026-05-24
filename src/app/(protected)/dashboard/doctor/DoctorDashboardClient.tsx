@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
@@ -29,6 +29,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Profile, DoctorProfile } from '@/types';
 import { isValidHealthId, normalizeHealthId } from '@/lib/utils/health-id';
 import ThemeToggle from '@/components/ThemeToggle';
+import { searchPatient } from './actions';
 
 // Lazy load AI assistant — only loaded after page renders
 const DoctorAIAssistant = dynamic(() => import('@/components/doctor/DoctorAIAssistant'), {
@@ -49,48 +50,26 @@ export default function DoctorDashboardClient({
   const router = useRouter();
   const [searchInput, setSearchInput] = useState('');
   const [searchError, setSearchError] = useState('');
-  const [searching, setSearching] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  const handleSearch = async (e: React.FormEvent) => {
+  // Use server action for search — eliminates 3 client→Supabase round-trips
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSearchError('');
     const normalized = normalizeHealthId(searchInput.trim());
-
     if (!isValidHealthId(normalized)) {
       setSearchError('Invalid Health ID format. Expected: HV-XXXX-XXXX');
       return;
     }
-
-    setSearching(true);
-    try {
-      const supabase = createClient();
-
-      // Check rate limit BEFORE inserting the search attempt
-      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-      const { count } = await supabase
-        .from('search_attempts')
-        .select('*', { count: 'exact', head: true })
-        .eq('doctor_id', profile.id)
-        .gte('searched_at', oneHourAgo);
-
-      if (count && count >= 10) {
-        setSearchError('Search limit reached (10 per hour). Please try again later.');
-        setSearching(false);
-        return;
+    const formData = new FormData();
+    formData.set('healthId', normalized);
+    startTransition(async () => {
+      const result = await searchPatient(null, formData);
+      // If result is returned (not redirected), it means there was an error
+      if (result?.error) {
+        setSearchError(result.error);
       }
-
-      // Insert search attempt after the rate-limit guard
-      await supabase.from('search_attempts').insert({
-        doctor_id: profile.id,
-        searched_health_id: normalized,
-        found: false,
-      });
-
-      router.push(`/dashboard/doctor/patient/${encodeURIComponent(normalized)}`);
-    } catch {
-      setSearchError('Something went wrong. Please try again.');
-      setSearching(false);
-    }
+    });
   };
 
   const handleLogout = async () => {
@@ -341,11 +320,11 @@ export default function DoctorDashboardClient({
                   color="secondary"
                   fullWidth
                   size="large"
-                  disabled={searching || !searchInput.trim()}
+                  disabled={isPending || !searchInput.trim()}
                   endIcon={<ArrowForwardIcon />}
                   sx={{ py: 1.5, fontSize: '1rem', boxShadow: '0 4px 12px rgba(5,150,105,0.3)' }}
                 >
-                  {searching ? 'Searching...' : 'View Patient Records'}
+                  {isPending ? 'Searching...' : 'View Patient Records'}
                 </Button>
               </Box>
             </CardContent>
