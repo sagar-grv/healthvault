@@ -146,7 +146,7 @@ export default function DoctorDashboardClient({
               sx={{
                 mr: 1,
                 bgcolor: 'rgba(5,150,105,0.15)',
-                color: 'success.dark',
+                color: 'success.main',
                 fontWeight: 600,
                 height: 26,
               }}
@@ -317,7 +317,7 @@ export default function DoctorDashboardClient({
                     input: {
                       startAdornment: (
                         <InputAdornment position="start">
-                          <SearchIcon sx={{ color: '#059669' }} />
+                          <SearchIcon sx={{ color: 'secondary.main' }} />
                         </InputAdornment>
                       ),
                       sx: {
@@ -420,7 +420,7 @@ export default function DoctorDashboardClient({
                             width: 38,
                             height: 38,
                             bgcolor: 'rgba(5,150,105,0.15)',
-                            color: 'success.dark',
+                            color: 'success.main',
                             fontSize: '0.9rem',
                             fontWeight: 700,
                           }}
