@@ -4,14 +4,13 @@ import Box from '@mui/material/Box';
 import Drawer from '@mui/material/Drawer';
 import Typography from '@mui/material/Typography';
 import ButtonBase from '@mui/material/ButtonBase';
-import { ScanReportIcon, UploadCloudIcon, EmergencyHeartIcon } from '@/components/icons/FabIcons';
+import { ScanReportIcon, UploadCloudIcon } from '@/components/icons/FabIcons';
 
 interface AddReportSheetProps {
   open: boolean;
   onClose: () => void;
   onScanReport: () => void;
   onUploadFile: () => void;
-  onEmergencyCard: () => void;
 }
 
 const ACTIONS = [
@@ -33,15 +32,6 @@ const ACTIONS = [
     iconColor: '#059669',
     borderColor: '#A7F3D0',
   },
-  {
-    id: 'emergency',
-    icon: (color: string) => <EmergencyHeartIcon size={40} color={color} />,
-    title: 'Emergency Card',
-    subtitle: 'Set up your emergency medical info + SOS',
-    bg: '#FEF2F2',
-    iconColor: '#DC2626',
-    borderColor: '#FECACA',
-  },
 ] as const;
 
 export default function AddReportSheet({
@@ -49,12 +39,10 @@ export default function AddReportSheet({
   onClose,
   onScanReport,
   onUploadFile,
-  onEmergencyCard,
 }: AddReportSheetProps) {
-  const handlers = {
+  const handlers: Record<string, () => void> = {
     scan: onScanReport,
     upload: onUploadFile,
-    emergency: onEmergencyCard,
   };
 
   return (

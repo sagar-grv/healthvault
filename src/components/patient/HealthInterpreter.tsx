@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { setAiLanguage } from '@/lib/utils/language';
+import { getAiLanguage, setAiLanguage } from '@/lib/utils/language';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -88,7 +88,9 @@ export default function HealthInterpreter({
   open,
   onClose,
 }: HealthInterpreterProps) {
-  const [language, setLanguage] = useState(defaultLanguage);
+  // Self-initialise from saved preference — ignores defaultLanguage prop so the
+  // user's stored language (AI or UI locale) is always used on first open.
+  const [language, setLanguage] = useState<string>(() => getAiLanguage() || defaultLanguage);
   const [result, setResult] = useState<InterpretationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
