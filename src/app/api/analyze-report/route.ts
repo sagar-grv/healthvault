@@ -107,54 +107,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'File type not supported for analysis' }, { status: 422 });
     }
 
-    const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'AI analysis not configured' }, { status: 503 });
-    }
-
     const base64 = Buffer.from(arrayBuffer).toString('base64');
-
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(apiKey);
 
     // Secure system prompt with topic guardrails and injection prevention
     const systemPrompt = buildSecureSystemPrompt();
 
-    // Model priority: gemini-2.5-flash → gemini-2.0-flash-lite
-    const MODEL_PRIORITY = ['gemini-2.5-flash', 'gemini-2.0-flash-lite'];
-    const contents = [systemPrompt, { inlineData: { data: base64, mimeType } }];
-
+    // Multi-provider: Gemini → NVIDIA (vision fallback)
+    const { callVisionAI } = await import('@/lib/ai/provider-router');
     let rawText = '';
     let usedModel = '';
-    let lastErr: { status?: number; message?: string } | null = null;
 
-    for (const modelName of MODEL_PRIORITY) {
-      try {
-        const model = genAI.getGenerativeModel({ model: modelName });
-        const result = await model.generateContent(contents);
-        rawText = result.response.text();
-        usedModel = modelName;
-        break;
-      } catch (e: unknown) {
-        const apiErr = e as { status?: number; message?: string };
-        lastErr = apiErr;
-        if (apiErr.status === 404) continue;
-        if (apiErr.status === 429 || apiErr.status === 503) {
-          await new Promise((r) => setTimeout(r, 2000));
-          continue;
-        }
-        throw e;
-      }
-    }
-
-    if (!rawText) {
-      if (lastErr?.status === 429) {
+    try {
+      const aiResult = await callVisionAI(systemPrompt, base64, mimeType);
+      rawText = aiResult.text;
+      usedModel = aiResult.model;
+    } catch (e) {
+      const err = e as { message?: string };
+      if (
+        err.message?.includes('429') ||
+        err.message?.includes('quota') ||
+        err.message?.includes('rate')
+      ) {
         return NextResponse.json(
-          { error: 'AI service is busy. Please wait 10 seconds and try again.' },
+          { error: 'AI service is busy. Please try again in a minute.' },
           { status: 429 }
         );
       }
-      throw lastErr ?? new Error('All Gemini models failed');
+      throw e;
+    }
+    if (!rawText) {
+      return NextResponse.json(
+        { error: 'AI service returned empty response. Please try again.' },
+        { status: 503 }
+      );
     }
 
     // ── Validate AI response for safety ─────────────────────────────────────
