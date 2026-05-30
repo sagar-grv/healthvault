@@ -6,6 +6,7 @@ import EmotionRegistry from '@/components/EmotionRegistry';
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration';
 import { NextIntlClientProvider } from 'next-intl';
 import { cookies } from 'next/headers';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -74,6 +75,7 @@ export default async function RootLayout({
           </ThemeProvider>
         </EmotionRegistry>
         <ServiceWorkerRegistration />
+        <SpeedInsights />
       </body>
     </html>
   );
