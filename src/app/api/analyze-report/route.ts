@@ -9,6 +9,33 @@ import {
   detectPromptInjection,
 } from '@/lib/ai/guardrails';
 
+function calculateConfidence(data: {
+  summary?: string | null;
+  key_findings?: unknown;
+  abnormal_values?: unknown;
+  medications_found?: unknown;
+  recommendation?: string | null;
+}): number {
+  let c = 0;
+  if (data.summary && data.summary !== 'No summary available.') c += 0.2;
+  if (Array.isArray(data.key_findings) && data.key_findings.length > 0) c += 0.2;
+  if (Array.isArray(data.abnormal_values) && data.abnormal_values.length > 0) c += 0.15;
+  if (Array.isArray(data.medications_found) && data.medications_found.length > 0) c += 0.15;
+  if (data.recommendation && data.recommendation.length > 10) c += 0.15;
+  if (data.summary && data.summary.length > 20) c += 0.1;
+  if (
+    data.summary &&
+    data.summary !== 'No summary available.' &&
+    Array.isArray(data.key_findings) &&
+    data.key_findings.length > 0 &&
+    data.recommendation &&
+    data.recommendation.length > 10
+  ) {
+    c += 0.05;
+  }
+  return Math.round(Math.min(c, 1) * 100) / 100;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -77,7 +104,9 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (existing) {
-      return NextResponse.json({ analysis: existing });
+      // Recalculate confidence from cached data (no migration needed)
+      const cachedConfidence = calculateConfidence(existing);
+      return NextResponse.json({ analysis: { ...existing, confidence: cachedConfidence } });
     }
 
     // Download file to check size before calling guardrails
@@ -207,7 +236,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ analysis: { ...analysis, report_id: reportId } });
     }
 
-    return NextResponse.json({ analysis: saved });
+    return NextResponse.json({ analysis: { ...saved, confidence: analysis.confidence } });
   } catch (err: unknown) {
     const apiErr = err as { status?: number; message?: string };
     console.error('[analyze-report] error:', apiErr);
