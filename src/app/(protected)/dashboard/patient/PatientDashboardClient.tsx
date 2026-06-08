@@ -35,6 +35,7 @@ import TranslateIcon from '@mui/icons-material/Translate';
 import LanguageIcon from '@mui/icons-material/Language';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServicesOutlined';
 import { useTranslations } from 'next-intl';
+import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, Report } from '@/types';
 import { REPORT_TYPES, REPORT_TYPE_COLORS } from '@/constants';
@@ -108,8 +109,63 @@ export default function PatientDashboardClient({
     }
   };
 
-  const handleWhatsAppShare = () => {
+  const handleWhatsAppShare = async () => {
     const message = `My HealthVault ID is ${profile.health_id}. Use this to view my medical records on HealthVault.`;
+
+    // Try to generate QR and share via Web Share API (sends image + text)
+    if (navigator.share && navigator.canShare) {
+      try {
+        // Generate QR as canvas
+        const canvas = document.createElement('canvas');
+        const size = 512;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          // Draw white background
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, size, size);
+          // Find the QR SVG and draw it
+          const qrContainer = document.getElementById('qr-share-canvas');
+          if (qrContainer) {
+            const svg = qrContainer.querySelector('svg');
+            if (svg) {
+              const svgData = new XMLSerializer().serializeToString(svg);
+              const img = new Image();
+              const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+              const url = URL.createObjectURL(svgBlob);
+              await new Promise<void>((resolve) => {
+                img.onload = () => {
+                  ctx.drawImage(img, 0, 0, size, size);
+                  URL.revokeObjectURL(url);
+                  resolve();
+                };
+                img.onerror = () => {
+                  URL.revokeObjectURL(url);
+                  resolve();
+                };
+                img.src = url;
+              });
+            }
+          }
+          // Convert canvas to blob and share
+          const blob = await new Promise<Blob | null>((resolve) =>
+            canvas.toBlob(resolve, 'image/png', 1.0)
+          );
+          if (blob) {
+            const file = new File([blob], 'healthvault-qr.png', { type: 'image/png' });
+            const shareData = { text: message, files: [file] };
+            if (navigator.canShare(shareData)) {
+              await navigator.share(shareData);
+              return;
+            }
+          }
+        }
+      } catch {
+        // Web Share failed or cancelled — fall through to WhatsApp URL
+      }
+    }
+    // Fallback: WhatsApp text-only
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
@@ -194,12 +250,10 @@ export default function PatientDashboardClient({
       // A7: Run thumbnail upload + DB insert in parallel
       const [, { data: newReport, error: dbErr }] = await Promise.all([
         thumbnailPath && optimized?.thumbnail
-          ? supabase.storage
-              .from('reports')
-              .upload(thumbnailPath, optimized.thumbnail, {
-                contentType: 'image/jpeg',
-                upsert: false,
-              })
+          ? supabase.storage.from('reports').upload(thumbnailPath, optimized.thumbnail, {
+              contentType: 'image/jpeg',
+              upsert: false,
+            })
           : Promise.resolve({ error: null }),
         supabase
           .from('reports')
@@ -351,60 +405,101 @@ export default function PatientDashboardClient({
               {t('yourHealthId')}
             </Typography>
 
-            <Typography
-              className="health-id-text"
-              sx={{
-                fontSize: { xs: '1.4rem', sm: '1.65rem' },
-                color: 'white',
-                mb: 0.5,
-                letterSpacing: '0.1em',
-              }}
-            >
-              {profile.health_id}
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{ color: 'rgba(255,255,255,0.6)', mb: 2.5, fontSize: '0.875rem' }}
-            >
-              {profile.full_name}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2.5 }}>
+              {/* Left: ID info */}
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography
+                  className="health-id-text"
+                  sx={{
+                    fontSize: { xs: '1.4rem', sm: '1.65rem' },
+                    color: 'white',
+                    mb: 0.5,
+                    letterSpacing: '0.1em',
+                  }}
+                >
+                  {profile.health_id}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{ color: 'rgba(255,255,255,0.6)', mb: 2.5, fontSize: '0.875rem' }}
+                >
+                  {profile.full_name}
+                </Typography>
 
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <Button
-                size="small"
-                startIcon={<ContentCopyIcon sx={{ fontSize: 15 }} />}
-                onClick={handleCopyId}
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Button
+                    size="small"
+                    startIcon={<ContentCopyIcon sx={{ fontSize: 15 }} />}
+                    onClick={handleCopyId}
+                    sx={{
+                      color: 'white',
+                      bgcolor: 'rgba(255,255,255,0.15)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      backdropFilter: 'blur(4px)',
+                      borderRadius: 2,
+                      '&:hover': {
+                        bgcolor: 'rgba(255,255,255,0.25)',
+                        transform: 'translateY(-1px)',
+                      },
+                      fontSize: '0.75rem',
+                      py: 0.6,
+                    }}
+                  >
+                    {t('copyId')}
+                  </Button>
+                  <Button
+                    size="small"
+                    startIcon={<MedicalServicesIcon sx={{ fontSize: 15 }} />}
+                    onClick={() => setShareSheetOpen(true)}
+                    sx={{
+                      color: 'white',
+                      bgcolor: 'rgba(255,255,255,0.20)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      backdropFilter: 'blur(4px)',
+                      borderRadius: 2,
+                      fontWeight: 700,
+                      '&:hover': {
+                        bgcolor: 'rgba(255,255,255,0.30)',
+                        transform: 'translateY(-1px)',
+                      },
+                      fontSize: '0.75rem',
+                      py: 0.6,
+                    }}
+                  >
+                    Share with Doctor
+                  </Button>
+                </Box>
+              </Box>
+
+              {/* Right: QR Code */}
+              <Box
                 sx={{
-                  color: 'white',
-                  bgcolor: 'rgba(255,255,255,0.15)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  backdropFilter: 'blur(4px)',
-                  borderRadius: 2,
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.25)', transform: 'translateY(-1px)' },
-                  fontSize: '0.75rem',
-                  py: 0.6,
+                  bgcolor: 'white',
+                  borderRadius: 2.5,
+                  p: 1.2,
+                  flexShrink: 0,
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 0.5,
                 }}
               >
-                {t('copyId')}
-              </Button>
-              <Button
-                size="small"
-                startIcon={<MedicalServicesIcon sx={{ fontSize: 15 }} />}
-                onClick={() => setShareSheetOpen(true)}
-                sx={{
-                  color: 'white',
-                  bgcolor: 'rgba(255,255,255,0.20)',
-                  border: '1px solid rgba(255,255,255,0.3)',
-                  backdropFilter: 'blur(4px)',
-                  borderRadius: 2,
-                  fontWeight: 700,
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.30)', transform: 'translateY(-1px)' },
-                  fontSize: '0.75rem',
-                  py: 0.6,
-                }}
-              >
-                Share with Doctor
-              </Button>
+                <Box id="qr-share-canvas">
+                  <QRCodeSVG value={profile.health_id || ''} size={90} level="M" />
+                </Box>
+                <Typography
+                  sx={{
+                    fontSize: '0.55rem',
+                    color: '#64748B',
+                    fontWeight: 700,
+                    letterSpacing: '0.05em',
+                    textAlign: 'center',
+                  }}
+                >
+                  SCAN ME
+                </Typography>
+              </Box>
             </Box>
           </CardContent>
         </Card>

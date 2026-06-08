@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import Box from '@mui/material/Box';
 import Drawer from '@mui/material/Drawer';
 import Typography from '@mui/material/Typography';
@@ -8,6 +9,8 @@ import IconButton from '@mui/material/IconButton';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
 import CloseIcon from '@mui/icons-material/Close';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface AppointmentShareSheetProps {
   open: boolean;
@@ -24,6 +27,63 @@ export default function AppointmentShareSheet({
   onCopy,
   onWhatsApp,
 }: AppointmentShareSheetProps) {
+  const qrRef = useRef<HTMLDivElement>(null);
+
+  const handleWhatsAppQR = async () => {
+    const message = `My HealthVault ID is ${healthId}. Use this to view my medical records on HealthVault.`;
+
+    // Try Web Share API with QR image
+    if (navigator.share && navigator.canShare) {
+      try {
+        const svgEl = qrRef.current?.querySelector('svg');
+        if (svgEl) {
+          const canvas = document.createElement('canvas');
+          const size = 512;
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, size, size);
+            const svgData = new XMLSerializer().serializeToString(svgEl);
+            const img = new Image();
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+            await new Promise<void>((resolve) => {
+              img.onload = () => {
+                ctx.drawImage(img, 0, 0, size, size);
+                URL.revokeObjectURL(url);
+                resolve();
+              };
+              img.onerror = () => {
+                URL.revokeObjectURL(url);
+                resolve();
+              };
+              img.src = url;
+            });
+            const blob = await new Promise<Blob | null>((resolve) =>
+              canvas.toBlob(resolve, 'image/png', 1.0)
+            );
+            if (blob) {
+              const file = new File([blob], 'healthvault-qr.png', { type: 'image/png' });
+              const shareData = { text: message, files: [file] };
+              if (navigator.canShare(shareData)) {
+                await navigator.share(shareData);
+                onClose();
+                return;
+              }
+            }
+          }
+        }
+      } catch {
+        // Fall through to text-only
+      }
+    }
+    // Fallback: WhatsApp text-only
+    onWhatsApp();
+    onClose();
+  };
+
   return (
     <Drawer
       anchor="bottom"
@@ -57,7 +117,7 @@ export default function AppointmentShareSheet({
       </Box>
 
       <Box sx={{ px: 3, pb: 3 }}>
-        {/* Health ID display — large, readable */}
+        {/* QR Code + Health ID */}
         <Box
           sx={{
             bgcolor: 'rgba(37,99,235,0.08)',
@@ -69,6 +129,19 @@ export default function AppointmentShareSheet({
             mb: 2,
           }}
         >
+          <Box
+            ref={qrRef}
+            sx={{
+              display: 'inline-block',
+              bgcolor: 'white',
+              borderRadius: 2,
+              p: 1.5,
+              mb: 1.5,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            }}
+          >
+            <QRCodeSVG value={healthId} size={120} level="M" />
+          </Box>
           <Typography
             variant="caption"
             color="text.secondary"
@@ -101,36 +174,51 @@ export default function AppointmentShareSheet({
           color="text.secondary"
           sx={{ textAlign: 'center', mb: 2.5, lineHeight: 1.5 }}
         >
-          Give this ID to your doctor before they see you. They will type it to view your shared
-          records.
+          Show this QR to your doctor, or share it via WhatsApp so they can scan it.
         </Typography>
 
         {/* Action buttons */}
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
-          <Button
-            variant="outlined"
-            fullWidth
-            startIcon={<ContentCopyIcon />}
-            onClick={() => {
-              onCopy();
-              onClose();
-            }}
-            sx={{ borderRadius: 2.5, py: 1.5 }}
-          >
-            Copy ID
-          </Button>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.2 }}>
           <Button
             variant="contained"
             fullWidth
-            startIcon={<ShareIcon />}
-            onClick={() => {
-              onWhatsApp();
-              onClose();
+            startIcon={<WhatsAppIcon />}
+            onClick={handleWhatsAppQR}
+            sx={{
+              borderRadius: 2.5,
+              py: 1.4,
+              bgcolor: '#25D366',
+              '&:hover': { bgcolor: '#1EBE5A' },
             }}
-            sx={{ borderRadius: 2.5, py: 1.5 }}
           >
-            Share via WhatsApp
+            Share QR via WhatsApp
           </Button>
+          <Box sx={{ display: 'flex', gap: 1.2 }}>
+            <Button
+              variant="outlined"
+              fullWidth
+              startIcon={<ContentCopyIcon />}
+              onClick={() => {
+                onCopy();
+                onClose();
+              }}
+              sx={{ borderRadius: 2.5, py: 1.4 }}
+            >
+              Copy ID
+            </Button>
+            <Button
+              variant="outlined"
+              fullWidth
+              startIcon={<ShareIcon />}
+              onClick={() => {
+                onWhatsApp();
+                onClose();
+              }}
+              sx={{ borderRadius: 2.5, py: 1.4 }}
+            >
+              Share Text
+            </Button>
+          </Box>
         </Box>
       </Box>
     </Drawer>
