@@ -6,15 +6,19 @@ export interface AnalysisResult {
   abnormal_values: { name: string; value: string; normal_range: string; status: string }[];
   medications_found: string[];
   recommendation: string;
+  confidence: number; // 0–1, auto-calculated from content completeness
 }
 
 // ─── buildAnalysisPrompt ──────────────────────────────────────────────────────
 
 const TYPE_HINTS: Partial<Record<ReportType | string, string>> = {
-  lab_report: 'Pay special attention to all lab values — blood counts, glucose, cholesterol, kidney and liver markers. Identify which values are outside the normal range.',
-  prescription: 'Extract all medication names, dosages, and frequencies. Identify if any medications are for chronic conditions.',
+  lab_report:
+    'Pay special attention to all lab values — blood counts, glucose, cholesterol, kidney and liver markers. Identify which values are outside the normal range.',
+  prescription:
+    'Extract all medication names, dosages, and frequencies. Identify if any medications are for chronic conditions.',
   scan: 'Describe the key findings from the imaging report. Note any abnormalities mentioned.',
-  discharge_summary: 'Extract the primary diagnosis, procedures performed, medications prescribed at discharge, and follow-up instructions.',
+  discharge_summary:
+    'Extract the primary diagnosis, procedures performed, medications prescribed at discharge, and follow-up instructions.',
   vaccination: 'List vaccines administered, dates, and any due upcoming doses if mentioned.',
   other: 'Extract any clinically relevant information present in the document.',
 };
@@ -77,11 +81,11 @@ export function parseGeminiAnalysis(raw: string): AnalysisResult | null {
 
   // Normalize arrays with safe defaults
   const key_findings = Array.isArray(parsed.key_findings)
-    ? (parsed.key_findings as unknown[]).filter(v => typeof v === 'string') as string[]
+    ? ((parsed.key_findings as unknown[]).filter((v) => typeof v === 'string') as string[])
     : [];
 
   const abnormal_values = Array.isArray(parsed.abnormal_values)
-    ? (parsed.abnormal_values as Record<string, unknown>[]).map(v => ({
+    ? (parsed.abnormal_values as Record<string, unknown>[]).map((v) => ({
         name: String(v.name ?? ''),
         value: String(v.value ?? ''),
         normal_range: String(v.normal_range ?? ''),
@@ -91,7 +95,7 @@ export function parseGeminiAnalysis(raw: string): AnalysisResult | null {
     : [];
 
   const medications_found = Array.isArray(parsed.medications_found)
-    ? (parsed.medications_found as unknown[]).filter(v => typeof v === 'string') as string[]
+    ? ((parsed.medications_found as unknown[]).filter((v) => typeof v === 'string') as string[])
     : [];
 
   // Recommendation: ensure it always mentions "doctor"
@@ -100,5 +104,24 @@ export function parseGeminiAnalysis(raw: string): AnalysisResult | null {
     ? String(rawRec)
     : 'Please consult your doctor for further guidance. This is not medical advice.';
 
-  return { summary, key_findings, abnormal_values, medications_found, recommendation };
+  // ── Auto-calculate confidence (0–1) from content completeness ──────────────
+  let confidence = 0;
+  if (summary && summary !== 'No summary available.') confidence += 0.2;
+  if (key_findings.length > 0) confidence += 0.2;
+  if (abnormal_values.length > 0) confidence += 0.15;
+  if (medications_found.length > 0) confidence += 0.15;
+  if (recommendation && recommendation.length > 10) confidence += 0.15;
+  if (summary.length > 20) confidence += 0.1;
+  if (
+    summary &&
+    summary !== 'No summary available.' &&
+    key_findings.length > 0 &&
+    recommendation &&
+    recommendation.length > 10
+  ) {
+    confidence += 0.05; // completeness bonus
+  }
+  confidence = Math.round(Math.min(confidence, 1) * 100) / 100; // cap at 1.00
+
+  return { summary, key_findings, abnormal_values, medications_found, recommendation, confidence };
 }
