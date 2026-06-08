@@ -12,6 +12,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import FlashlightOnIcon from '@mui/icons-material/FlashlightOn';
 import FlashlightOffIcon from '@mui/icons-material/FlashlightOff';
 import CameraswitchIcon from '@mui/icons-material/Cameraswitch';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { parseQRContent } from '@/lib/utils/qr-parser';
 
 interface QRScannerDialogProps {
@@ -28,10 +29,12 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
     clear: () => void;
     applyVideoConstraints: (c: object) => Promise<void>;
   } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [scanState, setScanState] = useState<ScanState>('idle');
   const [error, setError] = useState('');
   const [torchOn, setTorchOn] = useState(false);
   const [cameraCount, setCameraCount] = useState(0);
+  const [uploading, setUploading] = useState(false);
 
   const stopScanner = useCallback(async () => {
     if (scannerRef.current) {
@@ -254,6 +257,34 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
     }
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError('');
+    try {
+      const { Html5Qrcode } = await import('html5-qrcode');
+      const scanner = new Html5Qrcode('qr-upload-temp');
+      const result = await scanner.scanFile(file, /* showImage= */ false);
+      scanner.clear();
+      const healthId = parseQRContent(result);
+      if (healthId) {
+        if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+        setScanState('success');
+        onScan(healthId);
+      } else {
+        setError('No Health ID found in this image. Try a different QR code.');
+        setScanState('error');
+      }
+    } catch {
+      setError('Could not read a QR code from this image. Try a clearer photo.');
+      setScanState('error');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const isScanning = scanState === 'scanning';
   const isStarting = scanState === 'starting';
   const hasError = scanState === 'error';
@@ -265,6 +296,16 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
       fullScreen
       slotProps={{ paper: { sx: { bgcolor: '#000', overflow: 'hidden' } } }}
     >
+      {/* Hidden file input for QR image upload */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileUpload}
+        style={{ display: 'none' }}
+      />
+
       {/* Top bar */}
       <Box
         sx={{
@@ -372,20 +413,31 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
           <Alert severity="error" sx={{ mb: 3, width: '100%', maxWidth: 380 }}>
             {error}
           </Alert>
-          <Box sx={{ display: 'flex', gap: 1.5 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
+              <Button
+                variant="contained"
+                onClick={handleRetry}
+                sx={{ bgcolor: '#10B981', '&:hover': { bgcolor: '#059669' } }}
+              >
+                Retry
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={handleClose}
+                sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}
+              >
+                Enter Manually
+              </Button>
+            </Box>
             <Button
-              variant="contained"
-              onClick={handleRetry}
-              sx={{ bgcolor: '#10B981', '&:hover': { bgcolor: '#059669' } }}
+              variant="text"
+              startIcon={<UploadFileIcon />}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              sx={{ color: 'rgba(255,255,255,0.8)', mt: 0.5 }}
             >
-              Retry
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={handleClose}
-              sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}
-            >
-              Enter Manually
+              {uploading ? 'Scanning image…' : 'Upload QR image instead'}
             </Button>
           </Box>
         </Box>
@@ -482,15 +534,38 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
               right: 0,
               textAlign: 'center',
               zIndex: 20,
-              pointerEvents: 'none',
             }}
           >
-            <Typography variant="body2" sx={{ color: 'white', fontWeight: 600, mb: 0.5 }}>
+            <Typography
+              variant="body2"
+              sx={{ color: 'white', fontWeight: 600, mb: 0.5, pointerEvents: 'none' }}
+            >
               Place QR code in the frame
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'rgba(255,255,255,0.5)',
+                display: 'block',
+                mb: 1.5,
+                pointerEvents: 'none',
+              }}
+            >
               Scanning automatically — any angle works
             </Typography>
+            <Button
+              variant="text"
+              size="small"
+              startIcon={<UploadFileIcon sx={{ fontSize: 16 }} />}
+              onClick={() => {
+                stopScanner();
+                fileInputRef.current?.click();
+              }}
+              disabled={uploading}
+              sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem' }}
+            >
+              {uploading ? 'Scanning…' : 'Upload QR image'}
+            </Button>
           </Box>
         </>
       )}
