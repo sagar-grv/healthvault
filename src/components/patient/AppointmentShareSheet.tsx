@@ -1,15 +1,16 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import Drawer from '@mui/material/Drawer';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
 import CloseIcon from '@mui/icons-material/Close';
-import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import { QRCodeSVG } from 'qrcode.react';
 
 interface AppointmentShareSheetProps {
@@ -28,9 +29,14 @@ export default function AppointmentShareSheet({
   onWhatsApp,
 }: AppointmentShareSheetProps) {
   const qrRef = useRef<HTMLDivElement>(null);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'info' as 'info' | 'success' | 'error',
+  });
 
-  const handleWhatsAppQR = async () => {
-    // Generate QR image and share (image only, no text)
+  const handleShareQR = async () => {
+    const message = `My HealthVault ID is ${healthId}. Use this to view my medical records on HealthVault.`;
     const svgEl = qrRef.current?.querySelector('svg');
     if (svgEl) {
       try {
@@ -63,7 +69,7 @@ export default function AppointmentShareSheet({
           );
           if (blob && navigator.share && navigator.canShare) {
             const file = new File([blob], 'healthvault-qr.png', { type: 'image/png' });
-            const shareData = { files: [file] };
+            const shareData = { text: message, files: [file] };
             if (navigator.canShare(shareData)) {
               await navigator.share(shareData);
               onClose();
@@ -77,6 +83,11 @@ export default function AppointmentShareSheet({
             a.download = 'healthvault-qr.png';
             a.click();
             URL.revokeObjectURL(a.href);
+            setSnackbar({
+              open: true,
+              message: 'QR downloaded. Share it with your doctor.',
+              severity: 'info',
+            });
             onClose();
             return;
           }
@@ -85,7 +96,7 @@ export default function AppointmentShareSheet({
         // User cancelled or error
       }
     }
-    // Last fallback: WhatsApp text-only
+    // Last fallback: text share
     onWhatsApp();
     onClose();
   };
@@ -183,50 +194,45 @@ export default function AppointmentShareSheet({
           Show this QR to your doctor, or share it via WhatsApp so they can scan it.
         </Typography>
 
-        {/* Action buttons */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.2 }}>
+        {/* Action buttons — 2 options: Copy ID + Share QR */}
+        <Box sx={{ display: 'flex', gap: 1.2 }}>
+          <Button
+            variant="outlined"
+            fullWidth
+            startIcon={<ContentCopyIcon />}
+            onClick={() => {
+              onCopy();
+              onClose();
+            }}
+            sx={{ borderRadius: 2.5, py: 1.4 }}
+          >
+            Copy ID
+          </Button>
           <Button
             variant="contained"
             fullWidth
-            startIcon={<WhatsAppIcon />}
-            onClick={handleWhatsAppQR}
-            sx={{
-              borderRadius: 2.5,
-              py: 1.4,
-              bgcolor: '#25D366',
-              '&:hover': { bgcolor: '#1EBE5A' },
-            }}
+            startIcon={<ShareIcon />}
+            onClick={handleShareQR}
+            sx={{ borderRadius: 2.5, py: 1.4 }}
           >
-            Share QR via WhatsApp
+            Share QR
           </Button>
-          <Box sx={{ display: 'flex', gap: 1.2 }}>
-            <Button
-              variant="outlined"
-              fullWidth
-              startIcon={<ContentCopyIcon />}
-              onClick={() => {
-                onCopy();
-                onClose();
-              }}
-              sx={{ borderRadius: 2.5, py: 1.4 }}
-            >
-              Copy ID
-            </Button>
-            <Button
-              variant="outlined"
-              fullWidth
-              startIcon={<ShareIcon />}
-              onClick={() => {
-                onWhatsApp();
-                onClose();
-              }}
-              sx={{ borderRadius: 2.5, py: 1.4 }}
-            >
-              Share Text
-            </Button>
-          </Box>
         </Box>
       </Box>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Drawer>
   );
 }
