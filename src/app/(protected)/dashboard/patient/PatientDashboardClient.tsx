@@ -15,6 +15,8 @@ import Chip from '@mui/material/Chip';
 import Switch from '@mui/material/Switch';
 import Fab from '@mui/material/Fab';
 import Tooltip from '@mui/material/Tooltip';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import BottomNavigation from '@mui/material/BottomNavigation';
@@ -88,6 +90,7 @@ export default function PatientDashboardClient({
   const [uploadingCamera, setUploadingCamera] = useState(false);
   const [langPickerOpen, setLangPickerOpen] = useState(false);
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
+  const [qrPopupOpen, setQrPopupOpen] = useState(false);
 
   // Sync language preference from DB profile on mount (cross-device sync)
   useEffect(() => {
@@ -110,63 +113,69 @@ export default function PatientDashboardClient({
   };
 
   const handleWhatsAppShare = async () => {
-    const message = `My HealthVault ID is ${profile.health_id}. Use this to view my medical records on HealthVault.`;
-
-    // Try to generate QR and share via Web Share API (sends image + text)
-    if (navigator.share && navigator.canShare) {
+    // Generate QR as image and share via WhatsApp (image only, no text)
+    const svgEl = document.getElementById('qr-share-canvas')?.querySelector('svg');
+    if (svgEl) {
       try {
-        // Generate QR as canvas
         const canvas = document.createElement('canvas');
         const size = 512;
         canvas.width = size;
         canvas.height = size;
         const ctx = canvas.getContext('2d');
         if (ctx) {
-          // Draw white background
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(0, 0, size, size);
-          // Find the QR SVG and draw it
-          const qrContainer = document.getElementById('qr-share-canvas');
-          if (qrContainer) {
-            const svg = qrContainer.querySelector('svg');
-            if (svg) {
-              const svgData = new XMLSerializer().serializeToString(svg);
-              const img = new Image();
-              const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-              const url = URL.createObjectURL(svgBlob);
-              await new Promise<void>((resolve) => {
-                img.onload = () => {
-                  ctx.drawImage(img, 0, 0, size, size);
-                  URL.revokeObjectURL(url);
-                  resolve();
-                };
-                img.onerror = () => {
-                  URL.revokeObjectURL(url);
-                  resolve();
-                };
-                img.src = url;
-              });
-            }
-          }
-          // Convert canvas to blob and share
+          const svgData = new XMLSerializer().serializeToString(svgEl);
+          const img = new Image();
+          const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+          const url = URL.createObjectURL(svgBlob);
+          await new Promise<void>((resolve) => {
+            img.onload = () => {
+              ctx.drawImage(img, 0, 0, size, size);
+              URL.revokeObjectURL(url);
+              resolve();
+            };
+            img.onerror = () => {
+              URL.revokeObjectURL(url);
+              resolve();
+            };
+            img.src = url;
+          });
           const blob = await new Promise<Blob | null>((resolve) =>
             canvas.toBlob(resolve, 'image/png', 1.0)
           );
-          if (blob) {
+          if (blob && navigator.share && navigator.canShare) {
             const file = new File([blob], 'healthvault-qr.png', { type: 'image/png' });
-            const shareData = { text: message, files: [file] };
+            const shareData = { files: [file] };
             if (navigator.canShare(shareData)) {
               await navigator.share(shareData);
               return;
             }
           }
+          // Fallback: download the QR image
+          if (blob) {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'healthvault-qr.png';
+            a.click();
+            URL.revokeObjectURL(a.href);
+            setSnackbar({
+              open: true,
+              message: 'QR image downloaded. Share it via WhatsApp.',
+              severity: 'info',
+            });
+            return;
+          }
         }
       } catch {
-        // Web Share failed or cancelled — fall through to WhatsApp URL
+        // User cancelled or error — fall through
       }
     }
-    // Fallback: WhatsApp text-only
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    // Last fallback: open WhatsApp with text
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(`My HealthVault ID is ${profile.health_id}`)}`,
+      '_blank'
+    );
   };
 
   const handleToggleShareable = async (reportId: string, currentValue: boolean) => {
@@ -471,35 +480,42 @@ export default function PatientDashboardClient({
                 </Box>
               </Box>
 
-              {/* Right: QR Code */}
-              <Box
-                sx={{
-                  bgcolor: 'white',
-                  borderRadius: 2.5,
-                  p: 1.2,
-                  flexShrink: 0,
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 0.5,
-                }}
-              >
-                <Box id="qr-share-canvas">
-                  <QRCodeSVG value={profile.health_id || ''} size={90} level="M" />
-                </Box>
-                <Typography
+              {/* Right: QR Code — tap to enlarge for scanning */}
+              <Tooltip title="Tap to show QR for scanning">
+                <Box
+                  onClick={() => setQrPopupOpen(true)}
                   sx={{
-                    fontSize: '0.55rem',
-                    color: '#64748B',
-                    fontWeight: 700,
-                    letterSpacing: '0.05em',
-                    textAlign: 'center',
+                    bgcolor: 'white',
+                    borderRadius: 2.5,
+                    p: 1.2,
+                    flexShrink: 0,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    cursor: 'pointer',
+                    transition: 'transform 0.15s ease',
+                    '&:hover': { transform: 'scale(1.05)' },
+                    '&:active': { transform: 'scale(0.97)' },
                   }}
                 >
-                  SCAN ME
-                </Typography>
-              </Box>
+                  <Box id="qr-share-canvas">
+                    <QRCodeSVG value={profile.health_id || ''} size={90} level="M" />
+                  </Box>
+                  <Typography
+                    sx={{
+                      fontSize: '0.55rem',
+                      color: '#64748B',
+                      fontWeight: 700,
+                      letterSpacing: '0.05em',
+                      textAlign: 'center',
+                    }}
+                  >
+                    TAP TO SHOW
+                  </Typography>
+                </Box>
+              </Tooltip>
             </Box>
           </CardContent>
         </Card>
@@ -816,6 +832,63 @@ export default function PatientDashboardClient({
         onCopy={handleCopyId}
         onWhatsApp={handleWhatsAppShare}
       />
+
+      {/* QR Code Popup — large QR for doctor to scan */}
+      <Dialog
+        open={qrPopupOpen}
+        onClose={() => setQrPopupOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 4,
+              textAlign: 'center',
+              py: 3,
+            },
+          },
+        }}
+      >
+        <DialogContent
+          sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
+            Show this QR to your doctor
+          </Typography>
+          <Box
+            sx={{
+              bgcolor: 'white',
+              borderRadius: 3,
+              p: 2.5,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+            }}
+          >
+            <QRCodeSVG value={profile.health_id || ''} size={220} level="H" />
+          </Box>
+          <Typography
+            sx={{
+              fontFamily: 'monospace',
+              fontSize: '1.3rem',
+              fontWeight: 800,
+              letterSpacing: '0.12em',
+              color: 'primary.main',
+            }}
+          >
+            {profile.health_id}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {profile.full_name}
+          </Typography>
+          <Button
+            variant="contained"
+            fullWidth
+            onClick={() => setQrPopupOpen(false)}
+            sx={{ borderRadius: 2.5, py: 1.4, mt: 1 }}
+          >
+            Done
+          </Button>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
