@@ -113,72 +113,76 @@ export default function PatientDashboardClient({
   };
 
   const handleWhatsAppShare = async () => {
-    // Encode the full message into the QR so the image alone carries all info
-    const qrValue = `HealthVault ID: ${profile.health_id}\nMy HealthVault ID is ${profile.health_id}. Use this to view my medical records on HealthVault.`;
+    const message = `My HealthVault ID is ${profile.health_id}. Use this to view my medical records on HealthVault.`;
     try {
-      // Generate a fresh QR with the full message
       const canvas = document.createElement('canvas');
       const size = 512;
       canvas.width = size;
       canvas.height = size;
       const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, size, size);
-
-        const tempDiv = document.createElement('div');
-        tempDiv.style.position = 'absolute';
-        tempDiv.style.left = '-9999px';
-        document.body.appendChild(tempDiv);
-
-        const { createRoot } = await import('react-dom/client');
-        const { QRCodeSVG: QRGen } = await import('qrcode.react');
-        const React = await import('react');
-
-        const root = createRoot(tempDiv);
-        await new Promise<void>((resolve) => {
-          root.render(
-            React.default.createElement(QRGen, { value: qrValue, size: 512, level: 'M' })
-          );
-          setTimeout(resolve, 100);
-        });
-
-        const sharedSvg = tempDiv.querySelector('svg');
-        if (sharedSvg) {
-          const svgData = new XMLSerializer().serializeToString(sharedSvg);
-          const img = new Image();
-          const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-          const url = URL.createObjectURL(svgBlob);
-          await new Promise<void>((resolve) => {
-            img.onload = () => {
-              ctx.drawImage(img, 0, 0, size, size);
-              URL.revokeObjectURL(url);
-              resolve();
-            };
-            img.onerror = () => {
-              URL.revokeObjectURL(url);
-              resolve();
-            };
-            img.src = url;
-          });
-        }
-
-        root.unmount();
-        document.body.removeChild(tempDiv);
+      if (!ctx) {
+        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+        return;
       }
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      document.body.appendChild(tempDiv);
+
+      const { createRoot } = await import('react-dom/client');
+      const { QRCodeSVG: QRGen } = await import('qrcode.react');
+      const React = await import('react');
+
+      const root = createRoot(tempDiv);
+      await new Promise<void>((resolve) => {
+        root.render(
+          React.default.createElement(QRGen, {
+            value: profile.health_id || '',
+            size: 512,
+            level: 'M',
+          })
+        );
+        setTimeout(resolve, 100);
+      });
+
+      const sharedSvg = tempDiv.querySelector('svg');
+      if (sharedSvg) {
+        const svgData = new XMLSerializer().serializeToString(sharedSvg);
+        const img = new Image();
+        const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+        await new Promise<void>((resolve) => {
+          img.onload = () => {
+            ctx.drawImage(img, 0, 0, size, size);
+            URL.revokeObjectURL(url);
+            resolve();
+          };
+          img.onerror = () => {
+            URL.revokeObjectURL(url);
+            resolve();
+          };
+          img.src = url;
+        });
+      }
+
+      root.unmount();
+      document.body.removeChild(tempDiv);
 
       const blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob(resolve, 'image/png', 1.0)
       );
       if (blob && navigator.share && navigator.canShare) {
         const file = new File([blob], 'healthvault-qr.png', { type: 'image/png' });
-        const shareData = { files: [file] };
+        const shareData = { text: message, files: [file] };
         if (navigator.canShare(shareData)) {
           await navigator.share(shareData);
           return;
         }
       }
-      // Fallback: download the QR image
+      // Fallback: download
       if (blob) {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
@@ -193,13 +197,9 @@ export default function PatientDashboardClient({
         return;
       }
     } catch {
-      // User cancelled or error — fall through
+      // cancelled
     }
-    // Last fallback: open WhatsApp with text
-    window.open(
-      `https://wa.me/?text=${encodeURIComponent(`My HealthVault ID is ${profile.health_id}`)}`,
-      '_blank'
-    );
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const handleToggleShareable = async (reportId: string, currentValue: boolean) => {
