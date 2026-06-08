@@ -263,8 +263,11 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
     setUploading(true);
     setError('');
     try {
-      const { Html5Qrcode } = await import('html5-qrcode');
-      const scanner = new Html5Qrcode('qr-upload-temp');
+      const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
+      const scanner = new Html5Qrcode('qr-upload-container', {
+        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        verbose: false,
+      });
       const result = await scanner.scanFile(file, /* showImage= */ false);
       scanner.clear();
       const healthId = parseQRContent(result);
@@ -301,9 +304,13 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
         type="file"
         ref={fileInputRef}
         accept="image/*"
-        capture="environment"
         onChange={handleFileUpload}
         style={{ display: 'none' }}
+      />
+      {/* Hidden div for upload scanner */}
+      <Box
+        id="qr-upload-container"
+        sx={{ position: 'absolute', width: 1, height: 1, opacity: 0, overflow: 'hidden' }}
       />
 
       {/* Top bar */}
