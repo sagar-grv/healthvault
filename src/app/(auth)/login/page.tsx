@@ -13,6 +13,7 @@ import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import FavoriteIcon from '@mui/icons-material/Favorite';
+import GoogleIcon from '@mui/icons-material/Google';
 import { createClient } from '@/lib/supabase/client';
 
 function LoginForm() {
@@ -42,6 +43,27 @@ function LoginForm() {
       window.location.href = '/dashboard';
     } catch {
       setError('Something went wrong. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      const { error: authError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (authError) {
+        setError(authError.message);
+        setLoading(false);
+      }
+    } catch {
+      setError('Could not connect to Google. Please try again.');
       setLoading(false);
     }
   };
@@ -137,6 +159,30 @@ function LoginForm() {
               {loading ? <CircularProgress size={22} color="inherit" /> : 'Sign In'}
             </Button>
           </Box>
+
+          <Divider sx={{ my: 2 }}>
+            <Typography variant="caption" color="text.secondary">
+              or
+            </Typography>
+          </Divider>
+
+          <Button
+            variant="outlined"
+            fullWidth
+            size="large"
+            startIcon={<GoogleIcon />}
+            onClick={handleGoogleLogin}
+            disabled={loading}
+            sx={{
+              py: 1.25,
+              borderColor: '#E5E7EB',
+              color: '#374151',
+              bgcolor: 'white',
+              '&:hover': { bgcolor: '#F9FAFB', borderColor: '#D1D5DB' },
+            }}
+          >
+            Sign in with Google
+          </Button>
 
           <Divider sx={{ my: 2 }}>
             <Typography variant="caption" color="text.secondary">

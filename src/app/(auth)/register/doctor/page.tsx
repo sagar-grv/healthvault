@@ -15,6 +15,7 @@ import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServicesOutlined';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import GoogleIcon from '@mui/icons-material/Google';
 import { createClient } from '@/lib/supabase/client';
 
 export default function DoctorRegisterPage() {
@@ -29,16 +30,27 @@ export default function DoctorRegisterPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
-    if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
     setLoading(true);
     try {
       const supabase = createClient();
       const { error: authError } = await supabase.auth.signUp({
-        email, password,
+        email,
+        password,
         options: { data: { full_name: fullName, role: 'doctor' } },
       });
-      if (authError) { setError(authError.message); setLoading(false); return; }
+      if (authError) {
+        setError(authError.message);
+        setLoading(false);
+        return;
+      }
       window.location.href = '/dashboard';
     } catch {
       setError('Something went wrong. Please try again.');
@@ -46,9 +58,39 @@ export default function DoctorRegisterPage() {
     }
   };
 
+  const handleGoogleRegister = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      const { error: authError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=/onboarding/doctor`,
+        },
+      });
+      if (authError) {
+        setError(authError.message);
+        setLoading(false);
+      }
+    } catch {
+      setError('Could not connect to Google. Please try again.');
+      setLoading(false);
+    }
+  };
+
   return (
     <Box
-      sx={{ minHeight: '100vh', bgcolor: '#F9FAFB', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', px: 2, py: 4 }}
+      sx={{
+        minHeight: '100vh',
+        bgcolor: '#F9FAFB',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        px: 2,
+        py: 4,
+      }}
     >
       {/* Back button */}
       <Box sx={{ width: '100%', maxWidth: 420, mb: 2 }}>
@@ -57,47 +99,176 @@ export default function DoctorRegisterPage() {
         </IconButton>
       </Box>
 
-      <Card sx={{ width: '100%', maxWidth: 420, boxShadow: '0 4px 24px rgba(0,0,0,0.08)', borderRadius: 3, border: '1px solid #E5E7EB' }}>
+      <Card
+        sx={{
+          width: '100%',
+          maxWidth: 420,
+          boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+          borderRadius: 3,
+          border: '1px solid #E5E7EB',
+        }}
+      >
         <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
           {/* Role badge */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5, p: 1.5, bgcolor: '#F0FDF4', borderRadius: 2, border: '1px solid #A7F3D0' }}>
-            <Box sx={{ width: 36, height: 36, borderRadius: 2, background: 'linear-gradient(135deg, #047857, #10B981)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              mb: 2.5,
+              p: 1.5,
+              bgcolor: '#F0FDF4',
+              borderRadius: 2,
+              border: '1px solid #A7F3D0',
+            }}
+          >
+            <Box
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: 2,
+                background: 'linear-gradient(135deg, #047857, #10B981)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
               <MedicalServicesIcon sx={{ color: 'white', fontSize: 18 }} />
             </Box>
             <Box>
-              <Typography variant="body2" sx={{ fontWeight: 700, color: '#047857', lineHeight: 1.2 }}>Doctor Account</Typography>
-              <Typography variant="caption" color="text.secondary">Access patient records digitally</Typography>
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 700, color: '#047857', lineHeight: 1.2 }}
+              >
+                Doctor Account
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Access patient records digitally
+              </Typography>
             </Box>
           </Box>
 
-          <Typography variant="h4" sx={{ mb: 0.5, fontWeight: 700 }}>Create account</Typography>
+          <Typography variant="h4" sx={{ mb: 0.5, fontWeight: 700 }}>
+            Create account
+          </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             Already have one?{' '}
-            <Link href="/login" style={{ color: '#059669', fontWeight: 600, textDecoration: 'none' }}>Sign in</Link>
+            <Link
+              href="/login"
+              style={{ color: '#059669', fontWeight: 600, textDecoration: 'none' }}
+            >
+              Sign in
+            </Link>
           </Typography>
 
           <Alert severity="info" sx={{ mb: 2.5 }}>
             You&apos;ll complete your medical credentials on the next screen.
           </Alert>
 
-          {error && <Alert severity="error" sx={{ mb: 2.5 }}>{error}</Alert>}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2.5 }}>
+              {error}
+            </Alert>
+          )}
 
           <Box component="form" onSubmit={handleRegister}>
-            <TextField fullWidth label="Full Name" value={fullName} onChange={e => setFullName(e.target.value)} required placeholder="Dr. " autoComplete="name" autoFocus sx={{ mb: 2 }} />
-            <TextField fullWidth label="Email address" type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" sx={{ mb: 2 }} />
-            <TextField fullWidth label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="new-password" helperText="At least 6 characters" sx={{ mb: 2 }} />
-            <TextField fullWidth label="Confirm password" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required autoComplete="new-password" sx={{ mb: 3 }} />
-            <Button type="submit" variant="contained" color="secondary" fullWidth size="large" disabled={loading} sx={{ py: 1.5, fontSize: '1rem' }}>
+            <TextField
+              fullWidth
+              label="Full Name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+              placeholder="Dr. "
+              autoComplete="name"
+              autoFocus
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Email address"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="new-password"
+              helperText="At least 6 characters"
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Confirm password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              autoComplete="new-password"
+              sx={{ mb: 3 }}
+            />
+            <Button
+              type="submit"
+              variant="contained"
+              color="secondary"
+              fullWidth
+              size="large"
+              disabled={loading}
+              sx={{ py: 1.5, fontSize: '1rem' }}
+            >
               {loading ? <CircularProgress size={22} color="inherit" /> : 'Create Doctor Account'}
             </Button>
           </Box>
 
+          <Divider sx={{ my: 2 }}>
+            <Typography variant="caption" color="text.secondary">
+              or
+            </Typography>
+          </Divider>
+
+          <Button
+            variant="outlined"
+            fullWidth
+            size="large"
+            startIcon={<GoogleIcon />}
+            onClick={handleGoogleRegister}
+            disabled={loading}
+            sx={{
+              py: 1.25,
+              borderColor: '#E5E7EB',
+              color: '#374151',
+              bgcolor: 'white',
+              '&:hover': { bgcolor: '#F9FAFB', borderColor: '#D1D5DB' },
+            }}
+          >
+            Sign up with Google
+          </Button>
+
           <Divider sx={{ my: 2.5 }}>
-            <Typography variant="caption" color="text.secondary">Are you a patient?</Typography>
+            <Typography variant="caption" color="text.secondary">
+              Are you a patient?
+            </Typography>
           </Divider>
           <Button
-            component={Link} href="/register/patient" variant="outlined" fullWidth
-            sx={{ py: 1.25, borderColor: '#BFDBFE', color: '#1D4ED8', bgcolor: '#EFF6FF', '&:hover': { bgcolor: '#DBEAFE', borderColor: '#93C5FD', transform: 'none' } }}
+            component={Link}
+            href="/register/patient"
+            variant="outlined"
+            fullWidth
+            sx={{
+              py: 1.25,
+              borderColor: '#BFDBFE',
+              color: '#1D4ED8',
+              bgcolor: '#EFF6FF',
+              '&:hover': { bgcolor: '#DBEAFE', borderColor: '#93C5FD', transform: 'none' },
+            }}
           >
             Register as a Patient instead
           </Button>
