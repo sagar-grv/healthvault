@@ -236,7 +236,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ analysis: { ...analysis, report_id: reportId } });
     }
 
-    return NextResponse.json({ analysis: { ...saved, confidence: analysis.confidence } });
+    return NextResponse.json({ analysis: saved });
   } catch (err: unknown) {
     const apiErr = err as { status?: number; message?: string };
     console.error('[analyze-report] error:', apiErr);
