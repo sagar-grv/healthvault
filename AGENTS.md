@@ -13,7 +13,18 @@ Before doing ANY work, you MUST know:
 
 If these files don't exist, create them on first run.
 
-## 2. NEVER Touch Production Database
+## 2. NEVER Merge to Production Without User Approval
+
+- **NEVER** create PRs, merge PRs, or push to `main` without explicit user approval
+- **NEVER** relax branch protection and merge silently — user must test locally first
+- The deployment flow has TWO mandatory user checkpoints:
+  1. **After local dev**: User tests features on `localhost` → approves → THEN create PR
+  2. **After PR + CI green**: User reviews PR → approves → THEN merge
+- If CI is green but user hasn't tested, WAIT. Do not auto-merge.
+- Dependabot PRs: Ask user before merging, even if CI passes
+- **This overrides everything. No exceptions.**
+
+## 3. NEVER Touch Production Database
 
 - Supabase project `ctofuiuogawqcmyedyno` is PRODUCTION
 - Before ANY schema change, SQL migration, or table modification:
@@ -84,11 +95,18 @@ Trigger: `review security` to the Security Reviewer Agent
    - CodeQL: security vulnerability scan
 4. **Gate**: All checks must pass before merge
 
-### Stage 5 — Deploy
+### Stage 5 — User Reviews PR
 
-1. Merge PR to main (squash)
-2. Vercel auto-deploys production
-3. Post-deploy smoke: Sentry + Vercel Analytics verify
+1. **USER reviews the PR and tests on Vercel preview**
+2. **USER explicitly approves**: "merge it" / "approve" / "ship it"
+3. **Only THEN** merge PR to main (squash)
+4. Vercel auto-deploys production
+5. Post-deploy smoke: Sentry + Vercel Analytics verify
+
+### Stage 5a — Deploy (REQUIRES USER APPROVAL)
+
+> **CRITICAL**: Do NOT merge PRs without user saying "merge", "approve", "ship", or similar explicit approval.
+> CI being green is NOT approval. The user must test and approve.
 
 ### Stage 6 — Monitor
 
@@ -163,6 +181,7 @@ git push origin feat/feature-name
 
 ## 10. Critical Rules
 
+- **NEVER merge PRs to main without explicit user approval ("merge"/"approve"/"ship")**
 - RLS is enabled on all tables — respect it
 - `profiles.role` is either 'patient' or 'doctor'
 - `doctor_profiles` extends `profiles` for doctors
