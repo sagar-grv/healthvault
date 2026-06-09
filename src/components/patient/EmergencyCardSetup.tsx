@@ -17,6 +17,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import ShareIcon from '@mui/icons-material/Share';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import PrintIcon from '@mui/icons-material/Print';
+import EditIcon from '@mui/icons-material/Edit';
 import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@/lib/supabase/client';
 
@@ -332,8 +334,11 @@ export default function EmergencyCardSetup({ open, onClose }: EmergencyCardSetup
         return (
           <Box sx={{ textAlign: 'center' }}>
             <CheckCircleIcon sx={{ fontSize: 48, color: '#059669', mb: 1 }} />
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
               Emergency Card Ready!
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Print this QR or keep it on your phone for emergencies.
             </Typography>
 
             {savedProfile && (
@@ -344,31 +349,115 @@ export default function EmergencyCardSetup({ open, onClose }: EmergencyCardSetup
                   borderRadius: 3,
                   display: 'inline-block',
                   mb: 2,
+                  border: '2px solid #E5E7EB',
+                  position: 'relative',
                 }}
               >
                 <QRCodeSVG value={getEmergencyUrl()} size={180} level="M" includeMargin />
+                <Typography
+                  variant="caption"
+                  sx={{
+                    display: 'block',
+                    mt: 1,
+                    fontWeight: 600,
+                    color: '#374151',
+                    fontSize: '0.7rem',
+                  }}
+                >
+                  HealthVault Emergency
+                </Typography>
               </Box>
             )}
 
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Anyone who scans this QR sees your emergency info — no login needed.
-            </Typography>
+            {/* Summary preview */}
+            {savedProfile && (
+              <Box
+                sx={{
+                  mb: 2,
+                  p: 1.5,
+                  bgcolor: 'rgba(220,38,38,0.04)',
+                  borderRadius: 2,
+                  border: '1px solid rgba(220,38,38,0.15)',
+                  textAlign: 'left',
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{ fontWeight: 600, color: '#DC2626', display: 'block', mb: 0.5 }}
+                >
+                  This card shows:
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {savedProfile.blood_group && (
+                    <Chip
+                      label={`Blood: ${savedProfile.blood_group}`}
+                      size="small"
+                      sx={{ height: 20, fontSize: '0.65rem' }}
+                    />
+                  )}
+                  {savedProfile.allergies?.length > 0 && (
+                    <Chip
+                      label={`${savedProfile.allergies.length} allergies`}
+                      size="small"
+                      sx={{ height: 20, fontSize: '0.65rem' }}
+                    />
+                  )}
+                  {savedProfile.conditions?.length > 0 && (
+                    <Chip
+                      label={`${savedProfile.conditions.length} conditions`}
+                      size="small"
+                      sx={{ height: 20, fontSize: '0.65rem' }}
+                    />
+                  )}
+                  {savedProfile.emergency_contact_phone && (
+                    <Chip
+                      label="Emergency contact"
+                      size="small"
+                      sx={{ height: 20, fontSize: '0.65rem' }}
+                    />
+                  )}
+                </Box>
+              </Box>
+            )}
 
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
               <Button
                 fullWidth
                 variant="outlined"
                 startIcon={copied ? <CheckCircleIcon /> : <ContentCopyIcon />}
                 onClick={copyLink}
+                sx={{ py: 1.25 }}
               >
                 {copied ? 'Copied!' : 'Copy Link'}
               </Button>
-              <Button fullWidth variant="contained" startIcon={<ShareIcon />} onClick={shareCard}>
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={<ShareIcon />}
+                onClick={shareCard}
+                sx={{ py: 1.25 }}
+              >
                 Share
               </Button>
             </Box>
 
-            <Button variant="text" size="small" onClick={() => setStep(0)} sx={{ mt: 2 }}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<PrintIcon />}
+              onClick={() => window.print()}
+              sx={{ py: 1.25, mb: 1 }}
+            >
+              Print QR Code
+            </Button>
+
+            <Button
+              variant="text"
+              size="small"
+              startIcon={<EditIcon sx={{ fontSize: 14 }} />}
+              onClick={() => setStep(0)}
+              sx={{ mt: 0.5 }}
+            >
               Edit Card
             </Button>
           </Box>

@@ -37,13 +37,16 @@ Never apply band-aid fixes. If you don't understand the cause, say so.
 
 ## 4. Feature Development Workflow — Full Pipeline
 
+> **MANDATORY:** Every feature follows the deployment flow in `docs/DEPLOYMENT_FLOW.md`.
+> The user has TWO mandatory checkpoints: (1) after local dev, (2) after production deploy.
+> Nothing goes to production without user approval.
+
 ```
-User Instruction → Planner Agent → Builder Agent → Tester/Security Agent → CI/CD → Deploy → Monitor
-     ↑                 ↑                ↑                     ↑               ↑         ↑
-  You say          .opencode/    .opencode/             .opencode/       GitHub     Monitor
-  "plan: <x>"     agents/       agents/co-              agents/         Actions     Agent
-                  planner.md    developer.md            security-        (auto)     (every
-                                                        reviewer.md                 session)
+User Instruction → Planner Agent → Builder Agent → User Tests → PR → CI → Merge → Vercel → User Verifies
+     ↑                 ↑                ↑              ↑          ↑     ↑        ↑           ↑
+  You say          .opencode/    .opencode/        YOU TEST    GitHub  Auto   Vercel    YOU VERIFY
+  "plan: <x>"     agents/       agents/co-        locally     CLI    green  auto      production
+                  planner.md    developer.md      dev env             merge  deploy
 ```
 
 ### Stage 1 — Planning
@@ -169,3 +172,4 @@ git push origin feat/feature-name
 - NEVER commit `.env` files
 - NEVER skip the Security Reviewer agent before pushing to GitHub
 - ALWAYS run Monitor agent at session start
+- **ALWAYS follow `docs/DEPLOYMENT_FLOW.md` for every feature**

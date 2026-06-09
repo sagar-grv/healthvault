@@ -11,6 +11,7 @@ import Alert from '@mui/material/Alert';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
 import CloseIcon from '@mui/icons-material/Close';
+import LinkIcon from '@mui/icons-material/Link';
 import { QRCodeSVG } from 'qrcode.react';
 
 interface AppointmentShareSheetProps {
@@ -103,6 +104,31 @@ export default function AppointmentShareSheet({
       // cancelled
     }
     onWhatsApp();
+    onClose();
+  };
+
+  const generateShareLink = async () => {
+    const expiryMs = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+    const base =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : 'https://healthvault-dusky.vercel.app';
+    const link = `${base}/share?hid=${encodeURIComponent(healthId)}&exp=${expiryMs}`;
+
+    if (navigator.share) {
+      await navigator.share({
+        title: 'My HealthVault ID',
+        text: `My HealthVault ID is ${healthId}. Link expires in 24 hours:`,
+        url: link,
+      });
+    } else {
+      await navigator.clipboard.writeText(link);
+      setSnackbar({
+        open: true,
+        message: 'Share link copied (expires in 24h)',
+        severity: 'success',
+      });
+    }
     onClose();
   };
 
@@ -200,7 +226,7 @@ export default function AppointmentShareSheet({
         </Typography>
 
         {/* Action buttons — 2 options: Copy ID + Share QR */}
-        <Box sx={{ display: 'flex', gap: 1.2 }}>
+        <Box sx={{ display: 'flex', gap: 1.2, mb: 1.5 }}>
           <Button
             variant="outlined"
             fullWidth
@@ -223,6 +249,17 @@ export default function AppointmentShareSheet({
             Share QR
           </Button>
         </Box>
+
+        {/* Time-limited link */}
+        <Button
+          variant="text"
+          fullWidth
+          startIcon={<LinkIcon />}
+          onClick={generateShareLink}
+          sx={{ py: 1.2, color: 'text.secondary', fontSize: '0.85rem' }}
+        >
+          Share Link (expires in 24h)
+        </Button>
       </Box>
 
       <Snackbar

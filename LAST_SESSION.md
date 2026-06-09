@@ -35,26 +35,22 @@ PR #12 merged to `main` at 18:40 UTC. Vercel auto-deploying to `healthvault-dusk
 
 ---
 
-## Production Migration Required
+## Production Status — Verified Sat Jun 6 2026
 
-**IMPORTANT:** Migration 002 (emergency_profiles) and 003 (storage bucket + RLS) are
-applied to local Docker Supabase only. Production Supabase still needs them.
+All 5 migrations (001–005) confirmed applied in BOTH local Docker AND production Supabase:
 
-Run these on production Supabase (`ctofuiuogawqcmyedyno`) when ready:
-
-1. `supabase/migrations/20240102000001_p0_emergency_card.sql`
-2. `supabase/migrations/20240103000001_storage_bucket.sql`
-
-Do this via Supabase dashboard SQL editor or via: `npx supabase db push --linked`
+| Check                          | Local | Production    |
+| ------------------------------ | ----- | ------------- |
+| emergency_profiles table       | ✅    | ✅ (has data) |
+| profiles.preferred_language    | ✅    | ✅            |
+| reports.is_starred             | ✅    | ✅            |
+| reports.thumbnail_path         | ✅    | ✅            |
+| report_analyses.extracted_data | ✅    | ✅            |
+| reports storage bucket         | ✅    | ✅            |
 
 ---
 
 ## What's Next (P1 Sprint)
-
-### Immediate (next session)
-
-1. Apply migrations 002 + 003 to production Supabase
-2. Verify production app works (emergency card, file upload)
 
 ### P1 Features (priority order)
 
@@ -100,3 +96,27 @@ Test credentials:
 | Lead Time           | ~3 days (design → merge)   |
 | Change Failure Rate | 0% (all checks green)      |
 | MTTR                | N/A (no incidents)         |
+
+---
+
+# Current Session — Sat Jun 6 2026
+
+## What Was Completed
+
+### Environment Verification
+
+- Full audit of local Docker Supabase vs production Supabase
+- Verified all 5 migrations (001–005) applied in BOTH environments
+- Tables, columns, indexes, triggers, storage bucket — all in sync
+- LAST_SESSION.md corrected: removed outdated "Production Migration Required" section
+
+### Previously Completed (from earlier in session)
+
+- Investor pitch page at `/pitch` (8 sections, premium editorial style)
+- NotebookLM pitch deck generated then deleted
+- Full codebase analysis for feature planning
+- Design preview (glassmorphic) created then removed per user request
+
+## What's Next
+
+1. Start P1 features (Family Linking, Health Scheme Advisor, etc.)

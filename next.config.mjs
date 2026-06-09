@@ -16,6 +16,23 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['@mui/material', '@mui/icons-material'],
   },
+  headers: async () => [
+    {
+      source: '/api/emergency/:path*',
+      headers: [
+        { key: 'Cache-Control', value: 'public, s-maxage=60, stale-while-revalidate=300' },
+      ],
+    },
+    {
+      source: '/:path*',
+      headers: [
+        { key: 'X-Content-Type-Options', value: 'nosniff' },
+        { key: 'X-Frame-Options', value: 'DENY' },
+        { key: 'X-XSS-Protection', value: '1; mode=block' },
+        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+      ],
+    },
+  ],
 };
 
 export default withSentryConfig(withNextIntl(nextConfig), {
