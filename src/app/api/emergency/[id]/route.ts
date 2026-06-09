@@ -3,6 +3,34 @@ import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'edge';
 
+// ── In-memory rate limiter (10 req/min per IP, 96-bit entropy) ───────────────
+const RATE_LIMIT = 10;
+const WINDOW_MS = 60 * 1000;
+const hits = new Map<string, number[]>();
+
+function rateLimit(ip: string): boolean {
+  const now = Date.now();
+  const timestamps = hits.get(ip) ?? [];
+  const recent = timestamps.filter((t) => now - t < WINDOW_MS);
+  if (recent.length >= RATE_LIMIT) return false;
+  recent.push(now);
+  hits.set(ip, recent);
+  return true;
+}
+
+// Cleanup stale entries every 5 minutes
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [ip, timestamps] of hits) {
+      const recent = timestamps.filter((t) => now - t < WINDOW_MS);
+      if (recent.length === 0) hits.delete(ip);
+      else hits.set(ip, recent);
+    }
+  },
+  5 * 60 * 1000
+);
+
 /**
  * GET /api/emergency/[id]
  *
@@ -18,6 +46,15 @@ export const runtime = 'edge';
  */
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const ip =
+    request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? 'unknown';
+  if (!rateLimit(ip)) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again in a minute.' },
+      { status: 429 }
+    );
+  }
+
   const { id } = await params;
 
   if (!id || id.length < 10) {
