@@ -6,7 +6,6 @@ export interface AnalysisResult {
   abnormal_values: { name: string; value: string; normal_range: string; status: string }[];
   medications_found: string[];
   recommendation: string;
-  confidence: number; // 0–1, auto-calculated from content completeness
 }
 
 // ─── buildAnalysisPrompt ──────────────────────────────────────────────────────
@@ -104,24 +103,5 @@ export function parseGeminiAnalysis(raw: string): AnalysisResult | null {
     ? String(rawRec)
     : 'Please consult your doctor for further guidance. This is not medical advice.';
 
-  // ── Auto-calculate confidence (0–1) from content completeness ──────────────
-  let confidence = 0;
-  if (summary && summary !== 'No summary available.') confidence += 0.2;
-  if (key_findings.length > 0) confidence += 0.2;
-  if (abnormal_values.length > 0) confidence += 0.15;
-  if (medications_found.length > 0) confidence += 0.15;
-  if (recommendation && recommendation.length > 10) confidence += 0.15;
-  if (summary.length > 20) confidence += 0.1;
-  if (
-    summary &&
-    summary !== 'No summary available.' &&
-    key_findings.length > 0 &&
-    recommendation &&
-    recommendation.length > 10
-  ) {
-    confidence += 0.05; // completeness bonus
-  }
-  confidence = Math.round(Math.min(confidence, 1) * 100) / 100; // cap at 1.00
-
-  return { summary, key_findings, abnormal_values, medications_found, recommendation, confidence };
+  return { summary, key_findings, abnormal_values, medications_found, recommendation };
 }

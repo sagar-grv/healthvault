@@ -1,74 +1,82 @@
-# Last Session — Sat May 23 2026
+# Last Session — Tue Jun 9 2026
 
 ## What Was Completed
 
-### P0 Sprint — MERGED TO PRODUCTION ✓
+### Sprint 1 — MERGED TO PRODUCTION ✓
 
-PR #12 merged to `main` at 18:40 UTC. Vercel auto-deploying to `healthvault-dusky.vercel.app`.
+| Feature                               | PR  | Status  |
+| ------------------------------------- | --- | ------- |
+| QR Scanner (camera + image upload)    | #34 | ✅ Live |
+| Patient Dashboard QR (WhatsApp share) | #35 | ✅ Live |
+| AI Confidence Score                   | #36 | ✅ Live |
+| Google OAuth via Supabase             | #37 | ✅ Live |
 
----
+### Sprint 2–4 — MERGED TO PRODUCTION ✓
 
-### Features Shipped to Production
+PR #39 merged to `main`. Vercel auto-deploying to `healthvault-dusky.vercel.app`.
 
-| Feature                                                                | Status   |
-| ---------------------------------------------------------------------- | -------- |
-| Smart Report Capture (camera + Gemini AI extraction)                   | Live     |
-| AI Health Interpreter (12 Indian languages + TTS)                      | Live     |
-| Emergency Medical Card (public QR page, no login)                      | Live     |
-| PWA (installable, offline-capable)                                     | Live     |
-| Image compression pipeline (95% size reduction)                        | Live     |
-| Global [EN\|HI] language switcher in AppBar                            | Live     |
-| Full Hindi/English i18n: dashboard, profile, upload, access-log        | Live     |
-| AI language decoupled from UI locale                                   | Live     |
-| Modern icons (BiotechIcon, MonitorHeartIcon, AssignmentOutlined, etc.) | Live     |
-| Docker Supabase port fix (563xx range)                                 | Dev only |
-| Storage bucket + RLS migration (003)                                   | Live     |
-| Emergency profiles migration (002)                                     | Live     |
-| db:seed script for test users                                          | Dev only |
-| CI fix: npm ci --legacy-peer-deps                                      | Live     |
+| Feature                                           | Sprint | Status  |
+| ------------------------------------------------- | ------ | ------- |
+| AI Confidence Threshold (badge + warning)         | 2      | ✅ Live |
+| Full Offline Support (IndexedDB + queue + SW)     | 3      | ✅ Live |
+| Scalability (edge runtime, CDN, security headers) | 3      | ✅ Live |
+| Emergency QR Card Polish (preview, print)         | 4      | ✅ Live |
+| Time-limited Share Links (24h expiry)             | 4      | ✅ Live |
 
-### Test Coverage
+### Dependabot PRs — ALL MERGED ✓
 
-- 52/52 tests passing
-- CI: green on main
-- CodeQL: green on main
+| PR  | Description                 | Status    |
+| --- | --------------------------- | --------- |
+| #32 | Dev deps (4 updates)        | ✅ Merged |
+| #33 | Prod deps (6 updates)       | ✅ Merged |
+| #28 | actions/upload-artifact 4→7 | ✅ Merged |
+| #38 | Prod deps (4 updates)       | ✅ Merged |
 
----
+### Environment Verification (Earlier Session)
 
-## Production Status — Verified Sat Jun 6 2026
-
-All 5 migrations (001–005) confirmed applied in BOTH local Docker AND production Supabase:
-
-| Check                          | Local | Production    |
-| ------------------------------ | ----- | ------------- |
-| emergency_profiles table       | ✅    | ✅ (has data) |
-| profiles.preferred_language    | ✅    | ✅            |
-| reports.is_starred             | ✅    | ✅            |
-| reports.thumbnail_path         | ✅    | ✅            |
-| report_analyses.extracted_data | ✅    | ✅            |
-| reports storage bucket         | ✅    | ✅            |
+- All 5 migrations (001–005) confirmed applied in both local AND production
+- Tables, columns, indexes, triggers, storage bucket — all in sync
 
 ---
 
-## What's Next (P1 Sprint)
+## Production Status
 
-### P1 Features (priority order)
+| Check             | Status                                         |
+| ----------------- | ---------------------------------------------- |
+| Build             | ✅ Clean (20 routes)                           |
+| Lint              | ✅ Clean                                       |
+| TypeScript        | ✅ Clean                                       |
+| Tests             | ✅ 52/52 passing                               |
+| CI (main)         | ✅ Green                                       |
+| CodeQL            | ✅ Green                                       |
+| Branch protection | ✅ Restored (1 approval, CI + CodeQL required) |
 
-| #   | Feature                                             | Effort |
-| --- | --------------------------------------------------- | ------ |
-| 1   | Family Linking (request-based mutual access)        | 4 days |
-| 2   | Health Scheme Advisor (AI chat, PM-JAY eligibility) | 3 days |
-| 3   | Policy Awareness (AI voice guidance, all languages) | 3 days |
-| 4   | Health Trend Tracker (compare reports over time)    | 3 days |
-| 5   | Patient AI Assistant (chat about own reports)       | 2 days |
+---
 
-### ABDM Path (after P1)
+## What's Next
 
-- Register on ABDM Sandbox (sandbox.abdm.gov.in)
-- Implement M1 (ABHA linking)
-- Implement M2 (HIP — push records to ABDM)
-- Implement M3 (HIU — pull records from ABDM)
-- Functional testing + WASA + NHA certification
+### Sprint 5 (Final)
+
+| #   | Feature                                       | Status  |
+| --- | --------------------------------------------- | ------- |
+| 20  | Sentry SDK cleanup (fix deprecation warnings) | Pending |
+
+### After All Sprints
+
+1. Test all features locally with user
+2. Deploy to production one feature at a time (user preference)
+3. Monitor Sentry for errors
+
+---
+
+## DORA Metrics
+
+| Metric              | Value                    |
+| ------------------- | ------------------------ |
+| Deploy Frequency    | 3 sprints merged today   |
+| Lead Time           | ~3 days (design → merge) |
+| Change Failure Rate | 0% (all checks green)    |
+| MTTR                | N/A (no incidents)       |
 
 ---
 
@@ -87,36 +95,3 @@ Test credentials:
 
 - `patient@test.com` / `Test1234!`
 - `doctor@test.com` / `Test1234!`
-
-## DORA Metrics
-
-| Metric              | Value                      |
-| ------------------- | -------------------------- |
-| Deploy Frequency    | 1 sprint (P0) merged today |
-| Lead Time           | ~3 days (design → merge)   |
-| Change Failure Rate | 0% (all checks green)      |
-| MTTR                | N/A (no incidents)         |
-
----
-
-# Current Session — Sat Jun 6 2026
-
-## What Was Completed
-
-### Environment Verification
-
-- Full audit of local Docker Supabase vs production Supabase
-- Verified all 5 migrations (001–005) applied in BOTH environments
-- Tables, columns, indexes, triggers, storage bucket — all in sync
-- LAST_SESSION.md corrected: removed outdated "Production Migration Required" section
-
-### Previously Completed (from earlier in session)
-
-- Investor pitch page at `/pitch` (8 sections, premium editorial style)
-- NotebookLM pitch deck generated then deleted
-- Full codebase analysis for feature planning
-- Design preview (glassmorphic) created then removed per user request
-
-## What's Next
-
-1. Start P1 features (Family Linking, Health Scheme Advisor, etc.)
