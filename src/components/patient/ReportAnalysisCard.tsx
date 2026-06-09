@@ -28,6 +28,7 @@ interface AnalysisResult {
   abnormal_values: AbnormalValue[];
   medications_found: string[];
   recommendation: string;
+  confidence: number;
 }
 
 interface ReportAnalysisCardProps {
@@ -146,6 +147,9 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
 
   // Analysis results
   const hasAbnormal = analysis.abnormal_values?.length > 0;
+  const confidence = analysis.confidence ?? 0;
+  const confPercent = Math.round(confidence * 100);
+  const isLowConfidence = confidence < 0.7;
 
   return (
     <Card
@@ -176,6 +180,34 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
             }}
           />
         </Box>
+
+        {/* Confidence badge */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+          <Chip
+            label={`${confPercent}% confidence`}
+            size="small"
+            sx={{
+              bgcolor: isLowConfidence ? 'rgba(217,119,6,0.12)' : 'rgba(5,150,105,0.12)',
+              color: isLowConfidence ? '#d97706' : '#059669',
+              fontWeight: 600,
+              fontSize: '0.7rem',
+            }}
+          />
+          {isLowConfidence && (
+            <Typography variant="caption" color="warning.main" sx={{ fontWeight: 500 }}>
+              Please verify with your doctor
+            </Typography>
+          )}
+        </Box>
+
+        {/* Low confidence warning */}
+        {isLowConfidence && (
+          <Alert severity="warning" sx={{ mb: 1.5, py: 0 }}>
+            <Typography variant="caption" sx={{ fontWeight: 600 }}>
+              Low confidence — AI may have misread this report. Always confirm with your doctor.
+            </Typography>
+          </Alert>
+        )}
 
         {/* Summary */}
         <Typography variant="body2" sx={{ mb: 1.5, lineHeight: 1.55 }}>

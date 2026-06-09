@@ -32,6 +32,7 @@ import DocumentScannerOutlinedIcon from '@mui/icons-material/DocumentScannerOutl
 import { createClient } from '@/lib/supabase/client';
 import { REPORT_TYPES, REPORT_TYPE_COLORS, ACCEPTED_FILE_TYPES, MAX_FILE_SIZE } from '@/constants';
 import { optimizeImage, isOptimizableImage, formatFileSize } from '@/lib/utils/image-optimizer';
+import { isOnline, queueUpload } from '@/lib/offline/db';
 import ThemeToggle from '@/components/ThemeToggle';
 
 const CameraCapture = dynamic(() => import('@/components/patient/CameraCapture'), { ssr: false });
@@ -110,6 +111,28 @@ export default function UploadReportPage() {
       if (!user) {
         setError(t('sessionExpired'));
         setUploading(false);
+        return;
+      }
+
+      // If offline, queue the upload for later
+      if (!isOnline()) {
+        const reportId = crypto.randomUUID();
+        const filePath = `${user.id}/${reportId}/${file.name}`;
+        await queueUpload({
+          file,
+          fileName: file.name,
+          mimeType: file.type,
+          title,
+          reportType,
+          reportDate,
+          notes,
+          isShareable,
+          filePath,
+        });
+        setProgress(100);
+        setProgressLabel(t('done'));
+        router.push('/dashboard/patient');
+        router.refresh();
         return;
       }
 

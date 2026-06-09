@@ -19,6 +19,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import BloodtypeIcon from '@mui/icons-material/Bloodtype';
 import SosIcon from '@mui/icons-material/Sos';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import PrintIcon from '@mui/icons-material/Print';
 
 interface EmergencyData {
   name: string;
@@ -358,7 +359,16 @@ export default function EmergencyPage() {
         </Box>
 
         {/* Footer */}
-        <Box sx={{ mt: 3, textAlign: 'center' }}>
+        <Box sx={{ mt: 3, textAlign: 'center', width: '100%', maxWidth: 420 }}>
+          <Button
+            variant="outlined"
+            fullWidth
+            startIcon={<PrintIcon />}
+            onClick={() => window.print()}
+            sx={{ mb: 2, borderColor: '#D1D5DB', color: '#6B7280' }}
+          >
+            Print This Page
+          </Button>
           <Typography variant="caption" color="text.secondary">
             Powered by HealthVault
           </Typography>

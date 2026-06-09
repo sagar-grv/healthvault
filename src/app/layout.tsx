@@ -4,6 +4,7 @@ import './globals.css';
 import ThemeProvider from '@/components/ThemeProvider';
 import EmotionRegistry from '@/components/EmotionRegistry';
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration';
+import OfflineIndicator from '@/components/OfflineIndicator';
 import { NextIntlClientProvider } from 'next-intl';
 import { cookies } from 'next/headers';
 
@@ -74,6 +75,7 @@ export default async function RootLayout({
           </ThemeProvider>
         </EmotionRegistry>
         <ServiceWorkerRegistration />
+        <OfflineIndicator />
       </body>
     </html>
   );

@@ -5,9 +5,10 @@
  * - Offline access to cached reports and emergency card
  * - Background sync for queued uploads
  * - App shell caching for instant page loads
+ * - Offline file queue processing
  */
 
-const CACHE_NAME = 'healthvault-v1';
+const CACHE_NAME = 'healthvault-v2';
 const STATIC_ASSETS = ['/', '/manifest.json', '/offline.html'];
 
 // Install: cache static assets
@@ -45,9 +46,36 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Share page: cache for offline access
+  if (url.pathname.startsWith('/share')) {
+    event.respondWith(networkFirstWithCache(request));
+    return;
+  }
+
   // Static assets and pages: stale-while-revalidate
   event.respondWith(staleWhileRevalidate(request));
 });
+
+// Background sync: process queued uploads when back online
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-uploads') {
+    event.waitUntil(syncUploads());
+  }
+});
+
+async function syncUploads() {
+  // Notify all clients that sync is starting
+  const clients = await self.clients.matchAll();
+  for (const client of clients) {
+    client.postMessage({ type: 'SYNC_START' });
+  }
+
+  // The actual sync is handled by the client-side queue processor
+  // This just triggers it
+  for (const client of clients) {
+    client.postMessage({ type: 'SYNC_TRIGGER' });
+  }
+}
 
 async function networkFirstWithCache(request) {
   try {

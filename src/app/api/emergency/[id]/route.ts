@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+export const runtime = 'edge';
+
 /**
  * GET /api/emergency/[id]
  *
@@ -63,14 +65,22 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const firstName = profile?.full_name?.split(' ')[0] || 'Unknown';
 
   // Return only what's needed — minimal data
-  return NextResponse.json({
-    name: firstName,
-    bloodGroup: data.blood_group,
-    allergies: data.allergies || [],
-    conditions: data.conditions || [],
-    emergencyContact: {
-      name: data.emergency_contact_name,
-      phone: data.emergency_contact_phone,
+  // Cache for 60s on CDN, stale-while-revalidate for 5min
+  return NextResponse.json(
+    {
+      name: firstName,
+      bloodGroup: data.blood_group,
+      allergies: data.allergies || [],
+      conditions: data.conditions || [],
+      emergencyContact: {
+        name: data.emergency_contact_name,
+        phone: data.emergency_contact_phone,
+      },
     },
-  });
+    {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+      },
+    }
+  );
 }
