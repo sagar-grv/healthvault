@@ -37,15 +37,12 @@ export async function searchPatient(
     return { error: 'Search limit reached (10 per hour). Please try again later.' };
   }
 
-  // Insert search attempt — fire and forget, don't block navigation
-  supabase
-    .from('search_attempts')
-    .insert({
-      doctor_id: user.id,
-      searched_health_id: normalized,
-      found: false,
-    })
-    .then(() => {});
+  // Insert search attempt before redirect
+  await supabase.from('search_attempts').insert({
+    doctor_id: user.id,
+    searched_health_id: normalized,
+    found: false,
+  });
 
   // Server-side redirect — no client round-trip needed
   redirect(`/dashboard/doctor/patient/${encodeURIComponent(normalized)}`);

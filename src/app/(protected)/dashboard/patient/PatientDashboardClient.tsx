@@ -41,6 +41,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, Report } from '@/types';
 import { REPORT_TYPES, REPORT_TYPE_COLORS } from '@/constants';
+import { checkUploadAllowed, recordUpload } from '@/app/(protected)/dashboard/patient/actions';
 import { setAiLanguage, syncLanguageFromProfile } from '@/lib/utils/language';
 import { optimizeImage, isOptimizableImage } from '@/lib/utils/image-optimizer';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -253,6 +254,16 @@ export default function PatientDashboardClient({
     setSnackbar({ open: true, message: t('processingReport'), severity: 'info' });
 
     try {
+      const rateCheck = await checkUploadAllowed();
+      if (!rateCheck.allowed) {
+        setSnackbar({
+          open: true,
+          message: rateCheck.error || 'Upload limit reached',
+          severity: 'error',
+        });
+        return;
+      }
+
       const supabase = createClient();
       // A6: profile.id is already available as a prop — no getUser() needed
       const userId = profile.id;
@@ -314,6 +325,7 @@ export default function PatientDashboardClient({
       }
 
       setReports((prev) => [newReport, ...prev]);
+      await recordUpload();
       setSnackbar({ open: true, message: t('reportSaved'), severity: 'success' });
     } catch {
       setSnackbar({ open: true, message: t('somethingWentWrong'), severity: 'error' });
