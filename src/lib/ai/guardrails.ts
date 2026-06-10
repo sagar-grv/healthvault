@@ -11,13 +11,25 @@
 
 import { SupabaseClient } from '@supabase/supabase-js';
 
+// ─── Route types ─────────────────────────────────────────────────────────────
+
+export type AIRouteType =
+  | 'analyze_report'
+  | 'interpret_report'
+  | 'extract_report'
+  | 'explain_report'
+  | 'doctor_assistant';
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 /** Max file size we'll send to Gemini — ~3MB unencoded (~4MB base64) */
 export const MAX_AI_FILE_BYTES = 3 * 1024 * 1024;
 
-/** Max AI analyses per user per hour */
+/** Max AI analyses per user per hour (across all routes combined) */
 export const AI_HOURLY_LIMIT = 20;
+
+/** Max AI analyses per user per hour per route type */
+export const AI_HOURLY_LIMIT_PER_ROUTE = 10;
 
 /** Prompt injection patterns — any match = reject */
 const INJECTION_PATTERNS = [
@@ -34,7 +46,7 @@ const INJECTION_PATTERNS = [
   /DAN\s+mode/i,
   /\[INST\]/i,
   /<\|im_start\|>/i,
-  /\{\{.*\}\}/,  // Template injection
+  /\{\{.*\}\}/, // Template injection
 ];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -64,15 +76,16 @@ export interface AuditEntry {
 export async function checkAIGuardrails(
   supabase: SupabaseClient,
   userId: string,
-  reportId: string,
-  fileSizeBytes: number
+  routeType: AIRouteType,
+  fileSizeBytes: number,
+  reportId?: string
 ): Promise<GuardrailResult> {
-  // 1. File size check
-  if (fileSizeBytes > MAX_AI_FILE_BYTES) {
+  // 1. File size check (skip when no file, e.g. text-only routes)
+  if (fileSizeBytes > 0 && fileSizeBytes > MAX_AI_FILE_BYTES) {
     await logAuditEntry(supabase, {
       user_id: userId,
       report_id: reportId,
-      action: 'analyze_report',
+      action: routeType,
       file_size_bytes: fileSizeBytes,
       flagged: true,
       flag_reason: `File too large: ${Math.round(fileSizeBytes / 1024 / 1024)}MB > 3MB limit`,
@@ -84,37 +97,53 @@ export async function checkAIGuardrails(
     };
   }
 
-  // 2. Rate limit check — max 20 per hour per user
+  // 2. Rate limit check — max 20 per hour per user overall, 10 per route
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const { count } = await supabase
-    .from('ai_usage')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .gte('used_at', oneHourAgo);
 
-  if (count !== null && count >= AI_HOURLY_LIMIT) {
+  const [globalCount, routeCount] = await Promise.all([
+    supabase
+      .from('ai_usage')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('used_at', oneHourAgo),
+    supabase
+      .from('ai_usage')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('route_type', routeType)
+      .gte('used_at', oneHourAgo),
+  ]);
+
+  if (
+    (globalCount.count !== null && globalCount.count >= AI_HOURLY_LIMIT) ||
+    (routeCount.count !== null && routeCount.count >= AI_HOURLY_LIMIT_PER_ROUTE)
+  ) {
+    const reason =
+      (globalCount.count ?? 0) >= AI_HOURLY_LIMIT
+        ? `Global limit reached: ${globalCount.count} requests in last hour`
+        : `Route limit reached: ${routeCount.count} ${routeType} requests in last hour`;
     await logAuditEntry(supabase, {
       user_id: userId,
       report_id: reportId,
-      action: 'analyze_report',
+      action: routeType,
       file_size_bytes: fileSizeBytes,
       flagged: true,
-      flag_reason: `Rate limit exceeded: ${count} requests in last hour`,
+      flag_reason: `Rate limit exceeded - ${reason}`,
     });
     return {
       allowed: false,
-      reason: `AI analysis limit reached (${AI_HOURLY_LIMIT} per hour). Try again later.`,
+      reason: `AI analysis limit reached (${AI_HOURLY_LIMIT} per hour, ${AI_HOURLY_LIMIT_PER_ROUTE} per route). Try again later.`,
       status: 429,
     };
   }
 
   // 3. All checks passed — record usage
   await Promise.all([
-    supabase.from('ai_usage').insert({ user_id: userId }),
+    supabase.from('ai_usage').insert({ user_id: userId, route_type: routeType }),
     logAuditEntry(supabase, {
       user_id: userId,
       report_id: reportId,
-      action: 'analyze_report',
+      action: routeType,
       file_size_bytes: fileSizeBytes,
       flagged: false,
     }),
@@ -128,7 +157,7 @@ export async function checkAIGuardrails(
  * Call this on any user-supplied text before including it in a prompt.
  */
 export function detectPromptInjection(text: string): boolean {
-  return INJECTION_PATTERNS.some(pattern => pattern.test(text));
+  return INJECTION_PATTERNS.some((pattern) => pattern.test(text));
 }
 
 /**
@@ -164,10 +193,7 @@ OUTPUT FORMAT — respond ONLY with this JSON structure:
 /**
  * Silently log an audit entry. Never throws — audit failures must not block the user.
  */
-export async function logAuditEntry(
-  supabase: SupabaseClient,
-  entry: AuditEntry
-): Promise<void> {
+export async function logAuditEntry(supabase: SupabaseClient, entry: AuditEntry): Promise<void> {
   try {
     await supabase.from('ai_audit_log').insert(entry);
   } catch {

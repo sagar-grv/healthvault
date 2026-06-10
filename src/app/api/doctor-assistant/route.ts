@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { detectPromptInjection, validateAIResponse, logAuditEntry } from '@/lib/ai/guardrails';
+import { validateOrigin } from '@/lib/csrf';
+import {
+  checkAIGuardrails,
+  detectPromptInjection,
+  validateAIResponse,
+  logAuditEntry,
+} from '@/lib/ai/guardrails';
 
 // Max patients / reports in context to keep prompt size sane
 const MAX_PATIENTS = 5;
@@ -8,6 +14,9 @@ const MAX_REPORTS_PER_PATIENT = 3;
 const MAX_HISTORY_MESSAGES = 20;
 
 export async function POST(request: NextRequest) {
+  if (!validateOrigin(request)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
   try {
     const supabase = await createClient();
 
@@ -67,18 +76,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'That message could not be processed.' }, { status: 400 });
     }
 
-    // ── Rate limit: reuse ai_usage (20/hr) ───────────────────────────────────
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const { count: usageCount } = await supabase
-      .from('ai_usage')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .gte('used_at', oneHourAgo);
-
-    if (usageCount !== null && usageCount >= 20) {
+    // ── Rate limit: use shared guardrails ────────────────────────────────────
+    const guardResult = await checkAIGuardrails(supabase, user.id, 'doctor_assistant', 0);
+    if (!guardResult.allowed) {
       return NextResponse.json(
-        { error: 'AI assistant limit reached (20 per hour). Please try again later.' },
-        { status: 429 }
+        { error: guardResult.reason },
+        { status: guardResult.status ?? 429 }
       );
     }
 
@@ -258,15 +261,12 @@ ${patientContext}`;
       );
     }
 
-    // ── Record usage + audit ──────────────────────────────────────────────────
-    await Promise.all([
-      supabase.from('ai_usage').insert({ user_id: user.id }),
-      logAuditEntry(supabase, {
-        user_id: user.id,
-        action: 'doctor_assistant',
-        flagged: false,
-      }),
-    ]);
+    // ── Audit success ─────────────────────────────────────────────────────────
+    await logAuditEntry(supabase, {
+      user_id: user.id,
+      action: 'doctor_assistant',
+      flagged: false,
+    });
 
     return NextResponse.json({ reply: rawReply.trim() });
   } catch (err) {

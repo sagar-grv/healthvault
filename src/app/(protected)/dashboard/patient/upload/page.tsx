@@ -32,6 +32,7 @@ import DocumentScannerOutlinedIcon from '@mui/icons-material/DocumentScannerOutl
 import { createClient } from '@/lib/supabase/client';
 import { REPORT_TYPES, REPORT_TYPE_COLORS, ACCEPTED_FILE_TYPES, MAX_FILE_SIZE } from '@/constants';
 import { optimizeImage, isOptimizableImage, formatFileSize } from '@/lib/utils/image-optimizer';
+import { checkUploadAllowed, recordUpload } from '@/app/(protected)/dashboard/patient/actions';
 import ThemeToggle from '@/components/ThemeToggle';
 
 const CameraCapture = dynamic(() => import('@/components/patient/CameraCapture'), { ssr: false });
@@ -103,6 +104,14 @@ export default function UploadReportPage() {
     setUploading(true);
 
     try {
+      // Rate limit check
+      const rateCheck = await checkUploadAllowed();
+      if (!rateCheck.allowed) {
+        setError(rateCheck.error || 'Upload limit reached');
+        setUploading(false);
+        return;
+      }
+
       const supabase = createClient();
       const {
         data: { user },
@@ -190,6 +199,7 @@ export default function UploadReportPage() {
 
       setProgress(100);
       setProgressLabel(t('done'));
+      await recordUpload();
       router.push('/dashboard/patient');
       router.refresh();
     } catch {
