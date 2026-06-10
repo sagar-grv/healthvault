@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
+import { validateOrigin } from '@/lib/csrf';
 
 const MAX_BODY_BYTES = 10 * 1024;
 const RATE_LIMIT = 10;
@@ -18,9 +19,7 @@ function rateLimit(ip: string): boolean {
 
 export async function POST(request: NextRequest) {
   try {
-    const origin = request.headers.get('origin') || request.headers.get('referer') || '';
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://healthvault-dusky.vercel.app';
-    if (origin && !origin.startsWith(siteUrl)) {
+    if (!validateOrigin(request)) {
       return new Response(null, { status: 204 });
     }
 
