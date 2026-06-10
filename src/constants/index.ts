@@ -59,3 +59,9 @@ export const HEALTH_ID_CHARS = '2345679ABCDEFGHJKMNPQRSTUVWXYZ';
 export const HEALTH_ID_PREFIX = 'HV';
 
 export const DOCTOR_SEARCH_RATE_LIMIT = 10; // max searches per hour
+
+export const CURRENT_TERMS_VERSION = '1.0';
+
+export const CONSENT_TYPES = {
+  TERMS_OF_SERVICE: 'terms_of_service',
+} as const;

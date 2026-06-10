@@ -13,9 +13,7 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
@@ -28,13 +26,14 @@ export async function updateSession(request: NextRequest) {
   // getUser() validates JWT against Supabase Auth server.
   // getSession() does NOT validate and causes infinite redirect loops
   // when refresh tokens expire (refresh_token_not_found).
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isProtectedRoute =
-    path.startsWith('/dashboard') || path.startsWith('/onboarding');
-  const isAuthRoute =
-    path.startsWith('/login') || path.startsWith('/register');
+  const isProtectedRoute = path.startsWith('/dashboard') || path.startsWith('/onboarding');
+  const isAuthRoute = path.startsWith('/login') || path.startsWith('/register');
 
   // Auth error on a protected route → clear stale cookies and redirect to login.
   // Without this, a stale sb-* cookie causes an infinite reload loop.
@@ -66,12 +65,43 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Check terms acceptance for authenticated users on protected routes
+  if (user && isProtectedRoute) {
+    let termsAccepted = false;
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('terms_accepted_at')
+        .eq('id', user.id)
+        .single();
+      termsAccepted = !!profile?.terms_accepted_at;
+    } catch {
+      // If profile query fails, let request through to avoid redirect loop
+    }
+
+    // If user hasn't accepted terms and isn't on terms page, redirect to terms
+    if (!termsAccepted && !path.startsWith('/terms')) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/terms';
+      url.searchParams.set('redirect', path);
+      return NextResponse.redirect(url);
+    }
+
+    // If user has accepted terms and is on terms page, redirect to destination
+    if (termsAccepted && path.startsWith('/terms')) {
+      const rawParam = request.nextUrl.searchParams.get('redirect') || '';
+      const redirectParam =
+        rawParam.startsWith('/') && !rawParam.startsWith('//') ? rawParam : '/dashboard';
+      const url = request.nextUrl.clone();
+      url.pathname = redirectParam;
+      url.searchParams.delete('redirect');
+      return NextResponse.redirect(url);
+    }
+  }
+
   // Prevent back-button access to protected pages after logout (bfcache)
   if (isProtectedRoute) {
-    supabaseResponse.headers.set(
-      'Cache-Control',
-      'no-store, no-cache, must-revalidate'
-    );
+    supabaseResponse.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     supabaseResponse.headers.set('Pragma', 'no-cache');
   }
 

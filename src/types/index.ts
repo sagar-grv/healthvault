@@ -8,6 +8,8 @@ export interface Profile {
   phone: string | null;
   health_id: string | null; // HV-XXXX-XXXX for patients
   preferred_language: string; // ISO 639-1 code e.g. 'en', 'hi' (added migration 002)
+  terms_accepted_at: string | null;
+  consent_version: string | null;
   onboarding_complete: boolean;
   created_at: string;
   updated_at: string;
