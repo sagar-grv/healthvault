@@ -13,9 +13,13 @@ import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import PersonIcon from '@mui/icons-material/PersonOutlined';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import GoogleIcon from '@mui/icons-material/Google';
+import TermsModal from '@/components/auth/TermsModal';
+import { acceptTerms } from '@/lib/actions/consent';
 import { createClient } from '@/lib/supabase/client';
 
 export default function PatientRegisterPage() {
@@ -26,6 +30,8 @@ export default function PatientRegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +42,10 @@ export default function PatientRegisterPage() {
     }
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
+      return;
+    }
+    if (!termsAccepted) {
+      setError('You must accept the Terms & Conditions to register.');
       return;
     }
     setLoading(true);
@@ -51,6 +61,7 @@ export default function PatientRegisterPage() {
         setLoading(false);
         return;
       }
+      await acceptTerms().catch(() => {});
       window.location.href = '/dashboard';
     } catch {
       setError('Something went wrong. Please try again.');
@@ -77,6 +88,11 @@ export default function PatientRegisterPage() {
       setError('Could not connect to Google. Please try again.');
       setLoading(false);
     }
+  };
+
+  const handleTermsAccept = () => {
+    setTermsAccepted(true);
+    setTermsModalOpen(false);
   };
 
   return (
@@ -210,12 +226,51 @@ export default function PatientRegisterPage() {
               autoComplete="new-password"
               sx={{ mb: 3 }}
             />
+            <Box sx={{ mb: 2 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={termsAccepted}
+                    onChange={() => {
+                      if (!termsAccepted) {
+                        setTermsModalOpen(true);
+                      } else {
+                        setTermsAccepted(false);
+                      }
+                    }}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Typography variant="body2">
+                    I agree to the{' '}
+                    <Link
+                      href="/terms"
+                      target="_blank"
+                      style={{ color: '#2563EB', fontWeight: 600 }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Terms & Conditions
+                    </Link>{' '}
+                    and{' '}
+                    <Link
+                      href="/terms#privacy"
+                      target="_blank"
+                      style={{ color: '#2563EB', fontWeight: 600 }}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      Privacy Policy
+                    </Link>
+                  </Typography>
+                }
+              />
+            </Box>
             <Button
               type="submit"
               variant="contained"
               fullWidth
               size="large"
-              disabled={loading}
+              disabled={loading || !termsAccepted}
               sx={{ py: 1.5, fontSize: '1rem' }}
             >
               {loading ? <CircularProgress size={22} color="inherit" /> : 'Create Patient Account'}
@@ -268,6 +323,12 @@ export default function PatientRegisterPage() {
           </Button>
         </CardContent>
       </Card>
+
+      <TermsModal
+        open={termsModalOpen}
+        onClose={() => setTermsModalOpen(false)}
+        onAccept={handleTermsAccept}
+      />
     </Box>
   );
 }

@@ -19,7 +19,7 @@ export default async function DoctorDashboardPage() {
       supabase
         .from('profiles')
         .select(
-          'id, role, full_name, email, health_id, phone, preferred_language, onboarding_complete, created_at, updated_at'
+          'id, role, full_name, email, health_id, phone, preferred_language, terms_accepted_at, consent_version, onboarding_complete, created_at, updated_at'
         )
         .eq('id', user.id)
         .single(),
