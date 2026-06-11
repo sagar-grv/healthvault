@@ -187,7 +187,7 @@ export default function QRScannerDialog({
       mounted = false;
       stopScanner();
     };
-  }, [open, onScan, stopScanner]);
+  }, [open, onScan, stopScanner, customParser]);
 
   const handleClose = useCallback(() => {
     stopScanner();
