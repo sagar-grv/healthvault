@@ -11,7 +11,7 @@ import Divider from '@mui/material/Divider';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import PeopleIcon from '@mui/icons-material/PeopleOutlined';
 import Link from 'next/link';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import DoctorPageShell from '@/components/doctor/DoctorPageShell';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,33 +34,13 @@ export default async function DoctorPatientsPage() {
   const patients = result.patients ?? [];
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+    <DoctorPageShell>
       <Box sx={{ px: 2, py: 2.5, maxWidth: 640, mx: 'auto' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-          <Link href="/dashboard/doctor" style={{ display: 'flex' }}>
-            <Box
-              sx={{
-                width: 36,
-                height: 36,
-                borderRadius: 2,
-                bgcolor: 'background.paper',
-                border: '1px solid',
-                borderColor: 'divider',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-              }}
-            >
-              <ArrowBackIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-            </Box>
-          </Link>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <PeopleIcon sx={{ fontSize: 20, color: 'success.main' }} />
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              Patients
-            </Typography>
-          </Box>
+          <PeopleIcon sx={{ fontSize: 20, color: 'success.main' }} />
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            Patients
+          </Typography>
         </Box>
 
         {patients.length === 0 ? (
@@ -76,7 +56,7 @@ export default async function DoctorPatientsPage() {
           >
             <CardContent>
               <Typography variant="body1" color="text.secondary">
-                No patients yet. Search for a patient by Health ID to get started.
+                No patients yet. When patients share reports with you, they&apos;ll appear here.
               </Typography>
             </CardContent>
           </Card>
@@ -129,6 +109,6 @@ export default async function DoctorPatientsPage() {
           </Card>
         )}
       </Box>
-    </Box>
+    </DoctorPageShell>
   );
 }
