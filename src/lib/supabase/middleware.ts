@@ -58,10 +58,16 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Authenticated user hitting a login/register page → send to dashboard
+  // Authenticated user hitting a login/register page → send to dashboard or redirect
   if (isAuthRoute && user) {
     const url = request.nextUrl.clone();
-    url.pathname = '/dashboard';
+    const redirectParam = request.nextUrl.searchParams.get('redirect');
+    if (redirectParam?.startsWith('/') && !redirectParam.startsWith('//')) {
+      url.pathname = redirectParam;
+    } else {
+      url.pathname = '/dashboard';
+    }
+    url.searchParams.delete('redirect');
     return NextResponse.redirect(url);
   }
 
