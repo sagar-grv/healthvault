@@ -32,6 +32,19 @@ const QRScannerDialog = dynamic(() => import('@/components/doctor/QRScannerDialo
   ssr: false,
 });
 
+/** Custom parser for doctor QR codes — accepts hv-doctor:{userId} and raw UUIDs */
+function parseDoctorQR(raw: string): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('hv-doctor:')) return trimmed; // pass full string to onScan
+  if (trimmed.startsWith('hv-')) return null; // patient QR, not doctor
+  // Try as raw UUID (basic check)
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
+    return trimmed;
+  }
+  return null;
+}
+
 type FlowState = 'scanning' | 'confirming' | 'selecting' | 'sharing' | 'success' | 'error';
 
 interface DoctorQRShareFlowProps {
@@ -141,7 +154,12 @@ export default function DoctorQRShareFlow({ open, onClose, reports }: DoctorQRSh
   return (
     <>
       {/* QR Scanner — full screen */}
-      <QRScannerDialog open={showScanner} onClose={handleScannerClose} onScan={handleScan} />
+      <QRScannerDialog
+        open={showScanner}
+        onClose={handleScannerClose}
+        onScan={handleScan}
+        customParser={parseDoctorQR}
+      />
 
       {/* Confirmation dialog */}
       <Dialog open={open && state === 'confirming'} maxWidth="xs" fullWidth>

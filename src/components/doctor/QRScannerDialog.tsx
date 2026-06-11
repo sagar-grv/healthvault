@@ -19,11 +19,19 @@ interface QRScannerDialogProps {
   open: boolean;
   onClose: () => void;
   onScan: (healthId: string) => void;
+  /** Optional custom parser — receives raw QR content, returns parsed string or null.
+   *  When omitted, the default parseQRContent (Health ID) is used. */
+  customParser?: (raw: string) => string | null;
 }
 
 type ScanState = 'idle' | 'starting' | 'scanning' | 'success' | 'error';
 
-export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDialogProps) {
+export default function QRScannerDialog({
+  open,
+  onClose,
+  onScan,
+  customParser,
+}: QRScannerDialogProps) {
   const scannerRef = useRef<{
     stop: () => Promise<void>;
     clear: () => void;
@@ -100,12 +108,12 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
         };
 
         const onDecode = (decoded: string) => {
-          const healthId = parseQRContent(decoded);
-          if (healthId) {
+          const parsed = customParser ? customParser(decoded) : parseQRContent(decoded);
+          if (parsed) {
             if (navigator.vibrate) navigator.vibrate([50, 30, 50]); // double-pulse like UPI
             setScanState('success');
             stopScanner();
-            if (mounted) onScan(healthId);
+            if (mounted) onScan(parsed);
           }
         };
 
@@ -243,11 +251,11 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
         cameras[1].id,
         { fps: 30, disableFlip: false, aspectRatio: window.innerHeight / window.innerWidth },
         (decoded: string) => {
-          const healthId = parseQRContent(decoded);
-          if (healthId) {
+          const parsed = customParser ? customParser(decoded) : parseQRContent(decoded);
+          if (parsed) {
             if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
             stopScanner();
-            onScan(healthId);
+            onScan(parsed);
           }
         },
         () => {}
@@ -270,11 +278,11 @@ export default function QRScannerDialog({ open, onClose, onScan }: QRScannerDial
       });
       const result = await scanner.scanFile(file, /* showImage= */ false);
       scanner.clear();
-      const healthId = parseQRContent(result);
-      if (healthId) {
+      const parsed = customParser ? customParser(result) : parseQRContent(result);
+      if (parsed) {
         if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
         setScanState('success');
-        onScan(healthId);
+        onScan(parsed);
       } else {
         setError('No Health ID found in this image. Try a different QR code.');
         setScanState('error');
