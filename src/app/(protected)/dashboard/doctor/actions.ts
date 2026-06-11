@@ -47,3 +47,132 @@ export async function searchPatient(
   // Server-side redirect — no client round-trip needed
   redirect(`/dashboard/doctor/patient/${encodeURIComponent(normalized)}`);
 }
+
+export async function fetchSharedReports(): Promise<{
+  error?: string;
+  reports?: Array<{
+    id: string;
+    patient_id: string;
+    doctor_id: string;
+    report_id: string;
+    shared_at: string;
+    viewed_at: string | null;
+    message: string | null;
+    patient_name?: string;
+    patient_health_id?: string;
+    report_title?: string;
+    report_type?: string;
+  }>;
+}> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { data, error } = await supabase
+    .from('shared_reports')
+    .select(
+      `
+      *,
+      patient:patient_id (full_name, health_id),
+      report:report_id (title, report_type)
+    `
+    )
+    .eq('doctor_id', user.id)
+    .order('shared_at', { ascending: false })
+    .limit(20);
+
+  if (error) return { error: error.message };
+
+  type SharedReportRow = {
+    id: string;
+    patient_id: string;
+    doctor_id: string;
+    report_id: string;
+    shared_at: string;
+    viewed_at: string | null;
+    message: string | null;
+    patient: { full_name: string; health_id: string } | null;
+    report: { title: string; report_type: string } | null;
+  };
+
+  const reports = (data ?? []).map((r: SharedReportRow) => ({
+    id: r.id,
+    patient_id: r.patient_id,
+    doctor_id: r.doctor_id,
+    report_id: r.report_id,
+    shared_at: r.shared_at,
+    viewed_at: r.viewed_at,
+    message: r.message,
+    patient_name: r.patient?.full_name,
+    patient_health_id: r.patient?.health_id,
+    report_title: r.report?.title,
+    report_type: r.report?.report_type,
+  }));
+
+  return { reports };
+}
+
+export async function markSharedReportViewed(shareId: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('shared_reports')
+    .update({ viewed_at: new Date().toISOString() })
+    .eq('id', shareId);
+
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function getDoctorPatients(): Promise<{
+  error?: string;
+  patients?: Array<{
+    id: string;
+    full_name: string;
+    health_id: string;
+    last_visited: string;
+  }>;
+}> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { data, error } = await supabase
+    .from('access_logs')
+    .select(
+      `
+      patient_id,
+      searched_at,
+      patient:patient_id (full_name, health_id)
+    `
+    )
+    .eq('doctor_id', user.id)
+    .order('searched_at', { ascending: false });
+
+  if (error) return { error: error.message };
+
+  type AccessLogRow = {
+    patient_id: string;
+    searched_at: string;
+    patient: { full_name: string; health_id: string } | null;
+  };
+
+  const seen = new Set<string>();
+  const patients = (data ?? [])
+    .filter((log: AccessLogRow) => {
+      if (seen.has(log.patient_id)) return false;
+      seen.add(log.patient_id);
+      return true;
+    })
+    .map((log: AccessLogRow) => ({
+      id: log.patient_id,
+      full_name: log.patient?.full_name || 'Unknown',
+      health_id: log.patient?.health_id || '',
+      last_visited: log.searched_at,
+    }));
+
+  return { patients };
+}
