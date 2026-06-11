@@ -36,8 +36,8 @@ import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import TranslateIcon from '@mui/icons-material/Translate';
 import LanguageIcon from '@mui/icons-material/Language';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServicesOutlined';
+import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import { useTranslations } from 'next-intl';
-import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, Report } from '@/types';
 import { REPORT_TYPES, REPORT_TYPE_COLORS } from '@/constants';
@@ -63,6 +63,9 @@ const LanguagePicker = dynamic(() => import('@/components/patient/LanguagePicker
   ssr: false,
 });
 const AppointmentShareSheet = dynamic(() => import('@/components/patient/AppointmentShareSheet'), {
+  ssr: false,
+});
+const ScanDoctorQRSheet = dynamic(() => import('@/components/patient/ScanDoctorQRSheet'), {
   ssr: false,
 });
 
@@ -91,7 +94,7 @@ export default function PatientDashboardClient({
   const [uploadingCamera, setUploadingCamera] = useState(false);
   const [langPickerOpen, setLangPickerOpen] = useState(false);
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
-  const [qrPopupOpen, setQrPopupOpen] = useState(false);
+  const [scanDoctorQROpen, setScanDoctorQROpen] = useState(false);
 
   // Sync language preference from DB profile on mount (cross-device sync)
   useEffect(() => {
@@ -516,42 +519,33 @@ export default function PatientDashboardClient({
                 </Box>
               </Box>
 
-              {/* Right: QR Code — tap to enlarge for scanning */}
-              <Tooltip title="Tap to show QR for scanning">
-                <Box
-                  onClick={() => setQrPopupOpen(true)}
-                  sx={{
-                    bgcolor: 'white',
-                    borderRadius: 2.5,
-                    p: 1.2,
-                    flexShrink: 0,
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 0.5,
-                    cursor: 'pointer',
-                    transition: 'transform 0.15s ease',
-                    '&:hover': { transform: 'scale(1.05)' },
-                    '&:active': { transform: 'scale(0.97)' },
-                  }}
-                >
-                  <Box id="qr-share-canvas">
-                    <QRCodeSVG value={profile.health_id || ''} size={90} level="M" />
-                  </Box>
-                  <Typography
-                    sx={{
-                      fontSize: '0.55rem',
-                      color: '#64748B',
-                      fontWeight: 700,
-                      letterSpacing: '0.05em',
-                      textAlign: 'center',
-                    }}
-                  >
-                    TAP TO SHOW
-                  </Typography>
-                </Box>
-              </Tooltip>
+              {/* Right: Scan Doctor QR button */}
+              <Button
+                variant="contained"
+                startIcon={<QrCodeScannerIcon />}
+                onClick={() => setScanDoctorQROpen(true)}
+                sx={{
+                  flexShrink: 0,
+                  minWidth: 0,
+                  px: 1.5,
+                  py: 1,
+                  borderRadius: 2.5,
+                  bgcolor: 'rgba(255,255,255,0.2)',
+                  color: 'white',
+                  backdropFilter: 'blur(4px)',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  fontWeight: 700,
+                  fontSize: '0.7rem',
+                  textTransform: 'none',
+                  whiteSpace: 'nowrap',
+                  '&:hover': {
+                    bgcolor: 'rgba(255,255,255,0.3)',
+                    transform: 'translateY(-1px)',
+                  },
+                }}
+              >
+                Scan Doctor QR
+              </Button>
             </Box>
           </CardContent>
         </Card>
@@ -844,12 +838,13 @@ export default function PatientDashboardClient({
         <CameraCapture onCapture={handleCameraCapture} onClose={() => setShowCamera(false)} />
       )}
 
-      {/* Add Report Sheet (Scan + Upload) */}
+      {/* Add Report Sheet (Scan + Upload + Scan Doctor QR) */}
       <AddReportSheet
         open={addSheetOpen}
         onClose={() => setAddSheetOpen(false)}
         onScanReport={() => setShowCamera(true)}
         onUploadFile={() => router.push('/dashboard/patient/upload')}
+        onScanDoctorQR={() => setScanDoctorQROpen(true)}
       />
 
       {/* Language Picker */}
@@ -869,62 +864,12 @@ export default function PatientDashboardClient({
         onWhatsApp={handleWhatsAppShare}
       />
 
-      {/* QR Code Popup — large QR for doctor to scan */}
-      <Dialog
-        open={qrPopupOpen}
-        onClose={() => setQrPopupOpen(false)}
-        maxWidth="xs"
-        fullWidth
-        slotProps={{
-          paper: {
-            sx: {
-              borderRadius: 4,
-              textAlign: 'center',
-              py: 3,
-            },
-          },
-        }}
-      >
-        <DialogContent
-          sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}
-        >
-          <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
-            Show this QR to your doctor
-          </Typography>
-          <Box
-            sx={{
-              bgcolor: 'white',
-              borderRadius: 3,
-              p: 2.5,
-              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-            }}
-          >
-            <QRCodeSVG value={profile.health_id || ''} size={220} level="H" />
-          </Box>
-          <Typography
-            sx={{
-              fontFamily: 'monospace',
-              fontSize: '1.3rem',
-              fontWeight: 800,
-              letterSpacing: '0.12em',
-              color: 'primary.main',
-            }}
-          >
-            {profile.health_id}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {profile.full_name}
-          </Typography>
-          <Button
-            variant="contained"
-            fullWidth
-            onClick={() => setQrPopupOpen(false)}
-            sx={{ borderRadius: 2.5, py: 1.4, mt: 1 }}
-          >
-            Done
-          </Button>
-        </DialogContent>
-      </Dialog>
+      {/* Scan Doctor QR Sheet */}
+      <ScanDoctorQRSheet
+        open={scanDoctorQROpen}
+        onClose={() => setScanDoctorQROpen(false)}
+        patientReports={reports}
+      />
     </Box>
   );
 }
