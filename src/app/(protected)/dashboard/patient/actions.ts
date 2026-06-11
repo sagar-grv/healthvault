@@ -79,21 +79,19 @@ export async function getDoctorByShareId(doctorId: string): Promise<{
 
   if (profileError || !profile) return { error: 'Doctor not found' };
 
-  const { data: docProfile, error: docError } = await supabase
+  const { data: docProfile } = await supabase
     .from('doctor_profiles')
     .select('specialization, clinic_name, city')
     .eq('id', doctorId)
     .single();
 
-  if (docError) return { error: 'Doctor profile not found' };
-
   return {
     doctor: {
       id: profile.id,
       full_name: profile.full_name,
-      specialization: docProfile.specialization || '',
-      clinic_name: docProfile.clinic_name || '',
-      city: docProfile.city || '',
+      specialization: docProfile?.specialization || '',
+      clinic_name: docProfile?.clinic_name || '',
+      city: docProfile?.city || '',
     },
   };
 }
