@@ -154,25 +154,23 @@ export async function getDoctorPatients(): Promise<{
 
   if (error) return { error: error.message };
 
-  type AccessLogRow = {
-    patient_id: string;
-    searched_at: string;
-    patient: { full_name: string; health_id: string } | null;
-  };
-
   const seen = new Set<string>();
   const patients = (data ?? [])
-    .filter((log: AccessLogRow) => {
-      if (seen.has(log.patient_id)) return false;
-      seen.add(log.patient_id);
+    .filter((log: Record<string, unknown>) => {
+      if (seen.has(log.patient_id as string)) return false;
+      seen.add(log.patient_id as string);
       return true;
     })
-    .map((log: AccessLogRow) => ({
-      id: log.patient_id,
-      full_name: log.patient?.full_name || 'Unknown',
-      health_id: log.patient?.health_id || '',
-      last_visited: log.searched_at,
-    }));
+    .map((log: Record<string, unknown>) => {
+      const patientArr = log.patient as { full_name: string; health_id: string }[] | undefined;
+      const patient = patientArr?.[0];
+      return {
+        id: log.patient_id as string,
+        full_name: patient?.full_name || 'Unknown',
+        health_id: patient?.health_id || '',
+        last_visited: log.searched_at as string,
+      };
+    });
 
   return { patients };
 }

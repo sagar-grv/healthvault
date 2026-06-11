@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import DoctorDashboardClient from './DoctorDashboardClient';
+import { fetchSharedReports } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,7 @@ export default async function DoctorDashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  // Fetch profile, doctor profile, and recent access logs with embedded patient profiles
+  // Fetch profile, doctor profile, recent access logs, and shared reports
   // Single query for recent access + patient names — eliminates the waterfall
   const [{ data: profile, error: profileError }, { data: doctorProfile }, { data: recentAccess }] =
     await Promise.all([
@@ -51,11 +52,14 @@ export default async function DoctorDashboardPage() {
     }
   }
 
+  const { reports: sharedReports = [] } = await fetchSharedReports();
+
   return (
     <DoctorDashboardClient
       profile={profile}
       doctorProfile={doctorProfile}
       recentPatients={recentPatients}
+      sharedReports={sharedReports}
     />
   );
 }
