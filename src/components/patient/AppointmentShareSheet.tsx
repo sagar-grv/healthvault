@@ -12,6 +12,8 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
 import CloseIcon from '@mui/icons-material/Close';
 import LinkIcon from '@mui/icons-material/Link';
+import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { QRCodeSVG } from 'qrcode.react';
 
 interface AppointmentShareSheetProps {
@@ -20,6 +22,7 @@ interface AppointmentShareSheetProps {
   healthId: string;
   onCopy: () => void;
   onWhatsApp: () => void;
+  onScanDoctorQR?: () => void;
 }
 
 export default function AppointmentShareSheet({
@@ -28,6 +31,7 @@ export default function AppointmentShareSheet({
   healthId,
   onCopy,
   onWhatsApp,
+  onScanDoctorQR,
 }: AppointmentShareSheetProps) {
   const qrRef = useRef<HTMLDivElement>(null);
   const [snackbar, setSnackbar] = useState({
@@ -260,6 +264,29 @@ export default function AppointmentShareSheet({
         >
           Share Link (expires in 24h)
         </Button>
+
+        {/* Scan Doctor QR — push-based sharing */}
+        {onScanDoctorQR && (
+          <Button
+            variant="text"
+            fullWidth
+            startIcon={<QrCodeScannerIcon />}
+            endIcon={<ChevronRightIcon />}
+            onClick={() => {
+              onClose();
+              onScanDoctorQR();
+            }}
+            sx={{
+              py: 1.2,
+              color: 'success.main',
+              fontSize: '0.85rem',
+              mt: 0.5,
+              '&:hover': { bgcolor: 'rgba(5,150,105,0.08)' },
+            }}
+          >
+            Scan Doctor&apos;s QR to share reports
+          </Button>
+        )}
       </Box>
 
       <Snackbar
