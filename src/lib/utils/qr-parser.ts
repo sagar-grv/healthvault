@@ -37,3 +37,27 @@ export function parseQRContent(content: string): string | null {
 
   return null;
 }
+
+/**
+ * Extracts doctor ID from scanned QR content.
+ * Expected formats:
+ *   - https://healthvault-dusky.vercel.app/doctor-share/{uuid}
+ *   - healthvault://doctor/{uuid}
+ *   - bare UUID (36 chars with hyphens)
+ */
+export function parseDoctorQRContent(content: string): string | null {
+  if (!content) return null;
+
+  const doctorUrlMatch = content.match(/\/doctor-share\/([a-f0-9-]{36})/i);
+  if (doctorUrlMatch) return doctorUrlMatch[1];
+
+  const deepLinkMatch = content.match(/healthvault:\/\/doctor\/([a-f0-9-]{36})/i);
+  if (deepLinkMatch) return deepLinkMatch[1];
+
+  const uuidMatch = content.match(
+    /^([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/i
+  );
+  if (uuidMatch) return uuidMatch[1];
+
+  return null;
+}
