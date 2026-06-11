@@ -37,10 +37,10 @@ export default function SharedReportsClient({ shareId }: { shareId: string }) {
       if ('error' in res) {
         setError(res.error ?? 'An unknown error occurred');
       } else {
-        setPatient(
-          (res.share as { patient?: Pick<Profile, 'id' | 'full_name' | 'health_id'> })?.patient ??
-            null
-        );
+        // Supabase returns patient as an array from the join — extract first item
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const patientData = (res.share as Record<string, any>)?.patient;
+        setPatient(Array.isArray(patientData) ? (patientData[0] ?? null) : (patientData ?? null));
         setReports(res.reports || []);
       }
       setLoading(false);
