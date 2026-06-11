@@ -40,10 +40,7 @@ function LoginForm() {
         setLoading(false);
         return;
       }
-      const redirectTo = searchParams.get('redirect') || '/dashboard';
-      const safeRedirect =
-        redirectTo.startsWith('/') && !redirectTo.startsWith('//') ? redirectTo : '/dashboard';
-      window.location.href = safeRedirect;
+      window.location.href = '/dashboard';
     } catch {
       setError('Something went wrong. Please try again.');
       setLoading(false);
@@ -55,13 +52,10 @@ function LoginForm() {
     setLoading(true);
     try {
       const supabase = createClient();
-      const redirectTo = searchParams.get('redirect') || '/dashboard';
-      const safeRedirect =
-        redirectTo.startsWith('/') && !redirectTo.startsWith('//') ? redirectTo : '/dashboard';
       const { error: authError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeRedirect)}`,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
       if (authError) {

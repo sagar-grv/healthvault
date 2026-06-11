@@ -6,13 +6,14 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
+import CardActionArea from '@mui/material/CardActionArea';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import Avatar from '@mui/material/Avatar';
 import Divider from '@mui/material/Divider';
 import InboxIcon from '@mui/icons-material/Inbox';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { markSharedReportViewed } from '@/app/(protected)/dashboard/doctor/actions';
@@ -47,22 +48,12 @@ function timeAgo(dateStr: string): string {
 export default function SharedWithMeSection({ reports }: SharedWithMeSectionProps) {
   const router = useRouter();
   const [localReports, setLocalReports] = useState(reports);
-  const [markingId, setMarkingId] = useState<string | null>(null);
-
-  const unreadCount = localReports.filter((r) => !r.viewed_at).length;
 
   const handleMarkViewed = async (shareId: string) => {
-    setMarkingId(shareId);
     await markSharedReportViewed(shareId);
     setLocalReports((prev) =>
       prev.map((r) => (r.id === shareId ? { ...r, viewed_at: new Date().toISOString() } : r))
     );
-    setMarkingId(null);
-    router.refresh();
-  };
-
-  const handleViewRecords = (healthId: string) => {
-    router.push(`/dashboard/doctor/patient/${encodeURIComponent(healthId)}`);
   };
 
   if (localReports.length === 0) {
@@ -119,43 +110,42 @@ export default function SharedWithMeSection({ reports }: SharedWithMeSectionProp
             fontSize: '0.75rem',
           }}
         >
-          Shared with Me
+          Shared with Me {localReports.length > 0 && `(${localReports.length})`}
         </Typography>
-        {unreadCount > 0 && (
-          <Chip
-            label={`${unreadCount} new`}
-            size="small"
-            color="primary"
-            sx={{ height: 20, fontSize: '0.6rem', ml: 'auto' }}
-          />
-        )}
       </Box>
-
       <Card>
         {localReports.slice(0, 5).map((report, idx) => (
           <Box key={report.id}>
-            <CardContent
-              sx={{
-                p: 2,
-                '&:last-child': { pb: 2 },
-                bgcolor: !report.viewed_at ? 'rgba(139,92,246,0.04)' : 'transparent',
+            <CardActionArea
+              onClick={() => {
+                if (report.patient_health_id) {
+                  router.push(
+                    `/dashboard/doctor/patient/${encodeURIComponent(report.patient_health_id)}`
+                  );
+                }
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+              <CardContent
+                sx={{
+                  p: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  '&:last-child': { pb: 2 },
+                }}
+              >
                 <Avatar
                   sx={{
-                    width: 40,
-                    height: 40,
-                    bgcolor: !report.viewed_at ? 'rgba(139,92,246,0.25)' : 'rgba(139,92,246,0.12)',
+                    width: 36,
+                    height: 36,
+                    bgcolor: report.viewed_at ? 'rgba(139,92,246,0.12)' : 'rgba(139,92,246,0.25)',
                     color: '#8B5CF6',
                     fontSize: '0.85rem',
                     fontWeight: 700,
-                    mt: 0.25,
                   }}
                 >
                   {(report.patient_name || 'U').charAt(0).toUpperCase()}
                 </Avatar>
-
                 <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
@@ -170,81 +160,47 @@ export default function SharedWithMeSection({ reports }: SharedWithMeSectionProp
                       />
                     )}
                   </Box>
-
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    noWrap
-                    sx={{ display: 'block' }}
-                  >
-                    Shared {report.report_title || 'a report'}
-                    {report.report_type && ` (${report.report_type.replace(/_/g, ' ')})`}
+                  <Typography variant="caption" color="text.secondary" noWrap>
+                    {report.report_title || 'Report'}
+                    {report.report_type && ` · ${report.report_type.replace(/_/g, ' ')}`}
                   </Typography>
-
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25 }}>
                     <AccessTimeIcon sx={{ fontSize: 11, color: 'text.disabled' }} />
                     <Typography variant="caption" color="text.disabled">
                       {timeAgo(report.shared_at)}
                     </Typography>
                   </Box>
                 </Box>
-
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, flexShrink: 0 }}>
-                  <Button
-                    size="small"
-                    variant="contained"
-                    color="secondary"
-                    sx={{
-                      fontSize: '0.65rem',
-                      py: 0.3,
-                      minWidth: 80,
-                      whiteSpace: 'nowrap',
-                    }}
-                    onClick={() =>
-                      report.patient_health_id && handleViewRecords(report.patient_health_id)
-                    }
-                    endIcon={<ArrowForwardIcon sx={{ fontSize: 12 }} />}
-                  >
-                    View Records
-                  </Button>
-
                   {!report.viewed_at ? (
                     <Button
                       size="small"
-                      variant="text"
-                      color="inherit"
-                      sx={{
-                        fontSize: '0.6rem',
-                        py: 0.1,
-                        minWidth: 0,
-                        color: 'text.secondary',
-                      }}
+                      variant="outlined"
+                      color="primary"
+                      sx={{ fontSize: '0.65rem', py: 0.2, minWidth: 0 }}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleMarkViewed(report.id);
                       }}
-                      disabled={markingId === report.id}
-                      startIcon={<VisibilityIcon sx={{ fontSize: 12 }} />}
+                      startIcon={<VisibilityOffIcon sx={{ fontSize: 14 }} />}
                     >
-                      {markingId === report.id ? '...' : 'Mark Seen'}
+                      Mark Read
                     </Button>
                   ) : (
                     <Chip
-                      icon={<CheckCircleIcon sx={{ fontSize: 12 }} />}
+                      icon={<VisibilityIcon sx={{ fontSize: 13 }} />}
                       label="Seen"
                       size="small"
                       variant="outlined"
-                      sx={{
-                        fontSize: '0.6rem',
-                        height: 22,
-                        color: 'success.main',
-                        borderColor: 'success.main',
-                      }}
+                      sx={{ fontSize: '0.6rem', height: 22, color: 'text.disabled' }}
                     />
                   )}
+                  <ArrowForwardIcon
+                    sx={{ fontSize: 14, color: 'text.disabled', alignSelf: 'center' }}
+                  />
                 </Box>
-              </Box>
-            </CardContent>
+              </CardContent>
+            </CardActionArea>
             {idx < Math.min(localReports.length, 5) - 1 && <Divider />}
           </Box>
         ))}

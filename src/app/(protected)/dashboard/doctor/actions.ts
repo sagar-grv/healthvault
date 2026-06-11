@@ -116,44 +116,12 @@ export async function fetchSharedReports(): Promise<{
 
 export async function markSharedReportViewed(shareId: string): Promise<{ error?: string }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'Not authenticated' };
-
-  // Fetch the share to get patient_id and doctor_id
-  const { data: share, error: fetchError } = await supabase
-    .from('shared_reports')
-    .select('patient_id, doctor_id, report_id')
-    .eq('id', shareId)
-    .single();
-
-  if (fetchError || !share) return { error: 'Share not found' };
-  if (share.doctor_id !== user.id) return { error: 'Unauthorized' };
-
-  // Mark as viewed
-  const { error: updateError } = await supabase
+  const { error } = await supabase
     .from('shared_reports')
     .update({ viewed_at: new Date().toISOString() })
     .eq('id', shareId);
 
-  if (updateError) return { error: updateError.message };
-
-  // Log audit trail
-  const { data: doctorInfo } = await supabase
-    .from('profiles')
-    .select('full_name')
-    .eq('id', user.id)
-    .single();
-
-  const { error: logError } = await supabase.from('access_logs').insert({
-    patient_id: share.patient_id,
-    doctor_id: user.id,
-    doctor_name: doctorInfo?.full_name || 'Unknown',
-    reports_viewed: [share.report_id],
-  });
-  if (logError) console.error('Audit log failed:', logError.message);
-
+  if (error) return { error: error.message };
   return {};
 }
 

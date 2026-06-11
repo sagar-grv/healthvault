@@ -35,7 +35,6 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { MEDICAL_COUNCILS } from '@/constants';
 import { createClient } from '@/lib/supabase/client';
 import { QRCodeSVG } from 'qrcode.react';
-import DoctorPageShell from '@/components/doctor/DoctorPageShell';
 
 export default function DoctorProfilePage() {
   const router = useRouter();
@@ -171,488 +170,481 @@ export default function DoctorProfilePage() {
   }
 
   return (
-    <DoctorPageShell>
-      <Box sx={{ pb: 4, bgcolor: 'transparent' }}>
-        {/* AppBar — back + theme toggle + quick save */}
-        <AppBar position="sticky" color="inherit" elevation={0}>
-          <Toolbar>
-            <IconButton
-              edge="start"
-              onClick={() => router.push('/dashboard/doctor')}
-              aria-label="Back"
-            >
-              <ArrowBackIcon />
-            </IconButton>
-            <Typography variant="h6" sx={{ ml: 1, fontWeight: 700, flexGrow: 1 }}>
-              My Profile
-            </Typography>
-            <ThemeToggle />
-            <Tooltip title="Save profile">
-              <IconButton
-                onClick={handleSave}
-                disabled={saving}
-                aria-label="Save profile"
-                size="small"
-                sx={{ ml: 0.5 }}
-              >
-                {saving ? (
-                  <CircularProgress size={18} color="inherit" />
-                ) : (
-                  <SaveIcon sx={{ fontSize: 20 }} />
-                )}
-              </IconButton>
-            </Tooltip>
-          </Toolbar>
-        </AppBar>
-
-        <Box sx={{ px: 2, py: 2.5, maxWidth: 520, mx: 'auto' }}>
-          {/* ── Clinical Hero Card ──────────────────────────────────────── */}
-          <Card
-            sx={{
-              mb: 2,
-              borderRadius: 4,
-              background: 'linear-gradient(135deg, #064E3B 0%, #047857 45%, #10B981 100%)',
-              boxShadow: '0 8px 32px rgba(5,150,105,0.35)',
-              overflow: 'hidden',
-            }}
+    <Box sx={{ pb: 4, minHeight: '100vh', bgcolor: 'background.default' }}>
+      {/* AppBar — back + theme toggle + quick save */}
+      <AppBar position="sticky" color="inherit" elevation={0}>
+        <Toolbar>
+          <IconButton
+            edge="start"
+            onClick={() => router.push('/dashboard/doctor')}
+            aria-label="Back"
           >
-            <CardContent sx={{ p: 3 }}>
-              {/* Avatar + name row */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2.5 }}>
-                <Avatar
-                  sx={{
-                    width: 68,
-                    height: 68,
-                    bgcolor: 'rgba(255,255,255,0.18)',
-                    border: '2px solid rgba(255,255,255,0.35)',
-                    fontSize: '1.5rem',
-                    fontWeight: 700,
-                    color: 'white',
-                    flexShrink: 0,
-                  }}
-                >
-                  {initials || <MedicalServicesIcon sx={{ fontSize: 32 }} />}
-                </Avatar>
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography
-                    variant="h6"
-                    sx={{ color: 'white', fontWeight: 700, lineHeight: 1.2, mb: 0.25 }}
-                    noWrap
-                  >
-                    {fullName || 'Doctor Name'}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.3 }}
-                    noWrap
-                  >
-                    {[qualification, specialization].filter(Boolean).join(' · ') ||
-                      'Medical Professional'}
-                  </Typography>
-                  {clinicName && (
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.55)' }} noWrap>
-                      {clinicName}
-                      {city ? `, ${city}` : ''}
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography variant="h6" sx={{ ml: 1, fontWeight: 700, flexGrow: 1 }}>
+            My Profile
+          </Typography>
+          <ThemeToggle />
+          <Tooltip title="Save profile">
+            <IconButton
+              onClick={handleSave}
+              disabled={saving}
+              aria-label="Save profile"
+              size="small"
+              sx={{ ml: 0.5 }}
+            >
+              {saving ? (
+                <CircularProgress size={18} color="inherit" />
+              ) : (
+                <SaveIcon sx={{ fontSize: 20 }} />
+              )}
+            </IconButton>
+          </Tooltip>
+        </Toolbar>
+      </AppBar>
 
-              {/* Verification badge */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
-                {isVerified ? (
-                  <Chip
-                    icon={<VerifiedIcon sx={{ fontSize: 14, color: '#10B981 !important' }} />}
-                    label="Verified"
-                    size="small"
-                    sx={{
-                      bgcolor: 'rgba(255,255,255,0.18)',
-                      color: 'white',
-                      fontWeight: 700,
-                      border: '1px solid rgba(255,255,255,0.3)',
-                      '& .MuiChip-icon': { color: '#6EE7B7' },
-                    }}
-                  />
-                ) : (
-                  <Chip
-                    icon={<PendingIcon sx={{ fontSize: 14 }} />}
-                    label="Pending Verification"
-                    size="small"
-                    sx={{
-                      bgcolor: 'rgba(251,191,36,0.25)',
-                      color: '#FEF3C7',
-                      fontWeight: 600,
-                      border: '1px solid rgba(251,191,36,0.4)',
-                    }}
-                  />
-                )}
-                <Chip
-                  label="Doctor"
-                  size="small"
-                  sx={{
-                    bgcolor: 'rgba(255,255,255,0.12)',
-                    color: 'rgba(255,255,255,0.85)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    fontWeight: 600,
-                  }}
-                />
-              </Box>
-
-              {/* Profile completion progress */}
-              <Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
-                  <Typography
-                    variant="caption"
-                    sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}
-                  >
-                    Profile Completion
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{ color: 'rgba(255,255,255,0.85)', fontWeight: 700 }}
-                  >
-                    {completionScore} / {completionFields.length}
-                  </Typography>
-                </Box>
-                <LinearProgress
-                  variant="determinate"
-                  value={completionPct}
-                  sx={{
-                    height: 6,
-                    borderRadius: 3,
-                    bgcolor: 'rgba(255,255,255,0.20)',
-                    '& .MuiLinearProgress-bar': {
-                      bgcolor: completionPct === 100 ? '#6EE7B7' : '#FCD34D',
-                      borderRadius: 3,
-                    },
-                  }}
-                />
-                {completionPct < 100 && (
-                  <Typography
-                    variant="caption"
-                    sx={{ color: 'rgba(255,255,255,0.55)', mt: 0.5, display: 'block' }}
-                  >
-                    Fill in{' '}
-                    {completionFields
-                      .filter((f) => !f.filled)
-                      .map((f) => f.label)
-                      .join(', ')}{' '}
-                    to get verified
-                  </Typography>
-                )}
-              </Box>
-
-              {/* QR Code — tap to open popup */}
-              <Box
-                onClick={() => setQrOpen(true)}
+      <Box sx={{ px: 2, py: 2.5, maxWidth: 520, mx: 'auto' }}>
+        {/* ── Clinical Hero Card ──────────────────────────────────────── */}
+        <Card
+          sx={{
+            mb: 2,
+            borderRadius: 4,
+            background: 'linear-gradient(135deg, #064E3B 0%, #047857 45%, #10B981 100%)',
+            boxShadow: '0 8px 32px rgba(5,150,105,0.35)',
+            overflow: 'hidden',
+          }}
+        >
+          <CardContent sx={{ p: 3 }}>
+            {/* Avatar + name row */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2.5 }}>
+              <Avatar
                 sx={{
-                  mt: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1.5,
-                  cursor: 'pointer',
-                  color: 'rgba(255,255,255,0.7)',
-                  '&:hover': { color: 'white' },
+                  width: 68,
+                  height: 68,
+                  bgcolor: 'rgba(255,255,255,0.18)',
+                  border: '2px solid rgba(255,255,255,0.35)',
+                  fontSize: '1.5rem',
+                  fontWeight: 700,
+                  color: 'white',
+                  flexShrink: 0,
                 }}
               >
-                <Box
-                  sx={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 2,
-                    bgcolor: 'rgba(255,255,255,0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
+                {initials || <MedicalServicesIcon sx={{ fontSize: 32 }} />}
+              </Avatar>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography
+                  variant="h6"
+                  sx={{ color: 'white', fontWeight: 700, lineHeight: 1.2, mb: 0.25 }}
+                  noWrap
                 >
-                  <QrCodeIcon sx={{ fontSize: 22 }} />
-                </Box>
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography
-                    variant="caption"
-                    sx={{ fontWeight: 700, color: 'white', display: 'block' }}
-                  >
-                    Your Scan-to-Share QR
+                  {fullName || 'Doctor Name'}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.3 }}
+                  noWrap
+                >
+                  {[qualification, specialization].filter(Boolean).join(' · ') ||
+                    'Medical Professional'}
+                </Typography>
+                {clinicName && (
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.55)' }} noWrap>
+                    {clinicName}
+                    {city ? `, ${city}` : ''}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                    Tap to view
-                  </Typography>
-                </Box>
+                )}
               </Box>
-            </CardContent>
-          </Card>
+            </Box>
 
-          {/* ── QR Popup Dialog ─────────────────────────────────────────── */}
-          <Dialog open={qrOpen} onClose={() => setQrOpen(false)} maxWidth="xs" fullWidth>
-            <DialogContent sx={{ textAlign: 'center', py: 4 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-                Your Scan-to-Share QR
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Patients can scan this QR to share their reports with you
-              </Typography>
-              {userId && (
-                <QRCodeSVG
-                  id="doctor-share-qr-profile"
-                  value={`https://healthvault-dusky.vercel.app/doctor-share/${userId}`}
-                  size={200}
-                  level="M"
-                  fgColor="#047857"
-                  style={{
-                    padding: 16,
-                    borderRadius: 16,
-                    background: '#fff',
-                    display: 'block',
-                    margin: '0 auto 24px',
+            {/* Verification badge */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
+              {isVerified ? (
+                <Chip
+                  icon={<VerifiedIcon sx={{ fontSize: 14, color: '#10B981 !important' }} />}
+                  label="Verified"
+                  size="small"
+                  sx={{
+                    bgcolor: 'rgba(255,255,255,0.18)',
+                    color: 'white',
+                    fontWeight: 700,
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    '& .MuiChip-icon': { color: '#6EE7B7' },
+                  }}
+                />
+              ) : (
+                <Chip
+                  icon={<PendingIcon sx={{ fontSize: 14 }} />}
+                  label="Pending Verification"
+                  size="small"
+                  sx={{
+                    bgcolor: 'rgba(251,191,36,0.25)',
+                    color: '#FEF3C7',
+                    fontWeight: 600,
+                    border: '1px solid rgba(251,191,36,0.4)',
                   }}
                 />
               )}
-              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<DownloadIcon />}
-                  onClick={() => {
-                    const svg = document.getElementById('doctor-share-qr-profile');
-                    if (!svg) return;
-                    const blob = new Blob([svg.outerHTML], { type: 'image/svg+xml' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `${fullName || 'doctor'}-share-qr.svg`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  }}
-                >
-                  Download
-                </Button>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<PrintIcon />}
-                  onClick={() => {
-                    const svg = document.getElementById('doctor-share-qr-profile');
-                    if (!svg) return;
-                    const w = window.open('', '_blank');
-                    if (!w) return;
-                    w.document.write(
-                      `<html><body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0">${svg.outerHTML}</body></html>`
-                    );
-                    w.document.close();
-                    w.print();
-                  }}
-                >
-                  Print
-                </Button>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<ContentCopyIcon />}
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      `https://healthvault-dusky.vercel.app/doctor-share/${userId}`
-                    );
-                    setSnackbar({ open: true, message: 'QR link copied!', severity: 'success' });
-                  }}
-                >
-                  Copy Link
-                </Button>
-              </Box>
-            </DialogContent>
-          </Dialog>
+              <Chip
+                label="Doctor"
+                size="small"
+                sx={{
+                  bgcolor: 'rgba(255,255,255,0.12)',
+                  color: 'rgba(255,255,255,0.85)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  fontWeight: 600,
+                }}
+              />
+            </Box>
 
-          {/* ── Personal Details ─────────────────────────────────────────── */}
-          <Card sx={{ mb: 2, borderRadius: 3 }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
-                Personal Details
-              </Typography>
-              <TextField
-                fullWidth
-                label="Full Name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                label="Email"
-                value={email}
-                disabled
-                helperText="Email cannot be changed"
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                label="Phone (Optional)"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+91 XXXXX XXXXX"
-              />
-            </CardContent>
-          </Card>
-
-          {/* ── Medical Credentials ──────────────────────────────────────── */}
-          <Card
-            sx={{
-              mb: 2,
-              borderRadius: 3,
-              borderLeft: '3px solid',
-              borderLeftColor: 'secondary.main',
-            }}
-          >
-            <CardContent sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                  Medical Credentials
-                </Typography>
-                <Chip
-                  label="Required for verification"
-                  size="small"
-                  color="secondary"
-                  variant="outlined"
-                  sx={{ fontSize: '0.65rem', height: 20 }}
-                />
-              </Box>
-              <TextField
-                fullWidth
-                label="Registration Number *"
-                value={registrationNumber}
-                onChange={(e) => setRegistrationNumber(e.target.value)}
-                required
-                placeholder="e.g., MH-12345"
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                select
-                label="Medical Council *"
-                value={councilName}
-                onChange={(e) => setCouncilName(e.target.value)}
-                required
-                sx={{ mb: 2 }}
-              >
-                {MEDICAL_COUNCILS.map((c) => (
-                  <MenuItem key={c} value={c}>
-                    {c}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <TextField
-                fullWidth
-                label="Qualification *"
-                value={qualification}
-                onChange={(e) => setQualification(e.target.value)}
-                required
-                placeholder="e.g., MBBS, MD (Medicine)"
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                label="Specialization (Optional)"
-                value={specialization}
-                onChange={(e) => setSpecialization(e.target.value)}
-                placeholder="e.g., General Medicine, Cardiology"
-              />
-            </CardContent>
-          </Card>
-
-          {/* ── Practice Details ─────────────────────────────────────────── */}
-          <Card sx={{ mb: 2, borderRadius: 3 }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
-                Practice Details
+            {/* Profile completion progress */}
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
                 <Typography
-                  component="span"
                   variant="caption"
-                  color="text.secondary"
-                  sx={{ ml: 1 }}
+                  sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}
                 >
-                  optional
+                  Profile Completion
                 </Typography>
-              </Typography>
-              <TextField
-                fullWidth
-                label="Clinic / Hospital Name"
-                value={clinicName}
-                onChange={(e) => setClinicName(e.target.value)}
-                placeholder="e.g., City Health Clinic"
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                label="Clinic Address"
-                value={clinicAddress}
-                onChange={(e) => setClinicAddress(e.target.value)}
-                multiline
-                rows={2}
-                placeholder="Street, Area"
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                label="City"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="e.g., Mumbai"
-              />
-            </CardContent>
-          </Card>
-
-          {/* ── ABDM / HPR ───────────────────────────────────────────────── */}
-          <Card sx={{ mb: 3, borderRadius: 3 }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
-                ABDM / HPR Integration
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                Link your Healthcare Professionals Registry (HPR) ID for official ABDM verification.
-              </Typography>
-              <Divider sx={{ mb: 1.5 }} />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="body2" color="text.secondary">
-                  HPR ID
+                <Typography
+                  variant="caption"
+                  sx={{ color: 'rgba(255,255,255,0.85)', fontWeight: 700 }}
+                >
+                  {completionScore} / {completionFields.length}
                 </Typography>
-                <Chip
-                  label="Coming Soon"
-                  size="small"
-                  variant="outlined"
-                  sx={{ borderColor: 'divider', color: 'text.disabled' }}
-                />
               </Box>
-            </CardContent>
-          </Card>
+              <LinearProgress
+                variant="determinate"
+                value={completionPct}
+                sx={{
+                  height: 6,
+                  borderRadius: 3,
+                  bgcolor: 'rgba(255,255,255,0.20)',
+                  '& .MuiLinearProgress-bar': {
+                    bgcolor: completionPct === 100 ? '#6EE7B7' : '#FCD34D',
+                    borderRadius: 3,
+                  },
+                }}
+              />
+              {completionPct < 100 && (
+                <Typography
+                  variant="caption"
+                  sx={{ color: 'rgba(255,255,255,0.55)', mt: 0.5, display: 'block' }}
+                >
+                  Fill in{' '}
+                  {completionFields
+                    .filter((f) => !f.filled)
+                    .map((f) => f.label)
+                    .join(', ')}{' '}
+                  to get verified
+                </Typography>
+              )}
+            </Box>
 
-          {/* Save button */}
-          <Button
-            variant="contained"
-            fullWidth
-            size="large"
-            onClick={handleSave}
-            disabled={saving}
-            color="secondary"
-            sx={{ py: 1.75, borderRadius: 2, boxShadow: '0 4px 14px rgba(5,150,105,0.30)' }}
-          >
-            {saving ? <CircularProgress size={24} color="inherit" /> : 'Save Profile'}
-          </Button>
-        </Box>
+            {/* QR Code — tap to open popup */}
+            <Box
+              onClick={() => setQrOpen(true)}
+              sx={{
+                mt: 2,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+                cursor: 'pointer',
+                color: 'rgba(255,255,255,0.7)',
+                '&:hover': { color: 'white' },
+              }}
+            >
+              <Box
+                sx={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 2,
+                  bgcolor: 'rgba(255,255,255,0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <QrCodeIcon sx={{ fontSize: 22 }} />
+              </Box>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography
+                  variant="caption"
+                  sx={{ fontWeight: 700, color: 'white', display: 'block' }}
+                >
+                  Your Scan-to-Share QR
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                  Tap to view
+                </Typography>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
 
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={3000}
-          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        {/* ── QR Popup Dialog ─────────────────────────────────────────── */}
+        <Dialog open={qrOpen} onClose={() => setQrOpen(false)} maxWidth="xs" fullWidth>
+          <DialogContent sx={{ textAlign: 'center', py: 4 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+              Your Scan-to-Share QR
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Patients can scan this QR to share their reports with you
+            </Typography>
+            {userId && (
+              <QRCodeSVG
+                id="doctor-share-qr-profile"
+                value={`https://healthvault-dusky.vercel.app/doctor-share/${userId}`}
+                size={200}
+                level="M"
+                fgColor="#047857"
+                style={{
+                  padding: 16,
+                  borderRadius: 16,
+                  background: '#fff',
+                  display: 'block',
+                  margin: '0 auto 24px',
+                }}
+              />
+            )}
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<DownloadIcon />}
+                onClick={() => {
+                  const svg = document.getElementById('doctor-share-qr-profile');
+                  if (!svg) return;
+                  const blob = new Blob([svg.outerHTML], { type: 'image/svg+xml' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `${fullName || 'doctor'}-share-qr.svg`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Download
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<PrintIcon />}
+                onClick={() => {
+                  const svg = document.getElementById('doctor-share-qr-profile');
+                  if (!svg) return;
+                  const w = window.open('', '_blank');
+                  if (!w) return;
+                  w.document.write(
+                    `<html><body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0">${svg.outerHTML}</body></html>`
+                  );
+                  w.document.close();
+                  w.print();
+                }}
+              >
+                Print
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<ContentCopyIcon />}
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    `https://healthvault-dusky.vercel.app/doctor-share/${userId}`
+                  );
+                  setSnackbar({ open: true, message: 'QR link copied!', severity: 'success' });
+                }}
+              >
+                Copy Link
+              </Button>
+            </Box>
+          </DialogContent>
+        </Dialog>
+
+        {/* ── Personal Details ─────────────────────────────────────────── */}
+        <Card sx={{ mb: 2, borderRadius: 3 }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
+              Personal Details
+            </Typography>
+            <TextField
+              fullWidth
+              label="Full Name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Email"
+              value={email}
+              disabled
+              helperText="Email cannot be changed"
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Phone (Optional)"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+91 XXXXX XXXXX"
+            />
+          </CardContent>
+        </Card>
+
+        {/* ── Medical Credentials ──────────────────────────────────────── */}
+        <Card
+          sx={{
+            mb: 2,
+            borderRadius: 3,
+            borderLeft: '3px solid',
+            borderLeftColor: 'secondary.main',
+          }}
         >
-          <Alert
-            severity={snackbar.severity}
-            onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-          >
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
+          <CardContent sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                Medical Credentials
+              </Typography>
+              <Chip
+                label="Required for verification"
+                size="small"
+                color="secondary"
+                variant="outlined"
+                sx={{ fontSize: '0.65rem', height: 20 }}
+              />
+            </Box>
+            <TextField
+              fullWidth
+              label="Registration Number *"
+              value={registrationNumber}
+              onChange={(e) => setRegistrationNumber(e.target.value)}
+              required
+              placeholder="e.g., MH-12345"
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              select
+              label="Medical Council *"
+              value={councilName}
+              onChange={(e) => setCouncilName(e.target.value)}
+              required
+              sx={{ mb: 2 }}
+            >
+              {MEDICAL_COUNCILS.map((c) => (
+                <MenuItem key={c} value={c}>
+                  {c}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              fullWidth
+              label="Qualification *"
+              value={qualification}
+              onChange={(e) => setQualification(e.target.value)}
+              required
+              placeholder="e.g., MBBS, MD (Medicine)"
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Specialization (Optional)"
+              value={specialization}
+              onChange={(e) => setSpecialization(e.target.value)}
+              placeholder="e.g., General Medicine, Cardiology"
+            />
+          </CardContent>
+        </Card>
+
+        {/* ── Practice Details ─────────────────────────────────────────── */}
+        <Card sx={{ mb: 2, borderRadius: 3 }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
+              Practice Details
+              <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                optional
+              </Typography>
+            </Typography>
+            <TextField
+              fullWidth
+              label="Clinic / Hospital Name"
+              value={clinicName}
+              onChange={(e) => setClinicName(e.target.value)}
+              placeholder="e.g., City Health Clinic"
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Clinic Address"
+              value={clinicAddress}
+              onChange={(e) => setClinicAddress(e.target.value)}
+              multiline
+              rows={2}
+              placeholder="Street, Area"
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="City"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="e.g., Mumbai"
+            />
+          </CardContent>
+        </Card>
+
+        {/* ── ABDM / HPR ───────────────────────────────────────────────── */}
+        <Card sx={{ mb: 3, borderRadius: 3 }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
+              ABDM / HPR Integration
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              Link your Healthcare Professionals Registry (HPR) ID for official ABDM verification.
+            </Typography>
+            <Divider sx={{ mb: 1.5 }} />
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                HPR ID
+              </Typography>
+              <Chip
+                label="Coming Soon"
+                size="small"
+                variant="outlined"
+                sx={{ borderColor: 'divider', color: 'text.disabled' }}
+              />
+            </Box>
+          </CardContent>
+        </Card>
+
+        {/* Save button */}
+        <Button
+          variant="contained"
+          fullWidth
+          size="large"
+          onClick={handleSave}
+          disabled={saving}
+          color="secondary"
+          sx={{ py: 1.75, borderRadius: 2, boxShadow: '0 4px 14px rgba(5,150,105,0.30)' }}
+        >
+          {saving ? <CircularProgress size={24} color="inherit" /> : 'Save Profile'}
+        </Button>
       </Box>
-    </DoctorPageShell>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 }

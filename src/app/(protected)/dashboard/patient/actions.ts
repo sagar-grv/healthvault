@@ -47,13 +47,12 @@ export async function shareWithDoctor(
   } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
 
-  const { error } = await supabase.from('shared_reports').upsert(
+  const { error } = await supabase.from('shared_reports').insert(
     reportIds.map((reportId) => ({
       patient_id: user.id,
       doctor_id: doctorId,
       report_id: reportId,
-    })),
-    { onConflict: 'patient_id, report_id, doctor_id', ignoreDuplicates: true }
+    }))
   );
 
   if (error) return { error: error.message };
@@ -95,23 +94,4 @@ export async function getDoctorByShareId(doctorId: string): Promise<{
       city: docProfile?.city || '',
     },
   };
-}
-
-export async function revokeSharedReport(
-  shareId: string
-): Promise<{ error?: string; success?: boolean }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'Not authenticated' };
-
-  const { error } = await supabase
-    .from('shared_reports')
-    .delete()
-    .eq('id', shareId)
-    .eq('patient_id', user.id);
-
-  if (error) return { error: error.message };
-  return { success: true };
 }
