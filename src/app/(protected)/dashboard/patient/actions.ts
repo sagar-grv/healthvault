@@ -37,7 +37,6 @@ export async function recordUpload(): Promise<void> {
 
   await supabase.from('upload_attempts').insert({ user_id: user.id });
 }
-
 export async function shareWithDoctor(
   doctorId: string,
   reportIds: string[]
@@ -60,9 +59,7 @@ export async function shareWithDoctor(
   return { success: true };
 }
 
-export async function getDoctorByShareId(
-  doctorId: string
-): Promise<{
+export async function getDoctorByShareId(doctorId: string): Promise<{
   error?: string;
   doctor?: {
     id: string;
