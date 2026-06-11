@@ -71,17 +71,3 @@ export interface SearchAttempt {
   found: boolean;
   searched_at: string;
 }
-
-export interface SharedReport {
-  id: string;
-  patient_id: string;
-  doctor_id: string;
-  report_id: string;
-  shared_at: string;
-  viewed_at: string | null;
-  message: string | null;
-  patient_name?: string;
-  patient_health_id?: string;
-  report_title?: string;
-  report_type?: ReportType;
-}

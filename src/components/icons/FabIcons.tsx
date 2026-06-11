@@ -90,64 +90,6 @@ export function UploadCloudIcon({ size = 32, color = 'currentColor' }: SvgIconPr
   );
 }
 
-/** QR code with scan frame — "Scan Doctor QR" */
-export function QRIcon({ size = 32, color = 'currentColor' }: SvgIconProps) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      {/* Square with scan corners */}
-      <path
-        d="M3 9 L3 5 L3 3 L7 3 L9 3"
-        stroke={color}
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      <path
-        d="M23 3 L27 3 L29 3 L29 7 L29 9"
-        stroke={color}
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      <path
-        d="M29 23 L29 27 L29 29 L25 29 L23 29"
-        stroke={color}
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      <path
-        d="M9 29 L5 29 L3 29 L3 25 L3 23"
-        stroke={color}
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      {/* Inner QR code pattern */}
-      <rect x="8" y="8" width="3" height="3" rx="0.5" fill={color} />
-      <rect x="14" y="8" width="3" height="3" rx="0.5" fill={color} />
-      <rect x="20" y="8" width="3" height="3" rx="0.5" fill={color} />
-      <rect x="8" y="14" width="3" height="3" rx="0.5" fill={color} />
-      <rect x="14" y="14" width="3" height="3" rx="0.5" fill={color} />
-      <rect x="20" y="14" width="3" height="8" rx="0.5" fill={color} />
-      <rect x="8" y="20" width="3" height="3" rx="0.5" fill={color} />
-      <rect x="14" y="20" width="3" height="3" rx="0.5" fill={color} />
-      {/* Scan line */}
-      <line x1="3" y1="16" x2="29" y2="16" stroke={color} strokeWidth="1.2" strokeDasharray="2 2" />
-    </svg>
-  );
-}
-
 /** Heart with ECG/pulse line — "Emergency medical card" */
 export function EmergencyHeartIcon({ size = 32, color = 'currentColor' }: SvgIconProps) {
   return (
