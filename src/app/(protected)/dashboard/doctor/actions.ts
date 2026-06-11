@@ -140,25 +140,7 @@ export async function getDoctorPatients(): Promise<{
   } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
 
-  const seen = new Map<string, string>();
-
-  // Get patients from shared_reports (push-based sharing)
-  const { data: sharedData, error: sharedError } = await supabase
-    .from('shared_reports')
-    .select(
-      `
-      patient_id,
-      shared_at,
-      patient:patient_id (full_name, health_id)
-    `
-    )
-    .eq('doctor_id', user.id)
-    .order('shared_at', { ascending: false });
-
-  if (sharedError) return { error: sharedError.message };
-
-  // Also get patients from access_logs (pull-based / old flow)
-  const { data: accessData, error: accessError } = await supabase
+  const { data, error } = await supabase
     .from('access_logs')
     .select(
       `
@@ -170,45 +152,23 @@ export async function getDoctorPatients(): Promise<{
     .eq('doctor_id', user.id)
     .order('searched_at', { ascending: false });
 
-  if (accessError) return { error: accessError.message };
+  if (error) return { error: error.message };
 
-  const patientInfo = new Map<string, { full_name: string; health_id: string }>();
-
-  for (const row of sharedData ?? []) {
-    const pid = row.patient_id as string;
-    const ts = row.shared_at as string;
-    const patientArr = row.patient as { full_name: string; health_id: string }[] | undefined;
-    const patient = patientArr?.[0];
-    if (!seen.has(pid) || ts > seen.get(pid)!) {
-      seen.set(pid, ts);
-    }
-    if (patient && !patientInfo.has(pid)) {
-      patientInfo.set(pid, patient);
-    }
-  }
-
-  for (const row of accessData ?? []) {
-    const pid = row.patient_id as string;
-    const ts = row.searched_at as string;
-    const patientArr = row.patient as { full_name: string; health_id: string }[] | undefined;
-    const patient = patientArr?.[0];
-    if (!seen.has(pid) || ts > seen.get(pid)!) {
-      seen.set(pid, ts);
-    }
-    if (patient && !patientInfo.has(pid)) {
-      patientInfo.set(pid, patient);
-    }
-  }
-
-  const patients = Array.from(seen.entries())
-    .sort((a, b) => b[1].localeCompare(a[1]))
-    .map(([pid, lastVisited]) => {
-      const info = patientInfo.get(pid);
+  const seen = new Set<string>();
+  const patients = (data ?? [])
+    .filter((log: Record<string, unknown>) => {
+      if (seen.has(log.patient_id as string)) return false;
+      seen.add(log.patient_id as string);
+      return true;
+    })
+    .map((log: Record<string, unknown>) => {
+      const patientArr = log.patient as { full_name: string; health_id: string }[] | undefined;
+      const patient = patientArr?.[0];
       return {
-        id: pid,
-        full_name: info?.full_name || 'Unknown',
-        health_id: info?.health_id || '',
-        last_visited: lastVisited,
+        id: log.patient_id as string,
+        full_name: patient?.full_name || 'Unknown',
+        health_id: patient?.health_id || '',
+        last_visited: log.searched_at as string,
       };
     });
 

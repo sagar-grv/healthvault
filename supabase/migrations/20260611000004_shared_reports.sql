@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS public.shared_reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   patient_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  doctor_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  doctor_id UUID NOT NULL REFERENCES public.doctor_profiles(id) ON DELETE CASCADE,
   report_id UUID NOT NULL REFERENCES public.reports(id) ON DELETE CASCADE,
   shared_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   viewed_at TIMESTAMPTZ,
