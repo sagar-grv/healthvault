@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import AppBar from '@mui/material/AppBar';
@@ -18,12 +19,17 @@ import Chip from '@mui/material/Chip';
 import InputAdornment from '@mui/material/InputAdornment';
 import Avatar from '@mui/material/Avatar';
 import Divider from '@mui/material/Divider';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/PersonOutlined';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import CloseIcon from '@mui/icons-material/Close';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServicesOutlined';
 import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import { createClient } from '@/lib/supabase/client';
@@ -31,12 +37,22 @@ import { Profile, DoctorProfile } from '@/types';
 import { isValidHealthId, normalizeHealthId } from '@/lib/utils/health-id';
 import ThemeToggle from '@/components/ThemeToggle';
 import QRScannerDialog from '@/components/doctor/QRScannerDialog';
-import { searchPatient } from './actions';
+import { QRCodeSVG } from 'qrcode.react';
+import { searchPatient, getSharedReports } from './actions';
 
 // Lazy load AI assistant — only loaded after page renders
 const DoctorAIAssistant = dynamic(() => import('@/components/doctor/DoctorAIAssistant'), {
   ssr: false,
 });
+
+interface SharedReport {
+  id: string;
+  patient_id: string;
+  report_ids: string[];
+  shared_at: string;
+  viewed_at: string | null;
+  patient: { full_name: string; health_id: string }[];
+}
 
 interface DoctorDashboardClientProps {
   profile: Profile;
@@ -54,6 +70,14 @@ export default function DoctorDashboardClient({
   const [searchError, setSearchError] = useState('');
   const [isPending, startTransition] = useTransition();
   const [qrOpen, setQrOpen] = useState(false);
+  const [sharedWithMe, setSharedWithMe] = useState<SharedReport[]>([]);
+  const [showMyQR, setShowMyQR] = useState(false);
+
+  useEffect(() => {
+    getSharedReports().then((res) => {
+      if ('shares' in res) setSharedWithMe(res.shares ?? []);
+    });
+  }, []);
 
   // Use server action for search — eliminates 3 client→Supabase round-trips
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
@@ -312,6 +336,51 @@ export default function DoctorDashboardClient({
             </CardContent>
           </Card>
 
+          {/* My QR Code — show QR for patients to scan */}
+          <Card
+            className="animate-fade-in-up"
+            sx={{
+              mb: 3,
+              bgcolor: 'rgba(5,150,105,0.08)',
+              border: '1px solid rgba(5,150,105,0.30)',
+              boxShadow: 'none',
+            }}
+          >
+            <CardContent sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box
+                sx={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 2,
+                  background: 'linear-gradient(135deg, #047857, #10B981)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <QrCodeScannerIcon sx={{ color: 'white', fontSize: 24 }} />
+              </Box>
+              <Box sx={{ flexGrow: 1 }}>
+                <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                  My QR Code
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Show this to patients so they can share reports with you
+                </Typography>
+              </Box>
+              <Button
+                variant="contained"
+                color="success"
+                size="small"
+                onClick={() => setShowMyQR(true)}
+                sx={{ fontWeight: 600, textTransform: 'none' }}
+              >
+                Show
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* Search Card — Primary Element */}
           <Card
             className="animate-fade-in-up"
@@ -401,6 +470,96 @@ export default function DoctorDashboardClient({
                 </Typography>
               </CardContent>
             </Card>
+          )}
+
+          {/* Shared With Me Section */}
+          {sharedWithMe.length > 0 && (
+            <Box className="animate-fade-in-up" sx={{ mb: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 600,
+                    color: 'text.secondary',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    fontSize: '0.75rem',
+                  }}
+                >
+                  Shared With Me
+                </Typography>
+                <Chip
+                  label={sharedWithMe.filter((s) => !s.viewed_at).length || sharedWithMe.length}
+                  size="small"
+                  color="primary"
+                  sx={{ height: 20, fontSize: '0.7rem' }}
+                />
+              </Box>
+              <Card>
+                {sharedWithMe.slice(0, 5).map((share, idx) => {
+                  const patient = share.patient?.[0];
+                  const isNew = !share.viewed_at;
+                  return (
+                    <Box key={share.id}>
+                      <CardActionArea
+                        component={Link}
+                        href={`/dashboard/doctor/shared/${share.id}`}
+                      >
+                        <CardContent
+                          sx={{
+                            p: 2,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2,
+                            '&:last-child': { pb: 2 },
+                          }}
+                        >
+                          <Avatar
+                            sx={{
+                              width: 38,
+                              height: 38,
+                              bgcolor: 'rgba(37,99,235,0.15)',
+                              color: 'primary.main',
+                              fontSize: '0.9rem',
+                              fontWeight: 700,
+                            }}
+                          >
+                            {patient?.full_name?.charAt(0)?.toUpperCase() || '?'}
+                          </Avatar>
+                          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body1" sx={{ fontWeight: 600 }} noWrap>
+                                {patient?.full_name || 'Unknown Patient'}
+                              </Typography>
+                              {isNew && (
+                                <Chip
+                                  label="New"
+                                  size="small"
+                                  color="warning"
+                                  sx={{ height: 18, fontSize: '0.6rem' }}
+                                />
+                              )}
+                            </Box>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                fontFamily: 'var(--font-mono)',
+                                color: 'text.secondary',
+                                fontWeight: 500,
+                              }}
+                            >
+                              {patient?.health_id} · {share.report_ids.length} reports
+                            </Typography>
+                          </Box>
+                          <ArrowForwardIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+                        </CardContent>
+                      </CardActionArea>
+                      {idx < Math.min(sharedWithMe.length, 5) - 1 && <Divider />}
+                    </Box>
+                  );
+                })}
+              </Card>
+            </Box>
           )}
 
           {/* Recent Patients */}
@@ -497,6 +656,53 @@ export default function DoctorDashboardClient({
           router.push(`/dashboard/doctor/patient/${encodeURIComponent(healthId)}`);
         }}
       />
+
+      {/* My QR Code Dialog */}
+      <Dialog open={showMyQR} onClose={() => setShowMyQR(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ textAlign: 'center' }}>
+          My QR Code
+          <IconButton
+            onClick={() => setShowMyQR(false)}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ textAlign: 'center' }}>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            Show this to a patient so they can share reports with you
+          </Typography>
+          <Box
+            sx={{
+              mt: 2,
+              display: 'inline-block',
+              bgcolor: 'white',
+              borderRadius: 3,
+              p: 2.5,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+            }}
+          >
+            <QRCodeSVG value={`hv-doctor:${profile.id}`} size={200} level="M" />
+          </Box>
+          <Typography
+            variant="caption"
+            sx={{
+              mt: 2,
+              display: 'block',
+              fontFamily: 'monospace',
+              fontWeight: 600,
+              color: 'text.secondary',
+            }}
+          >
+            {profile.id}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
+          <Button variant="contained" onClick={() => setShowMyQR(false)} color="success">
+            Done
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }
