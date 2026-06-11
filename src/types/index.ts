@@ -8,6 +8,8 @@ export interface Profile {
   phone: string | null;
   health_id: string | null; // HV-XXXX-XXXX for patients
   preferred_language: string; // ISO 639-1 code e.g. 'en', 'hi' (added migration 002)
+  terms_accepted_at: string | null;
+  consent_version: string | null;
   onboarding_complete: boolean;
   created_at: string;
   updated_at: string;
@@ -68,4 +70,18 @@ export interface SearchAttempt {
   searched_health_id: string;
   found: boolean;
   searched_at: string;
+}
+
+export interface SharedReport {
+  id: string;
+  patient_id: string;
+  doctor_id: string;
+  report_id: string;
+  shared_at: string;
+  viewed_at: string | null;
+  message: string | null;
+  patient_name?: string;
+  patient_health_id?: string;
+  report_title?: string;
+  report_type?: ReportType;
 }

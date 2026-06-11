@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { validateOrigin } from '@/lib/csrf';
 import { parseGeminiAnalysis } from '@/lib/ai/analysis-parser';
 import {
   checkAIGuardrails,
@@ -37,6 +38,9 @@ function calculateConfidence(data: {
 }
 
 export async function POST(request: NextRequest) {
+  if (!validateOrigin(request)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
   try {
     const supabase = await createClient();
     const {
@@ -122,7 +126,13 @@ export async function POST(request: NextRequest) {
     const fileSizeBytes = arrayBuffer.byteLength;
 
     // ── Security guardrails ──────────────────────────────────────────────────
-    const guardResult = await checkAIGuardrails(supabase, user.id, reportId, fileSizeBytes);
+    const guardResult = await checkAIGuardrails(
+      supabase,
+      user.id,
+      'analyze_report',
+      fileSizeBytes,
+      reportId
+    );
     if (!guardResult.allowed) {
       return NextResponse.json(
         { error: guardResult.reason },

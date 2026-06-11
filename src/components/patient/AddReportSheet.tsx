@@ -4,13 +4,14 @@ import Box from '@mui/material/Box';
 import Drawer from '@mui/material/Drawer';
 import Typography from '@mui/material/Typography';
 import ButtonBase from '@mui/material/ButtonBase';
-import { ScanReportIcon, UploadCloudIcon } from '@/components/icons/FabIcons';
+import { ScanReportIcon, UploadCloudIcon, QRIcon } from '@/components/icons/FabIcons';
 
 interface AddReportSheetProps {
   open: boolean;
   onClose: () => void;
   onScanReport: () => void;
   onUploadFile: () => void;
+  onScanDoctorQR?: () => void;
 }
 
 const ACTIONS = [
@@ -32,6 +33,15 @@ const ACTIONS = [
     iconColor: '#10B981',
     borderColor: 'rgba(5,150,105,0.25)',
   },
+  {
+    id: 'scanDoctorQR',
+    icon: (color: string) => <QRIcon size={40} color={color} />,
+    title: 'Scan Doctor QR',
+    subtitle: 'Scan doctor QR to share reports',
+    bg: 'rgba(147,51,234,0.08)',
+    iconColor: '#8B5CF6',
+    borderColor: 'rgba(147,51,234,0.25)',
+  },
 ] as const;
 
 export default function AddReportSheet({
@@ -39,10 +49,12 @@ export default function AddReportSheet({
   onClose,
   onScanReport,
   onUploadFile,
+  onScanDoctorQR,
 }: AddReportSheetProps) {
   const handlers: Record<string, () => void> = {
     scan: onScanReport,
     upload: onUploadFile,
+    scanDoctorQR: onScanDoctorQR || (() => {}),
   };
 
   return (

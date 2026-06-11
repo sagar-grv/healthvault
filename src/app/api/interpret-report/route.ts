@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { validateOrigin } from '@/lib/csrf';
 import { checkAIGuardrails, logAuditEntry } from '@/lib/ai/guardrails';
 
 /**
@@ -73,8 +74,10 @@ Return valid JSON only — no markdown, no code fences:
 }
 
 export async function POST(request: NextRequest) {
+  if (!validateOrigin(request)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
   try {
-    // Auth
     const supabase = await createClient();
     const {
       data: { user },
@@ -153,7 +156,13 @@ export async function POST(request: NextRequest) {
     const fileSizeBytes = arrayBuffer.byteLength;
 
     // Rate limiting
-    const guardResult = await checkAIGuardrails(supabase, user.id, reportId, fileSizeBytes);
+    const guardResult = await checkAIGuardrails(
+      supabase,
+      user.id,
+      'interpret_report',
+      fileSizeBytes,
+      reportId
+    );
     if (!guardResult.allowed) {
       return NextResponse.json(
         { error: guardResult.reason },

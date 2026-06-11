@@ -20,21 +20,30 @@ import Chip from '@mui/material/Chip';
 import LinearProgress from '@mui/material/LinearProgress';
 import Snackbar from '@mui/material/Snackbar';
 import Tooltip from '@mui/material/Tooltip';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import PendingIcon from '@mui/icons-material/Pending';
 import SaveIcon from '@mui/icons-material/Save';
+import QrCodeIcon from '@mui/icons-material/QrCode2';
+import DownloadIcon from '@mui/icons-material/Download';
+import PrintIcon from '@mui/icons-material/Print';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ThemeToggle from '@/components/ThemeToggle';
 import { MEDICAL_COUNCILS } from '@/constants';
 import { createClient } from '@/lib/supabase/client';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function DoctorProfilePage() {
   const router = useRouter();
 
+  const [userId, setUserId] = useState<string | null>(null);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [qrOpen, setQrOpen] = useState(false);
   const [registrationNumber, setRegistrationNumber] = useState('');
   const [councilName, setCouncilName] = useState('');
   const [qualification, setQualification] = useState('');
@@ -61,6 +70,7 @@ export default function DoctorProfilePage() {
         setLoading(false);
         return;
       }
+      setUserId(user.id);
       const [{ data: profile }, { data: doctorProfile }] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', user.id).single(),
         supabase.from('doctor_profiles').select('*').eq('id', user.id).single(),
@@ -329,8 +339,127 @@ export default function DoctorProfilePage() {
                 </Typography>
               )}
             </Box>
+
+            {/* QR Code — tap to open popup */}
+            <Box
+              onClick={() => setQrOpen(true)}
+              sx={{
+                mt: 2,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+                cursor: 'pointer',
+                color: 'rgba(255,255,255,0.7)',
+                '&:hover': { color: 'white' },
+              }}
+            >
+              <Box
+                sx={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 2,
+                  bgcolor: 'rgba(255,255,255,0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <QrCodeIcon sx={{ fontSize: 22 }} />
+              </Box>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography
+                  variant="caption"
+                  sx={{ fontWeight: 700, color: 'white', display: 'block' }}
+                >
+                  Your Scan-to-Share QR
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                  Tap to view
+                </Typography>
+              </Box>
+            </Box>
           </CardContent>
         </Card>
+
+        {/* ── QR Popup Dialog ─────────────────────────────────────────── */}
+        <Dialog open={qrOpen} onClose={() => setQrOpen(false)} maxWidth="xs" fullWidth>
+          <DialogContent sx={{ textAlign: 'center', py: 4 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+              Your Scan-to-Share QR
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Patients can scan this QR to share their reports with you
+            </Typography>
+            {userId && (
+              <QRCodeSVG
+                id="doctor-share-qr-profile"
+                value={`https://healthvault-dusky.vercel.app/doctor-share/${userId}`}
+                size={200}
+                level="M"
+                fgColor="#047857"
+                style={{
+                  padding: 16,
+                  borderRadius: 16,
+                  background: '#fff',
+                  display: 'block',
+                  margin: '0 auto 24px',
+                }}
+              />
+            )}
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<DownloadIcon />}
+                onClick={() => {
+                  const svg = document.getElementById('doctor-share-qr-profile');
+                  if (!svg) return;
+                  const blob = new Blob([svg.outerHTML], { type: 'image/svg+xml' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `${fullName || 'doctor'}-share-qr.svg`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Download
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<PrintIcon />}
+                onClick={() => {
+                  const svg = document.getElementById('doctor-share-qr-profile');
+                  if (!svg) return;
+                  const w = window.open('', '_blank');
+                  if (!w) return;
+                  w.document.write(
+                    `<html><body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0">${svg.outerHTML}</body></html>`
+                  );
+                  w.document.close();
+                  w.print();
+                }}
+              >
+                Print
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<ContentCopyIcon />}
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    `https://healthvault-dusky.vercel.app/doctor-share/${userId}`
+                  );
+                  setSnackbar({ open: true, message: 'QR link copied!', severity: 'success' });
+                }}
+              >
+                Copy Link
+              </Button>
+            </Box>
+          </DialogContent>
+        </Dialog>
 
         {/* ── Personal Details ─────────────────────────────────────────── */}
         <Card sx={{ mb: 2, borderRadius: 3 }}>
