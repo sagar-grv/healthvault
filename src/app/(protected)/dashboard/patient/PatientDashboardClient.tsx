@@ -15,8 +15,6 @@ import Chip from '@mui/material/Chip';
 import Switch from '@mui/material/Switch';
 import Fab from '@mui/material/Fab';
 import Tooltip from '@mui/material/Tooltip';
-import Dialog from '@mui/material/Dialog';
-import DialogContent from '@mui/material/DialogContent';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import BottomNavigation from '@mui/material/BottomNavigation';
