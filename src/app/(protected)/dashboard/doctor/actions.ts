@@ -48,6 +48,50 @@ export async function searchPatient(
   redirect(`/dashboard/doctor/patient/${encodeURIComponent(normalized)}`);
 }
 
+/** Fetch all patients who shared reports with the current doctor. */
+export async function getPatientsSharedWithMe() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { error: 'Not authenticated', shares: [] };
+  }
+
+  // 1. Fetch shares (no join needed here)
+  const { data: shares, error: shareError } = await supabase
+    .from('shared_reports')
+    .select('id, patient_id, report_ids, shared_at, viewed_at')
+    .eq('doctor_id', user.id)
+    .order('shared_at', { ascending: false });
+
+  if (shareError) {
+    return { error: 'Failed to load shares', shares: [] };
+  }
+
+  if (!shares || shares.length === 0) {
+    return { shares: [] };
+  }
+
+  // 2. Fetch patient profiles in one query (RLS allows doctors to see patients)
+  const patientIds = [...new Set(shares.map((s) => s.patient_id))];
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, full_name, health_id')
+    .in('id', patientIds);
+
+  // 3. Merge
+  const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
+  const enriched = shares.map((share) => ({
+    ...share,
+    patient: profileMap.get(share.patient_id) || null,
+  }));
+
+  return { shares: enriched };
+}
+
 export async function markShareViewed(shareId: string) {
   const supabase = await createClient();
   const {
