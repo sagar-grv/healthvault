@@ -111,7 +111,7 @@ export default function SharedWithMePanel({
     return () => {
       cancelled = true;
     };
-  }, [open, shareId, onShareViewed]);
+  }, [open, shareId]); // eslint-disable-line react-hooks/exhaustive-deps -- onShareViewed must NOT be a dependency: it's an inline callback that changes every render, causing infinite re-fetch loops
 
   // Filter reports
   const filteredReports = useMemo(() => {
