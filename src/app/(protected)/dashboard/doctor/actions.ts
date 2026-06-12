@@ -155,10 +155,16 @@ export async function getSharedReportDetails(shareId: string) {
     .eq('id', shareId);
 
   // Log access (fire-and-forget)
+  const { data: doctorProfile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', user.id)
+    .single();
+
   await supabase.from('access_logs').insert({
     patient_id: share.patient_id,
     doctor_id: user.id,
-    doctor_name: '',
+    doctor_name: doctorProfile?.full_name || '',
     reports_viewed: share.report_ids,
   });
 

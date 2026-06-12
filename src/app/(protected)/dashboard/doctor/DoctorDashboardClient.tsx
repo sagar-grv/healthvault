@@ -489,7 +489,7 @@ export default function DoctorDashboardClient({
                   Shared With Me
                 </Typography>
                 <Chip
-                  label={sharedWithMe.filter((s) => !s.viewed_at).length || sharedWithMe.length}
+                  label={sharedWithMe.filter((s) => !s.viewed_at).length}
                   size="small"
                   color="primary"
                   sx={{ height: 20, fontSize: '0.7rem' }}

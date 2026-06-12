@@ -5,6 +5,23 @@ import { revalidatePath } from 'next/cache';
 
 const UPLOAD_HOURLY_LIMIT = 50;
 
+/** Look up a doctor's profile for display in the confirmation step */
+export async function lookupDoctor(doctorUserId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('full_name, doctor_profiles(clinic_name)')
+    .eq('id', doctorUserId)
+    .eq('role', 'doctor')
+    .single();
+
+  if (error || !data) return { full_name: null, clinic_name: null };
+  const clinic = Array.isArray(data.doctor_profiles)
+    ? data.doctor_profiles[0]
+    : data.doctor_profiles;
+  return { full_name: data.full_name, clinic_name: clinic?.clinic_name ?? null };
+}
+
 export async function checkUploadAllowed(): Promise<{ allowed: boolean; error?: string }> {
   const supabase = await createClient();
   const {
@@ -69,7 +86,8 @@ export async function shareReportsWithDoctor(doctorUserId: string, reportIds: st
     .from('reports')
     .select('id')
     .in('id', reportIds)
-    .eq('patient_id', user.id);
+    .eq('patient_id', user.id)
+    .eq('is_shareable', true);
 
   if (reportsError || !reports || reports.length !== reportIds.length) {
     return { error: 'Some reports could not be found' };
@@ -85,6 +103,9 @@ export async function shareReportsWithDoctor(doctorUserId: string, reportIds: st
     return { error: 'Failed to share reports' };
   }
 
+  // Supabase may return the result as an array or object
+  const shareData = Array.isArray(share) ? share[0] : share;
+
   revalidatePath('/dashboard/patient');
 
   const clinicName = (doctor.doctor_profiles as { clinic_name?: string })?.clinic_name;
@@ -92,7 +113,7 @@ export async function shareReportsWithDoctor(doctorUserId: string, reportIds: st
     success: true,
     doctorName: doctor.full_name,
     clinicName: clinicName || undefined,
-    shareId: share.id,
+    shareId: shareData?.id,
   };
 }
 

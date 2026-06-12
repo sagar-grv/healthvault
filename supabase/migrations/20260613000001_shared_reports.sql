@@ -47,6 +47,11 @@ AS $$
 DECLARE
     v_result public.shared_reports;
 BEGIN
+    -- Only the patient themselves can create shares
+    IF auth.uid() <> p_patient_id THEN
+        RAISE EXCEPTION 'Not authorized to share reports for another patient';
+    END IF;
+
     INSERT INTO public.shared_reports (patient_id, doctor_id, report_ids)
     VALUES (p_patient_id, p_doctor_id, p_report_ids)
     ON CONFLICT (patient_id, doctor_id)

@@ -24,7 +24,7 @@ import {
   ArrowBack as BackIcon,
 } from '@mui/icons-material';
 import dynamic from 'next/dynamic';
-import { shareReportsWithDoctor } from '@/app/(protected)/dashboard/patient/actions';
+import { shareReportsWithDoctor, lookupDoctor } from '@/app/(protected)/dashboard/patient/actions';
 import { REPORT_TYPES } from '@/constants';
 import type { Report } from '@/types';
 
@@ -36,8 +36,8 @@ const QRScannerDialog = dynamic(() => import('@/components/doctor/QRScannerDialo
 function parseDoctorQR(raw: string): string | null {
   if (!raw) return null;
   const trimmed = raw.trim();
-  if (trimmed.startsWith('hv-doctor:')) return trimmed; // pass full string to onScan
-  if (trimmed.startsWith('hv-')) return null; // patient QR, not doctor
+  if (trimmed.toLowerCase().startsWith('hv-doctor:')) return trimmed; // pass full string to onScan
+  if (trimmed.toLowerCase().startsWith('hv-')) return null; // patient QR, not doctor
   // Try as raw UUID (basic check)
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
     return trimmed;
@@ -79,9 +79,9 @@ export default function DoctorQRShareFlow({ open, onClose, reports }: DoctorQRSh
     // Expect format: hv-doctor:{userId} or plain UUID
     let extractedDoctorId: string | null = null;
 
-    if (decoded.startsWith('hv-doctor:')) {
-      extractedDoctorId = decoded.replace('hv-doctor:', '');
-    } else if (decoded.startsWith('hv-')) {
+    if (decoded.toLowerCase().startsWith('hv-doctor:')) {
+      extractedDoctorId = decoded.replace(/hv-doctor:/i, '');
+    } else if (decoded.toLowerCase().startsWith('hv-')) {
       setErrorMessage("This is a patient QR code. Please scan a doctor's QR code.");
       setState('error');
       return;
@@ -96,7 +96,22 @@ export default function DoctorQRShareFlow({ open, onClose, reports }: DoctorQRSh
       return;
     }
 
+    // Validate UUID format
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(extractedDoctorId)
+    ) {
+      setErrorMessage('Invalid QR code format. Please scan again.');
+      setState('error');
+      return;
+    }
+
     setDoctorId(extractedDoctorId);
+
+    // Fetch doctor identity for confirmation
+    const doc = await lookupDoctor(extractedDoctorId);
+    setDoctorName(doc.full_name || '');
+    setClinicName(doc.clinic_name || '');
+
     setState('confirming');
   }, []);
 
@@ -146,7 +161,7 @@ export default function DoctorQRShareFlow({ open, onClose, reports }: DoctorQRSh
     REPORT_TYPES.find((t) => t.value === type)?.label || type;
 
   // Handle scanner close — reset state for next open
-  const handleScannerClose = () => {
+  const handleClose = () => {
     resetState();
     onClose();
   };
@@ -156,7 +171,7 @@ export default function DoctorQRShareFlow({ open, onClose, reports }: DoctorQRSh
       {/* QR Scanner — full screen */}
       <QRScannerDialog
         open={showScanner}
-        onClose={handleScannerClose}
+        onClose={handleClose}
         onScan={handleScan}
         customParser={parseDoctorQR}
       />
@@ -172,6 +187,16 @@ export default function DoctorQRShareFlow({ open, onClose, reports }: DoctorQRSh
           </Box>
         </DialogTitle>
         <DialogContent>
+          {doctorName && (
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
+              Dr. {doctorName}
+            </Typography>
+          )}
+          {clinicName && (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              {clinicName}
+            </Typography>
+          )}
           <Typography variant="body2" color="text.secondary" gutterBottom>
             Share your reports with this doctor?
           </Typography>
@@ -180,7 +205,7 @@ export default function DoctorQRShareFlow({ open, onClose, reports }: DoctorQRSh
           </Alert>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={handleClose}>Cancel</Button>
           <Button variant="contained" onClick={() => setState('selecting')} color="success">
             Continue
           </Button>
@@ -256,7 +281,7 @@ export default function DoctorQRShareFlow({ open, onClose, reports }: DoctorQRSh
           </List>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={handleClose}>Cancel</Button>
           <Button
             variant="contained"
             onClick={handleShare}
@@ -291,7 +316,7 @@ export default function DoctorQRShareFlow({ open, onClose, reports }: DoctorQRSh
           )}
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
-          <Button variant="contained" onClick={onClose} color="success">
+          <Button variant="contained" onClick={handleClose} color="success">
             Done
           </Button>
         </DialogActions>
@@ -305,7 +330,7 @@ export default function DoctorQRShareFlow({ open, onClose, reports }: DoctorQRSh
           </Alert>
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
-          <Button variant="outlined" onClick={onClose}>
+          <Button variant="outlined" onClick={handleClose}>
             Cancel
           </Button>
           <Button
