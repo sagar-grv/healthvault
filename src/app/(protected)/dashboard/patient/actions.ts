@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { revalidatePath } from 'next/cache';
 
 const UPLOAD_HOURLY_LIMIT = 50;
 
@@ -36,4 +37,119 @@ export async function recordUpload(): Promise<void> {
   if (!user) return;
 
   await supabase.from('upload_attempts').insert({ user_id: user.id });
+}
+
+export async function shareReportsWithDoctor(doctorUserId: string, reportIds: string[]) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { error: 'Not authenticated' };
+  }
+
+  if (!reportIds.length) {
+    return { error: 'Select at least one report to share' };
+  }
+
+  const { data: doctor, error: doctorError } = await supabase
+    .from('profiles')
+    .select('id, full_name, doctor_profiles(clinic_name)')
+    .eq('id', doctorUserId)
+    .eq('role', 'doctor')
+    .single();
+
+  if (doctorError || !doctor) {
+    return { error: 'Doctor not found' };
+  }
+
+  const { data: reports, error: reportsError } = await supabase
+    .from('reports')
+    .select('id')
+    .in('id', reportIds)
+    .eq('patient_id', user.id);
+
+  if (reportsError || !reports || reports.length !== reportIds.length) {
+    return { error: 'Some reports could not be found' };
+  }
+
+  const { data: share, error: shareError } = await supabase.rpc('share_reports_with_doctor', {
+    p_patient_id: user.id,
+    p_doctor_id: doctorUserId,
+    p_report_ids: reportIds,
+  });
+
+  if (shareError) {
+    return { error: 'Failed to share reports' };
+  }
+
+  revalidatePath('/dashboard/patient');
+
+  const clinicName = (doctor.doctor_profiles as { clinic_name?: string })?.clinic_name;
+  return {
+    success: true,
+    doctorName: doctor.full_name,
+    clinicName: clinicName || undefined,
+    shareId: share.id,
+  };
+}
+
+export async function revokeShare(shareId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { error: 'Not authenticated' };
+  }
+
+  const { error } = await supabase
+    .from('shared_reports')
+    .delete()
+    .eq('id', shareId)
+    .eq('patient_id', user.id);
+
+  if (error) {
+    return { error: 'Failed to revoke share' };
+  }
+
+  revalidatePath('/dashboard/patient');
+  return { success: true };
+}
+
+export async function getPatientShares() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { error: 'Not authenticated' };
+  }
+
+  const { data: shares, error } = await supabase
+    .from('shared_reports')
+    .select(
+      `
+      id,
+      doctor_id,
+      report_ids,
+      shared_at,
+      viewed_at,
+      doctor:profiles!shared_reports_doctor_id_fkey(full_name, doctor_profiles(clinic_name))
+    `
+    )
+    .eq('patient_id', user.id)
+    .order('shared_at', { ascending: false });
+
+  if (error) {
+    return { error: 'Failed to load shares' };
+  }
+
+  return { shares: shares || [] };
 }

@@ -28,6 +28,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import ThemeToggle from '@/components/ThemeToggle';
 import { MEDICAL_COUNCILS } from '@/constants';
 import { createClient } from '@/lib/supabase/client';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function DoctorProfilePage() {
   const router = useRouter();
@@ -43,6 +44,7 @@ export default function DoctorProfilePage() {
   const [clinicAddress, setClinicAddress] = useState('');
   const [city, setCity] = useState('');
   const [isVerified, setIsVerified] = useState(false);
+  const [userId, setUserId] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [snackbar, setSnackbar] = useState({
@@ -61,6 +63,7 @@ export default function DoctorProfilePage() {
         setLoading(false);
         return;
       }
+      setUserId(user.id);
       const [{ data: profile }, { data: doctorProfile }] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', user.id).single(),
         supabase.from('doctor_profiles').select('*').eq('id', user.id).single(),
@@ -486,6 +489,41 @@ export default function DoctorProfilePage() {
                 sx={{ borderColor: 'divider', color: 'text.disabled' }}
               />
             </Box>
+          </CardContent>
+        </Card>
+
+        {/* ── QR Code ───────────────────────────────────────────────────── */}
+        <Card sx={{ mb: 3, borderRadius: 3 }}>
+          <CardContent sx={{ p: 3, textAlign: 'center' }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
+              Your QR Code
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Patients can scan this QR to share their medical reports with you.
+            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+              <Box
+                sx={{
+                  p: 2,
+                  bgcolor: 'white',
+                  borderRadius: 3,
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+                  display: 'inline-block',
+                }}
+              >
+                <QRCodeSVG
+                  value={`hv-doctor:${userId}`}
+                  size={180}
+                  bgColor="#ffffff"
+                  fgColor="#1a1a2e"
+                  level="H"
+                  includeMargin={false}
+                />
+              </Box>
+            </Box>
+            <Typography variant="caption" color="text.secondary">
+              Format: hv-doctor:{'{'}userId{'}'}
+            </Typography>
           </CardContent>
         </Card>
 

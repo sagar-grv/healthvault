@@ -71,3 +71,15 @@ export interface SearchAttempt {
   found: boolean;
   searched_at: string;
 }
+
+export interface SharedReport {
+  id: string;
+  patient_id: string;
+  doctor_id: string;
+  report_ids: string[];
+  shared_at: string;
+  viewed_at: string | null;
+  // Joined fields (from Supabase select)
+  patient?: Profile;
+  doctor?: Profile;
+}
