@@ -31,6 +31,7 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CloseIcon from '@mui/icons-material/Close';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServicesOutlined';
 import PeopleIcon from '@mui/icons-material/PeopleOutlined';
+import QrCodeIcon from '@mui/icons-material/QrCode';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, DoctorProfile } from '@/types';
 import { isValidHealthId, normalizeHealthId } from '@/lib/utils/health-id';
@@ -295,7 +296,7 @@ export default function DoctorDashboardClient({
                   flexShrink: 0,
                 }}
               >
-                <QRCodeSVG value={`hv-doctor:${profile.id}`} size={28} level="M" />
+                <QrCodeIcon sx={{ color: 'white', fontSize: 22 }} />
               </Box>
               <Box sx={{ flexGrow: 1 }}>
                 <Typography variant="body1" sx={{ fontWeight: 700 }}>

@@ -19,11 +19,15 @@ import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import VisibilityIcon from '@mui/icons-material/VisibilityOutlined';
 import HomeIcon from '@mui/icons-material/Home';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import HistoryIcon from '@mui/icons-material/History';
 import PersonIcon from '@mui/icons-material/PersonOutlined';
 import GroupIcon from '@mui/icons-material/PeopleOutlined';
@@ -55,6 +59,10 @@ export default function AccessLogClient({ logs, shares: initialShares }: AccessL
     message: string;
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
+  const [revokeConfirm, setRevokeConfirm] = useState<{ open: boolean; shareId: string | null }>({
+    open: false,
+    shareId: null,
+  });
 
   // Relative time — inside component to access t()
   const formatRelativeTime = (dateStr: string) => {
@@ -325,15 +333,7 @@ export default function AccessLogClient({ logs, shares: initialShares }: AccessL
                     <Button
                       size="small"
                       color="error"
-                      onClick={async () => {
-                        const result = await revokeShare(share.id);
-                        if (result.error) {
-                          setSnackbar({ open: true, message: result.error, severity: 'error' });
-                          return;
-                        }
-                        setShares((prev) => prev.filter((s) => s.id !== share.id));
-                        setSnackbar({ open: true, message: 'Share revoked', severity: 'success' });
-                      }}
+                      onClick={() => setRevokeConfirm({ open: true, shareId: share.id })}
                       sx={{ textTransform: 'none' }}
                     >
                       Revoke
@@ -352,17 +352,55 @@ export default function AccessLogClient({ logs, shares: initialShares }: AccessL
           value={2}
           onChange={(_, v) => {
             if (v === 0) router.push('/dashboard/patient');
-            if (v === 1) router.push('/dashboard/patient/upload');
+            if (v === 1) router.push('/dashboard/patient/reports');
             if (v === 3) router.push('/dashboard/patient/profile');
           }}
           showLabels
         >
           <BottomNavigationAction label={tc('bottomNav.home')} icon={<HomeIcon />} />
-          <BottomNavigationAction label={tc('bottomNav.upload')} icon={<UploadFileIcon />} />
+          <BottomNavigationAction label="Reports" icon={<AssignmentOutlinedIcon />} />
           <BottomNavigationAction label={tc('bottomNav.accessLog')} icon={<HistoryIcon />} />
           <BottomNavigationAction label={tc('bottomNav.profile')} icon={<PersonIcon />} />
         </BottomNavigation>
       </Paper>
+
+      {/* Revoke Confirmation Dialog */}
+      <Dialog
+        open={revokeConfirm.open}
+        onClose={() => setRevokeConfirm({ open: false, shareId: null })}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Revoke access?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            This doctor will no longer be able to view the shared reports. You can re-share later if
+            needed.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ pb: 2, px: 3 }}>
+          <Button onClick={() => setRevokeConfirm({ open: false, shareId: null })} color="inherit">
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={async () => {
+              if (!revokeConfirm.shareId) return;
+              const result = await revokeShare(revokeConfirm.shareId);
+              if (result.error) {
+                setSnackbar({ open: true, message: result.error, severity: 'error' });
+              } else {
+                setShares((prev) => prev.filter((s) => s.id !== revokeConfirm.shareId));
+                setSnackbar({ open: true, message: 'Share revoked', severity: 'success' });
+              }
+              setRevokeConfirm({ open: false, shareId: null });
+            }}
+          >
+            Revoke
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Snackbar */}
       <Snackbar
