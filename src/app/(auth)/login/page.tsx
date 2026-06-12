@@ -72,7 +72,7 @@ function LoginForm() {
     <Box
       sx={{
         minHeight: '100vh',
-        bgcolor: '#F9FAFB',
+        bgcolor: 'background.default',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -97,7 +97,7 @@ function LoginForm() {
         >
           <FavoriteIcon sx={{ color: 'white', fontSize: 22 }} />
         </Box>
-        <Typography variant="h5" sx={{ fontWeight: 800, color: '#111827' }}>
+        <Typography variant="h5" sx={{ fontWeight: 800, color: 'text.primary' }}>
           HealthVault
         </Typography>
       </Box>
@@ -109,7 +109,8 @@ function LoginForm() {
           maxWidth: 400,
           boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
           borderRadius: 3,
-          border: '1px solid #E5E7EB',
+          border: '1px solid',
+          borderColor: 'divider',
         }}
       >
         <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
@@ -175,10 +176,10 @@ function LoginForm() {
             disabled={loading}
             sx={{
               py: 1.25,
-              borderColor: '#E5E7EB',
-              color: '#374151',
-              bgcolor: 'white',
-              '&:hover': { bgcolor: '#F9FAFB', borderColor: '#D1D5DB' },
+              borderColor: 'divider',
+              color: 'text.primary',
+              bgcolor: 'background.paper',
+              '&:hover': { bgcolor: 'action.hover', borderColor: 'action.focus' },
             }}
           >
             Sign in with Google
@@ -200,10 +201,10 @@ function LoginForm() {
               size="large"
               sx={{
                 py: 1.25,
-                borderColor: '#BFDBFE',
-                color: '#1D4ED8',
-                bgcolor: '#EFF6FF',
-                '&:hover': { bgcolor: '#DBEAFE', borderColor: '#93C5FD', transform: 'none' },
+                borderColor: 'primary.main',
+                color: 'primary.main',
+                bgcolor: 'background.paper',
+                '&:hover': { bgcolor: 'action.hover', borderColor: 'primary.light' },
               }}
             >
               Register as a Patient
@@ -216,10 +217,10 @@ function LoginForm() {
               size="large"
               sx={{
                 py: 1.25,
-                borderColor: '#A7F3D0',
-                color: '#047857',
-                bgcolor: '#F0FDF4',
-                '&:hover': { bgcolor: '#D1FAE5', borderColor: '#6EE7B7', transform: 'none' },
+                borderColor: 'secondary.main',
+                color: 'secondary.main',
+                bgcolor: 'background.paper',
+                '&:hover': { bgcolor: 'action.hover', borderColor: 'secondary.light' },
               }}
             >
               Register as a Doctor

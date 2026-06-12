@@ -13,7 +13,7 @@ import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Avatar from '@mui/material/Avatar';
 import MenuItem from '@mui/material/MenuItem';
-import Divider from '@mui/material/Divider';
+
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Chip from '@mui/material/Chip';
@@ -465,30 +465,6 @@ export default function DoctorProfilePage() {
               onChange={(e) => setCity(e.target.value)}
               placeholder="e.g., Mumbai"
             />
-          </CardContent>
-        </Card>
-
-        {/* ── ABDM / HPR ───────────────────────────────────────────────── */}
-        <Card sx={{ mb: 3, borderRadius: 3 }}>
-          <CardContent sx={{ p: 3 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
-              ABDM / HPR Integration
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-              Link your Healthcare Professionals Registry (HPR) ID for official ABDM verification.
-            </Typography>
-            <Divider sx={{ mb: 1.5 }} />
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                HPR ID
-              </Typography>
-              <Chip
-                label="Coming Soon"
-                size="small"
-                variant="outlined"
-                sx={{ borderColor: 'divider', color: 'text.disabled' }}
-              />
-            </Box>
           </CardContent>
         </Card>
 
