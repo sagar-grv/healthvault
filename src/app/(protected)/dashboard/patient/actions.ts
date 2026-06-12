@@ -5,21 +5,18 @@ import { revalidatePath } from 'next/cache';
 
 const UPLOAD_HOURLY_LIMIT = 50;
 
-/** Look up a doctor's profile for display in the confirmation step */
+/** Look up a doctor's profile for display in the confirmation step.
+ *  Uses SECURITY DEFINER function to bypass RLS (patients can't view doctor profiles). */
 export async function lookupDoctor(doctorUserId: string) {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('full_name, doctor_profiles(clinic_name)')
-    .eq('id', doctorUserId)
-    .eq('role', 'doctor')
-    .single();
+  const { data, error } = await supabase.rpc('get_doctor_display_info', {
+    p_doctor_id: doctorUserId,
+  });
 
   if (error || !data) return { full_name: null, clinic_name: null };
-  const clinic = Array.isArray(data.doctor_profiles)
-    ? data.doctor_profiles[0]
-    : data.doctor_profiles;
-  return { full_name: data.full_name, clinic_name: clinic?.clinic_name ?? null };
+  // RPC returns array — extract first row
+  const row = Array.isArray(data) ? data[0] : data;
+  return { full_name: row?.full_name ?? null, clinic_name: row?.clinic_name ?? null };
 }
 
 export async function checkUploadAllowed(): Promise<{ allowed: boolean; error?: string }> {
@@ -71,17 +68,7 @@ export async function shareReportsWithDoctor(doctorUserId: string, reportIds: st
     return { error: 'Select at least one report to share' };
   }
 
-  const { data: doctor, error: doctorError } = await supabase
-    .from('profiles')
-    .select('id, full_name, doctor_profiles(clinic_name)')
-    .eq('id', doctorUserId)
-    .eq('role', 'doctor')
-    .single();
-
-  if (doctorError || !doctor) {
-    return { error: 'Doctor not found' };
-  }
-
+  // Validate reports belong to patient and are shareable
   const { data: reports, error: reportsError } = await supabase
     .from('reports')
     .select('id')
@@ -93,6 +80,7 @@ export async function shareReportsWithDoctor(doctorUserId: string, reportIds: st
     return { error: 'Some reports could not be found' };
   }
 
+  // Call RPC — validates doctor exists via FK, handles upsert
   const { data: share, error: shareError } = await supabase.rpc('share_reports_with_doctor', {
     p_patient_id: user.id,
     p_doctor_id: doctorUserId,
@@ -103,16 +91,18 @@ export async function shareReportsWithDoctor(doctorUserId: string, reportIds: st
     return { error: 'Failed to share reports' };
   }
 
+  // Get doctor display info for the success message
+  const doctorInfo = await lookupDoctor(doctorUserId);
+
   // Supabase may return the result as an array or object
   const shareData = Array.isArray(share) ? share[0] : share;
 
   revalidatePath('/dashboard/patient');
 
-  const clinicName = (doctor.doctor_profiles as { clinic_name?: string })?.clinic_name;
   return {
     success: true,
-    doctorName: doctor.full_name,
-    clinicName: clinicName || undefined,
+    doctorName: doctorInfo.full_name || 'Doctor',
+    clinicName: doctorInfo.clinic_name || undefined,
     shareId: shareData?.id,
   };
 }
@@ -140,37 +130,4 @@ export async function revokeShare(shareId: string) {
 
   revalidatePath('/dashboard/patient');
   return { success: true };
-}
-
-export async function getPatientShares() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return { error: 'Not authenticated' };
-  }
-
-  const { data: shares, error } = await supabase
-    .from('shared_reports')
-    .select(
-      `
-      id,
-      doctor_id,
-      report_ids,
-      shared_at,
-      viewed_at,
-      doctor:profiles!shared_reports_doctor_id_fkey(full_name, doctor_profiles(clinic_name))
-    `
-    )
-    .eq('patient_id', user.id)
-    .order('shared_at', { ascending: false });
-
-  if (error) {
-    return { error: 'Failed to load shares' };
-  }
-
-  return { shares: shares || [] };
 }

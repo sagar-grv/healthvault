@@ -146,6 +146,13 @@ export async function getSharedReportDetails(shareId: string) {
     .eq('id', share.patient_id)
     .single();
 
+  // Fetch doctor's own name for access log (RLS allows viewing own profile)
+  const { data: doctorProfile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', user.id)
+    .single();
+
   // Fetch reports — only needed columns, not select('*')
   const { data: reports, error: reportsError } = await supabase
     .from('reports')
@@ -168,7 +175,7 @@ export async function getSharedReportDetails(shareId: string) {
     supabase.from('access_logs').insert({
       patient_id: share.patient_id,
       doctor_id: user.id,
-      doctor_name: patientProfile?.full_name || '',
+      doctor_name: doctorProfile?.full_name || '',
       reports_viewed: share.report_ids,
     }),
   ]).catch(() => {

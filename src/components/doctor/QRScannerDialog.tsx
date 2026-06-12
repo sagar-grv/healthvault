@@ -42,6 +42,7 @@ export default function QRScannerDialog({
   const [error, setError] = useState('');
   const [torchOn, setTorchOn] = useState(false);
   const [cameraCount, setCameraCount] = useState(0);
+  const [cameraIndex, setCameraIndex] = useState(0);
   const [uploading, setUploading] = useState(false);
 
   const stopScanner = useCallback(async () => {
@@ -198,26 +199,13 @@ export default function QRScannerDialog({
   }, [stopScanner, onClose]);
 
   const handleRetry = useCallback(async () => {
+    // Stop any existing scanner, clear state, close dialog.
+    // The parent will re-open on next button tap, which triggers a fresh effect run.
     await stopScanner();
     setScanState('idle');
     setError('');
-    // Brief delay then re-trigger the effect by forcing a re-mount via key change
-    setTimeout(() => setScanState('idle'), 100);
-    // Directly restart: toggle open state in parent is not available here,
-    // so we re-run init by briefly resetting to idle and back
-    // The effect watches `open` not `scanState`, so we need to force re-run:
-    setScanState('starting');
-    requestAnimationFrame(async () => {
-      setScanState('idle'); // The useEffect will NOT re-run since open didn't change.
-      // Instead, just call the same logic inline:
-    });
-    // Simplest: just close + reopen
+    setTorchOn(false);
     onClose();
-    setTimeout(() => {
-      // The parent will re-open immediately if we signal via onScan('' won't work)
-      // So we just reset the state and let the user tap the button again
-      setScanState('idle');
-    }, 150);
   }, [stopScanner, onClose]);
 
   const handleToggleTorch = async () => {
@@ -241,6 +229,10 @@ export default function QRScannerDialog({
       await new Promise((r) => requestAnimationFrame(r));
       await new Promise((r) => requestAnimationFrame(r));
 
+      // Toggle to the next camera
+      const nextIndex = (cameraIndex + 1) % cameras.length;
+      setCameraIndex(nextIndex);
+
       const scanner = new Html5Qrcode('qr-reader-container', {
         formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
         verbose: false,
@@ -248,7 +240,7 @@ export default function QRScannerDialog({
       scannerRef.current = scanner;
 
       await scanner.start(
-        cameras[1].id,
+        cameras[nextIndex].id,
         { fps: 30, disableFlip: false, aspectRatio: window.innerHeight / window.innerWidth },
         (decoded: string) => {
           const parsed = customParser ? customParser(decoded) : parseQRContent(decoded);
