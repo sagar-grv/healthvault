@@ -5,9 +5,20 @@ import CardContent from '@mui/material/CardContent';
 
 export function PatientDashboardSkeleton() {
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* AppBar skeleton */}
-      <Box sx={{ height: 56, bgcolor: 'white', borderBottom: '1px solid #E5E7EB', px: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box
+        sx={{
+          height: 56,
+          bgcolor: 'background.paper',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          px: 2,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+        }}
+      >
         <Skeleton variant="rounded" width={26} height={26} />
         <Skeleton variant="text" width={100} height={24} />
         <Box sx={{ flexGrow: 1 }} />
@@ -25,7 +36,7 @@ export function PatientDashboardSkeleton() {
         </Card>
 
         {/* Report cards skeleton */}
-        {[1, 2, 3].map(i => (
+        {[1, 2, 3].map((i) => (
           <Card key={i} sx={{ mb: 2 }}>
             <CardContent sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
               <Skeleton variant="rounded" width={40} height={40} />
@@ -44,9 +55,20 @@ export function PatientDashboardSkeleton() {
 
 export function DoctorDashboardSkeleton() {
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* AppBar skeleton */}
-      <Box sx={{ height: 56, bgcolor: 'white', borderBottom: '1px solid #E5E7EB', px: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box
+        sx={{
+          height: 56,
+          bgcolor: 'background.paper',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          px: 2,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+        }}
+      >
         <Skeleton variant="rounded" width={26} height={26} />
         <Skeleton variant="text" width={100} height={24} />
         <Box sx={{ flexGrow: 1 }} />
@@ -66,8 +88,11 @@ export function DoctorDashboardSkeleton() {
 
         {/* Stats row */}
         <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
-          {[1, 2, 3].map(i => (
-            <Card key={i} sx={{ flex: 1, boxShadow: 'none', border: '1px solid #E5E7EB' }}>
+          {[1, 2, 3].map((i) => (
+            <Card
+              key={i}
+              sx={{ flex: 1, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}
+            >
               <CardContent sx={{ p: 2, textAlign: 'center' }}>
                 <Skeleton variant="text" width={30} height={36} sx={{ mx: 'auto' }} />
                 <Skeleton variant="text" width={50} height={12} sx={{ mx: 'auto' }} />
@@ -92,9 +117,20 @@ export function DoctorDashboardSkeleton() {
 
 export function PatientViewSkeleton() {
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* AppBar */}
-      <Box sx={{ height: 56, bgcolor: 'white', borderBottom: '1px solid #E5E7EB', px: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box
+        sx={{
+          height: 56,
+          bgcolor: 'background.paper',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          px: 2,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+        }}
+      >
         <Skeleton variant="circular" width={32} height={32} />
         <Skeleton variant="text" width={160} height={24} />
       </Box>
@@ -112,7 +148,7 @@ export function PatientViewSkeleton() {
         </Card>
 
         {/* Report cards */}
-        {[1, 2, 3].map(i => (
+        {[1, 2, 3].map((i) => (
           <Card key={i} sx={{ mb: 2 }}>
             <CardContent sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
               <Skeleton variant="rounded" width={40} height={40} />
@@ -130,9 +166,20 @@ export function PatientViewSkeleton() {
 
 export function AccessLogSkeleton() {
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* AppBar */}
-      <Box sx={{ height: 56, bgcolor: 'white', borderBottom: '1px solid #E5E7EB', px: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box
+        sx={{
+          height: 56,
+          bgcolor: 'background.paper',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          px: 2,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+        }}
+      >
         <Skeleton variant="circular" width={32} height={32} />
         <Box>
           <Skeleton variant="text" width={90} height={22} />
@@ -143,13 +190,13 @@ export function AccessLogSkeleton() {
       <Box sx={{ px: 2, py: 3, maxWidth: 600, mx: 'auto' }}>
         {/* Stats */}
         <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
-          <Card sx={{ flex: 1, boxShadow: 'none', border: '1px solid #E5E7EB' }}>
+          <Card sx={{ flex: 1, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
             <CardContent sx={{ p: 2, textAlign: 'center' }}>
               <Skeleton variant="text" width={30} height={40} sx={{ mx: 'auto' }} />
               <Skeleton variant="text" width={60} height={12} sx={{ mx: 'auto' }} />
             </CardContent>
           </Card>
-          <Card sx={{ flex: 1, boxShadow: 'none', border: '1px solid #E5E7EB' }}>
+          <Card sx={{ flex: 1, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
             <CardContent sx={{ p: 2, textAlign: 'center' }}>
               <Skeleton variant="text" width={30} height={40} sx={{ mx: 'auto' }} />
               <Skeleton variant="text" width={70} height={12} sx={{ mx: 'auto' }} />
@@ -158,7 +205,7 @@ export function AccessLogSkeleton() {
         </Box>
 
         {/* Timeline items */}
-        {[1, 2, 3].map(i => (
+        {[1, 2, 3].map((i) => (
           <Box key={i} sx={{ display: 'flex', gap: 2, mb: 2.5 }}>
             <Skeleton variant="circular" width={38} height={38} sx={{ flexShrink: 0 }} />
             <Card sx={{ flex: 1 }}>

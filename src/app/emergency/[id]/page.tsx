@@ -167,7 +167,7 @@ export default function EmergencyPage() {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            bgcolor: '#F9FAFB',
+            bgcolor: 'background.default',
             p: 3,
           }}
         >
@@ -193,8 +193,8 @@ export default function EmergencyPage() {
       >
         {/* Header */}
         <Box sx={{ width: '100%', maxWidth: 420, textAlign: 'center', py: 3 }}>
-          <LocalHospitalIcon sx={{ fontSize: 52, color: '#DC2626' }} />
-          <Typography variant="h5" sx={{ fontWeight: 700, color: '#DC2626', mt: 1 }}>
+          <LocalHospitalIcon sx={{ fontSize: 52, color: 'error.main' }} />
+          <Typography variant="h5" sx={{ fontWeight: 700, color: 'error.main', mt: 1 }}>
             EMERGENCY INFO
           </Typography>
           <Typography variant="body2" color="text.secondary">
@@ -231,7 +231,7 @@ export default function EmergencyPage() {
                   borderRadius: 2,
                 }}
               >
-                <BloodtypeIcon sx={{ color: '#DC2626', fontSize: 28 }} />
+                <BloodtypeIcon sx={{ color: 'error.main', fontSize: 28 }} />
                 <Box>
                   <Typography variant="caption" color="text.secondary">
                     Blood Group
@@ -268,7 +268,10 @@ export default function EmergencyPage() {
             {/* Conditions */}
             {data.conditions.length > 0 && (
               <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151', mb: 1 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ fontWeight: 600, color: 'text.secondary', mb: 1 }}
+                >
                   Medical Conditions
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
@@ -295,7 +298,10 @@ export default function EmergencyPage() {
                   border: '1px solid #BBF7D0',
                 }}
               >
-                <Typography variant="body2" sx={{ fontWeight: 600, color: '#065F46', mb: 1 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ fontWeight: 600, color: 'secondary.dark', mb: 1 }}
+                >
                   Emergency Contact
                 </Typography>
                 {data.emergencyContact.name && (
@@ -339,8 +345,8 @@ export default function EmergencyPage() {
               fontSize: '1.2rem',
               fontWeight: 800,
               borderRadius: 3,
-              bgcolor: sosState === 'sent' ? '#059669' : '#DC2626',
-              '&:hover': { bgcolor: sosState === 'sent' ? '#047857' : '#B91C1C' },
+              bgcolor: sosState === 'sent' ? 'secondary.main' : 'error.main',
+              '&:hover': { bgcolor: sosState === 'sent' ? 'secondary.dark' : '#B91C1C' },
               boxShadow: '0 8px 24px rgba(220,38,38,0.4)',
               letterSpacing: '0.05em',
             }}
@@ -365,7 +371,7 @@ export default function EmergencyPage() {
             fullWidth
             startIcon={<PrintIcon />}
             onClick={() => window.print()}
-            sx={{ mb: 2, borderColor: '#D1D5DB', color: '#6B7280' }}
+            sx={{ mb: 2, borderColor: 'grey.300', color: 'text.secondary' }}
           >
             Print This Page
           </Button>

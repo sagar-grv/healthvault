@@ -443,7 +443,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
                 bgcolor: 'rgba(0,0,0,0.4)',
               }}
             >
-              <CircularProgress sx={{ color: '#10B981' }} />
+              <CircularProgress sx={{ color: 'secondary.light' }} />
               <Typography color="white" sx={{ ml: 2 }}>
                 Detecting edges...
               </Typography>

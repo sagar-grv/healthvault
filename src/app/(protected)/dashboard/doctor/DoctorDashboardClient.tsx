@@ -552,7 +552,7 @@ export default function DoctorDashboardClient({
             sx={{
               mt: 2,
               display: 'inline-block',
-              bgcolor: 'white',
+              bgcolor: 'background.paper',
               borderRadius: 3,
               p: 2.5,
               boxShadow: '0 4px 20px rgba(0,0,0,0.1)',

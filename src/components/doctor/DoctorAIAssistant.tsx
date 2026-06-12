@@ -41,6 +41,21 @@ const SUGGESTED_QUESTIONS = [
   'Any critical findings across my patients?',
 ];
 
+// ── Simple markdown renderer ───────────────────────────────────────────────────
+
+function MarkdownContent({ text }: { text: string }) {
+  const html = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^- (.+)$/gm, '• $1')
+    .replace(/\n/g, '<br />');
+
+  return <span dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
 // ── Typing indicator component ─────────────────────────────────────────────────
 
 function TypingIndicator() {
@@ -53,7 +68,7 @@ function TypingIndicator() {
             width: 7,
             height: 7,
             borderRadius: '50%',
-            bgcolor: '#059669',
+            bgcolor: 'secondary.main',
             animation: 'bounce 1.2s infinite',
             animationDelay: `${i * 0.2}s`,
             '@keyframes bounce': {
@@ -104,8 +119,6 @@ export default function DoctorAIAssistant({
 
   const handleClose = () => {
     setOpen(false);
-    // Clear chat on close — fresh session next time
-    setMessages([]);
     setInput('');
     setError('');
   };
@@ -213,7 +226,7 @@ export default function DoctorAIAssistant({
                   width: 10,
                   height: 10,
                   borderRadius: '50%',
-                  bgcolor: '#F59E0B',
+                  bgcolor: 'warning.main',
                   border: '2px solid white',
                 }}
               />
@@ -300,7 +313,7 @@ export default function DoctorAIAssistant({
               display: 'flex',
               flexDirection: 'column',
               gap: 1.5,
-              bgcolor: '#F9FAFB',
+              bgcolor: 'background.default',
             }}
           >
             {/* Welcome message */}
@@ -316,7 +329,9 @@ export default function DoctorAIAssistant({
                   alignItems: 'flex-start',
                 }}
               >
-                <AutoAwesomeIcon sx={{ fontSize: 16, color: '#059669', flexShrink: 0, mt: 0.2 }} />
+                <AutoAwesomeIcon
+                  sx={{ fontSize: 16, color: 'secondary.main', flexShrink: 0, mt: 0.2 }}
+                />
                 <Typography variant="body2" sx={{ fontSize: '0.82rem', lineHeight: 1.5 }}>
                   {hasPatients
                     ? `Hello Dr. ${firstName}! I have access to your ${recentPatients.length} recent patient${recentPatients.length > 1 ? 's' : ''}'s shared records. Ask me anything.`
@@ -383,7 +398,7 @@ export default function DoctorAIAssistant({
                 <Box
                   sx={{
                     maxWidth: '78%',
-                    bgcolor: msg.role === 'user' ? '#059669' : 'background.paper',
+                    bgcolor: msg.role === 'user' ? 'secondary.main' : 'background.paper',
                     color: msg.role === 'user' ? 'white' : 'text.primary',
                     borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                     px: 1.5,
@@ -402,7 +417,7 @@ export default function DoctorAIAssistant({
                       wordBreak: 'break-word',
                     }}
                   >
-                    {msg.text}
+                    <MarkdownContent text={msg.text} />
                   </Typography>
                   <Typography
                     sx={{
@@ -500,7 +515,7 @@ export default function DoctorAIAssistant({
                   fontSize: '0.83rem',
                   borderRadius: 3,
                   bgcolor: 'background.default',
-                  '&.Mui-focused fieldset': { borderColor: '#059669' },
+                  '&.Mui-focused fieldset': { borderColor: 'secondary.main' },
                 },
               }}
             />
@@ -511,12 +526,13 @@ export default function DoctorAIAssistant({
                 width: 38,
                 height: 38,
                 flexShrink: 0,
-                bgcolor: input.trim() && !loading ? '#059669' : 'action.disabledBackground',
+                bgcolor: input.trim() && !loading ? 'secondary.main' : 'action.disabledBackground',
                 color: input.trim() && !loading ? 'white' : 'text.disabled',
                 borderRadius: 2,
                 transition: 'all 0.15s',
                 '&:hover': {
-                  bgcolor: input.trim() && !loading ? '#047857' : 'action.disabledBackground',
+                  bgcolor:
+                    input.trim() && !loading ? 'secondary.dark' : 'action.disabledBackground',
                 },
                 '&.Mui-disabled': { bgcolor: 'action.disabledBackground', color: 'text.disabled' },
               }}

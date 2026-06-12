@@ -20,7 +20,7 @@ const ACTIONS = [
     title: 'Scan Report',
     subtitle: 'Point camera at your medical report',
     bg: 'rgba(37,99,235,0.08)',
-    iconColor: '#3B82F6',
+    iconColor: 'primary.light',
     borderColor: 'rgba(37,99,235,0.25)',
   },
   {
@@ -29,7 +29,7 @@ const ACTIONS = [
     title: 'Upload from Phone',
     subtitle: 'Choose a PDF or image from gallery',
     bg: 'rgba(5,150,105,0.08)',
-    iconColor: '#10B981',
+    iconColor: 'secondary.light',
     borderColor: 'rgba(5,150,105,0.25)',
   },
 ] as const;

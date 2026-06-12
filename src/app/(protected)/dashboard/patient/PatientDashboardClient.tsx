@@ -19,14 +19,9 @@ import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
-import BottomNavigation from '@mui/material/BottomNavigation';
-import BottomNavigationAction from '@mui/material/BottomNavigationAction';
-import Paper from '@mui/material/Paper';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AddIcon from '@mui/icons-material/Add';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import HomeIcon from '@mui/icons-material/Home';
-import HistoryIcon from '@mui/icons-material/History';
 import LockIcon from '@mui/icons-material/Lock';
 import PublicIcon from '@mui/icons-material/Public';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
@@ -86,7 +81,6 @@ export default function PatientDashboardClient({
     message: string;
     severity: 'success' | 'error' | 'info';
   }>({ open: false, message: '', severity: 'success' });
-  const [navValue, setNavValue] = useState(0);
   const [viewingReport, setViewingReport] = useState<Report | null>(null);
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
@@ -545,7 +539,7 @@ export default function PatientDashboardClient({
                 <Box
                   onClick={() => setQrPopupOpen(true)}
                   sx={{
-                    bgcolor: 'white',
+                    bgcolor: 'background.paper',
                     borderRadius: 2.5,
                     p: 1.2,
                     flexShrink: 0,
@@ -566,7 +560,7 @@ export default function PatientDashboardClient({
                   <Typography
                     sx={{
                       fontSize: '0.55rem',
-                      color: '#64748B',
+                      color: 'text.secondary',
                       fontWeight: 700,
                       letterSpacing: '0.05em',
                       textAlign: 'center',
@@ -617,7 +611,7 @@ export default function PatientDashboardClient({
                   mb: 2.5,
                 }}
               >
-                <NoteAddIcon sx={{ fontSize: 32, color: '#2563EB' }} />
+                <NoteAddIcon sx={{ fontSize: 32, color: 'primary.main' }} />
               </Box>
               <Typography variant="h5" sx={{ mb: 1 }}>
                 {t('noReports')}
@@ -802,26 +796,6 @@ export default function PatientDashboardClient({
         <AddIcon sx={{ fontSize: 28 }} />
       </Fab>
 
-      {/* Bottom Navigation */}
-      <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={0}>
-        <BottomNavigation
-          value={navValue}
-          onChange={(_, v) => {
-            setNavValue(v);
-            if (v === 0) router.push('/dashboard/patient');
-            if (v === 1) router.push('/dashboard/patient/reports');
-            if (v === 2) router.push('/dashboard/patient/access-log');
-            if (v === 3) router.push('/dashboard/patient/profile');
-          }}
-          showLabels
-        >
-          <BottomNavigationAction label={t('home')} icon={<HomeIcon />} />
-          <BottomNavigationAction label="Reports" icon={<AssignmentOutlinedIcon />} />
-          <BottomNavigationAction label={t('accessLog')} icon={<HistoryIcon />} />
-          <BottomNavigationAction label={t('profile')} icon={<PersonIcon />} />
-        </BottomNavigation>
-      </Paper>
-
       {/* Snackbar */}
       <Snackbar
         open={snackbar.open}
@@ -928,7 +902,7 @@ export default function PatientDashboardClient({
           </Typography>
           <Box
             sx={{
-              bgcolor: 'white',
+              bgcolor: 'background.paper',
               borderRadius: 3,
               p: 2.5,
               boxShadow: '0 4px 20px rgba(0,0,0,0.1)',

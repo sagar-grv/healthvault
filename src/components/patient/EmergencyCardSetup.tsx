@@ -333,7 +333,7 @@ export default function EmergencyCardSetup({ open, onClose }: EmergencyCardSetup
       case 4: // QR Code + Share
         return (
           <Box sx={{ textAlign: 'center' }}>
-            <CheckCircleIcon sx={{ fontSize: 48, color: '#059669', mb: 1 }} />
+            <CheckCircleIcon sx={{ fontSize: 48, color: 'secondary.main', mb: 1 }} />
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
               Emergency Card Ready!
             </Typography>
@@ -345,11 +345,12 @@ export default function EmergencyCardSetup({ open, onClose }: EmergencyCardSetup
               <Box
                 sx={{
                   p: 3,
-                  bgcolor: '#FFFFFF',
+                  bgcolor: 'background.paper',
                   borderRadius: 3,
                   display: 'inline-block',
                   mb: 2,
-                  border: '2px solid #E5E7EB',
+                  border: '2px solid',
+                  borderColor: 'divider',
                   position: 'relative',
                 }}
               >
@@ -360,7 +361,7 @@ export default function EmergencyCardSetup({ open, onClose }: EmergencyCardSetup
                     display: 'block',
                     mt: 1,
                     fontWeight: 600,
-                    color: '#374151',
+                    color: 'text.secondary',
                     fontSize: '0.7rem',
                   }}
                 >

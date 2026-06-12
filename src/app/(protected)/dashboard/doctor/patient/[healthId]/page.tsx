@@ -70,7 +70,7 @@ export default async function DoctorPatientViewPage({
       .eq('searched_health_id', decodedHealthId)
       .order('searched_at', { ascending: false })
       .limit(1),
-  ]);
+  ]).catch(() => {});
 
   return (
     <PatientViewClient

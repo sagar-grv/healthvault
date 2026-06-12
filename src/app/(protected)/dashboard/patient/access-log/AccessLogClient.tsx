@@ -11,9 +11,6 @@ import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
-import Paper from '@mui/material/Paper';
-import BottomNavigation from '@mui/material/BottomNavigation';
-import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 import Avatar from '@mui/material/Avatar';
 import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
@@ -26,10 +23,6 @@ import DialogActions from '@mui/material/DialogActions';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import VisibilityIcon from '@mui/icons-material/VisibilityOutlined';
-import HomeIcon from '@mui/icons-material/Home';
-import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
-import HistoryIcon from '@mui/icons-material/History';
-import PersonIcon from '@mui/icons-material/PersonOutlined';
 import GroupIcon from '@mui/icons-material/PeopleOutlined';
 import { AccessLog } from '@/types';
 import { revokeShare } from '../actions';
@@ -51,7 +44,6 @@ interface AccessLogClientProps {
 export default function AccessLogClient({ logs, shares: initialShares }: AccessLogClientProps) {
   const router = useRouter();
   const t = useTranslations('accessLog');
-  const tc = useTranslations('common');
   const locale = useLocale();
   const [shares, setShares] = useState(initialShares);
   const [snackbar, setSnackbar] = useState<{
@@ -346,23 +338,6 @@ export default function AccessLogClient({ logs, shares: initialShares }: AccessL
           </Box>
         )}
       </Box>
-
-      <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={0}>
-        <BottomNavigation
-          value={2}
-          onChange={(_, v) => {
-            if (v === 0) router.push('/dashboard/patient');
-            if (v === 1) router.push('/dashboard/patient/reports');
-            if (v === 3) router.push('/dashboard/patient/profile');
-          }}
-          showLabels
-        >
-          <BottomNavigationAction label={tc('bottomNav.home')} icon={<HomeIcon />} />
-          <BottomNavigationAction label="Reports" icon={<AssignmentOutlinedIcon />} />
-          <BottomNavigationAction label={tc('bottomNav.accessLog')} icon={<HistoryIcon />} />
-          <BottomNavigationAction label={tc('bottomNav.profile')} icon={<PersonIcon />} />
-        </BottomNavigation>
-      </Paper>
 
       {/* Revoke Confirmation Dialog */}
       <Dialog

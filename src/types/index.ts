@@ -1,4 +1,52 @@
-export type UserRole = 'patient' | 'doctor';
+export type UserRole = 'patient' | 'doctor' | 'admin';
+
+export interface EmergencyProfile {
+  id: string;
+  patient_id: string;
+  random_id: string;
+  blood_group: string | null;
+  allergies: string[];
+  conditions: string[];
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConsentLog {
+  id: string;
+  user_id: string;
+  consent_type: string;
+  consent_version: string;
+  accepted_at: string;
+  ip_address: string | null;
+  user_agent: string | null;
+}
+
+export interface UploadAttempt {
+  id: string;
+  user_id: string;
+  uploaded_at: string;
+}
+
+export interface AiAuditLog {
+  id: string;
+  user_id: string;
+  report_id: string | null;
+  action: string;
+  model_used: string | null;
+  file_size_bytes: number | null;
+  flagged: boolean;
+  flag_reason: string | null;
+  created_at: string;
+}
+
+export interface AiUsage {
+  id: string;
+  user_id: string;
+  used_at: string;
+}
 
 export interface Profile {
   id: string;

@@ -17,6 +17,11 @@ import {
   ListItemIcon,
   Divider,
   Avatar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
 } from '@mui/material';
 import { ArrowBack as BackIcon, Description as ReportIcon } from '@mui/icons-material';
 import { getSharedReportDetails } from '@/app/(protected)/dashboard/doctor/actions';
@@ -31,6 +36,7 @@ export default function SharedReportsClient({ shareId }: { shareId: string }) {
     null
   );
   const [reports, setReports] = useState<Report[]>([]);
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
   useEffect(() => {
     getSharedReportDetails(shareId)
@@ -128,9 +134,7 @@ export default function SharedReportsClient({ shareId }: { shareId: string }) {
               <ListItemButton
                 key={report.id}
                 sx={{ borderRadius: 1, mb: 0.5 }}
-                onClick={() => {
-                  // TODO: open report detail dialog in the future
-                }}
+                onClick={() => setSelectedReport(report)}
               >
                 <ListItemIcon>
                   <ReportIcon sx={{ color: colors.color }} />
@@ -160,6 +164,39 @@ export default function SharedReportsClient({ shareId }: { shareId: string }) {
 
         {reports.length === 0 && <Alert severity="info">No reports found in this share.</Alert>}
       </Box>
+
+      {/* Report detail dialog */}
+      <Dialog
+        open={!!selectedReport}
+        onClose={() => setSelectedReport(null)}
+        maxWidth="sm"
+        fullWidth
+      >
+        {selectedReport && (
+          <>
+            <DialogTitle>{selectedReport.title}</DialogTitle>
+            <DialogContent dividers>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Type: {selectedReport.report_type.replace('_', ' ')}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Date: {new Date(selectedReport.report_date).toLocaleDateString('en-IN')}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                File: {selectedReport.file_name}
+              </Typography>
+              {selectedReport.notes && (
+                <Typography variant="body2" sx={{ mt: 2, whiteSpace: 'pre-wrap' }}>
+                  {selectedReport.notes}
+                </Typography>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setSelectedReport(null)}>Close</Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
     </Box>
   );
 }

@@ -396,7 +396,7 @@ export default function QRScannerDialog({
             justifyContent: 'center',
           }}
         >
-          <CircularProgress sx={{ color: '#10B981', mb: 2 }} size={40} />
+          <CircularProgress sx={{ color: 'secondary.light', mb: 2 }} size={40} />
           <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
             Starting camera…
           </Typography>
@@ -425,7 +425,7 @@ export default function QRScannerDialog({
               <Button
                 variant="contained"
                 onClick={handleRetry}
-                sx={{ bgcolor: '#10B981', '&:hover': { bgcolor: '#059669' } }}
+                sx={{ bgcolor: 'secondary.light', '&:hover': { bgcolor: 'secondary.main' } }}
               >
                 Retry
               </Button>
@@ -489,7 +489,8 @@ export default function QRScannerDialog({
               right: '10%',
               zIndex: 15,
               pointerEvents: 'none',
-              border: '2px solid #10B981',
+              border: '2px solid',
+              borderColor: 'secondary.light',
               borderRadius: 2,
             }}
           >
@@ -500,7 +501,7 @@ export default function QRScannerDialog({
                 left: 4,
                 right: 4,
                 height: 2,
-                bgcolor: '#10B981',
+                bgcolor: 'secondary.light',
                 boxShadow: '0 0 8px #10B981, 0 0 16px #10B981',
                 animation: 'scanLine 2s ease-in-out infinite',
                 '@keyframes scanLine': {
@@ -523,7 +524,7 @@ export default function QRScannerDialog({
                   position: 'absolute',
                   width: 20,
                   height: 20,
-                  borderColor: '#10B981',
+                  borderColor: 'secondary.light',
                   borderStyle: 'solid',
                   borderRadius: 0.5,
                   ...style,

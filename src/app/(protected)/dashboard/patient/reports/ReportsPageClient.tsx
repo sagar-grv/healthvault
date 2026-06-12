@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { useTranslations } from 'next-intl';
 import Box from '@mui/material/Box';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
@@ -13,20 +11,14 @@ import IconButton from '@mui/material/IconButton';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
-import Paper from '@mui/material/Paper';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
-import BottomNavigation from '@mui/material/BottomNavigation';
-import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
 import SearchIcon from '@mui/icons-material/Search';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
-import HomeIcon from '@mui/icons-material/Home';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
-import HistoryIcon from '@mui/icons-material/History';
-import PersonIcon from '@mui/icons-material/PersonOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import TranslateIcon from '@mui/icons-material/Translate';
 import LockIcon from '@mui/icons-material/Lock';
@@ -57,8 +49,6 @@ export default function ReportsPageClient({
   totalCount,
   initialHasMore,
 }: ReportsPageClientProps) {
-  const router = useRouter();
-  const tc = useTranslations('common');
   const [reports, setReports] = useState<Report[]>(initialReports);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -379,24 +369,6 @@ export default function ReportsPageClient({
           </Button>
         )}
       </Box>
-
-      {/* Bottom Navigation */}
-      <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={0}>
-        <BottomNavigation
-          value={1}
-          onChange={(_, v) => {
-            if (v === 0) router.push('/dashboard/patient');
-            if (v === 2) router.push('/dashboard/patient/access-log');
-            if (v === 3) router.push('/dashboard/patient/profile');
-          }}
-          showLabels
-        >
-          <BottomNavigationAction label={tc('bottomNav.home')} icon={<HomeIcon />} />
-          <BottomNavigationAction label="Reports" icon={<AssignmentOutlinedIcon />} />
-          <BottomNavigationAction label={tc('bottomNav.accessLog')} icon={<HistoryIcon />} />
-          <BottomNavigationAction label={tc('bottomNav.profile')} icon={<PersonIcon />} />
-        </BottomNavigation>
-      </Paper>
 
       {/* Dialogs */}
       <ReportDetailDialog

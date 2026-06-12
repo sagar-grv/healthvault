@@ -253,7 +253,7 @@ export default function DoctorProfilePage() {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
               {isVerified ? (
                 <Chip
-                  icon={<VerifiedIcon sx={{ fontSize: 14, color: '#10B981 !important' }} />}
+                  icon={<VerifiedIcon sx={{ fontSize: 14, color: 'secondary.light !important' }} />}
                   label="Verified"
                   size="small"
                   sx={{
@@ -481,7 +481,7 @@ export default function DoctorProfilePage() {
               <Box
                 sx={{
                   p: 2,
-                  bgcolor: 'white',
+                  bgcolor: 'background.paper',
                   borderRadius: 3,
                   boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
                   display: 'inline-block',

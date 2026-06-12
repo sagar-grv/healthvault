@@ -42,8 +42,5 @@ describe('PatientDashboardClient translations', () => {
     expect(screen.getByText('dashboard.noReports')).toBeInTheDocument();
     expect(screen.getByText('dashboard.noReportsHint')).toBeInTheDocument();
     expect(screen.getAllByText('dashboard.upload').length).toBeGreaterThan(0);
-    expect(screen.getByText('dashboard.home')).toBeInTheDocument();
-    expect(screen.getByText('dashboard.accessLog')).toBeInTheDocument();
-    expect(screen.getByText('dashboard.profile')).toBeInTheDocument();
   });
 });

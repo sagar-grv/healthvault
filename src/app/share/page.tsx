@@ -20,7 +20,7 @@ export default async function SharePage({ searchParams }: SharePageProps) {
         <Box
           sx={{
             minHeight: '100vh',
-            bgcolor: '#F9FAFB',
+            bgcolor: 'background.default',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -30,7 +30,7 @@ export default async function SharePage({ searchParams }: SharePageProps) {
         >
           <Card sx={{ width: '100%', maxWidth: 400, borderRadius: 3 }}>
             <CardContent sx={{ p: 3, textAlign: 'center' }}>
-              <WarningAmberIcon sx={{ fontSize: 48, color: '#F59E0B', mb: 1 }} />
+              <WarningAmberIcon sx={{ fontSize: 48, color: 'warning.main', mb: 1 }} />
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
                 Invalid Link
               </Typography>
@@ -57,7 +57,7 @@ export default async function SharePage({ searchParams }: SharePageProps) {
             <Box
               sx={{
                 minHeight: '100vh',
-                bgcolor: '#F9FAFB',
+                bgcolor: 'background.default',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -67,7 +67,7 @@ export default async function SharePage({ searchParams }: SharePageProps) {
             >
               <Card sx={{ width: '100%', maxWidth: 400, borderRadius: 3 }}>
                 <CardContent sx={{ p: 3, textAlign: 'center' }}>
-                  <WarningAmberIcon sx={{ fontSize: 48, color: '#F59E0B', mb: 1 }} />
+                  <WarningAmberIcon sx={{ fontSize: 48, color: 'warning.main', mb: 1 }} />
                   <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
                     Link Expired
                   </Typography>

@@ -17,9 +17,6 @@ import Avatar from '@mui/material/Avatar';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Chip from '@mui/material/Chip';
-import Paper from '@mui/material/Paper';
-import BottomNavigation from '@mui/material/BottomNavigation';
-import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 import Snackbar from '@mui/material/Snackbar';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
@@ -29,9 +26,6 @@ import Divider from '@mui/material/Divider';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PersonIcon from '@mui/icons-material/Person';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import HomeIcon from '@mui/icons-material/Home';
-import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
-import HistoryIcon from '@mui/icons-material/History';
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import LanguageIcon from '@mui/icons-material/Language';
@@ -64,7 +58,6 @@ const ALL_LANGUAGES = [
 export default function PatientProfilePage() {
   const router = useRouter();
   const t = useTranslations('profile');
-  const tc = useTranslations('common');
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -449,9 +442,9 @@ export default function PatientProfilePage() {
                 }}
               >
                 {hasEmergencyCard ? (
-                  <CheckCircleIcon sx={{ color: '#16A34A', fontSize: 24 }} />
+                  <CheckCircleIcon sx={{ color: 'success.main', fontSize: 24 }} />
                 ) : (
-                  <LocalHospitalIcon sx={{ color: '#DC2626', fontSize: 24 }} />
+                  <LocalHospitalIcon sx={{ color: 'error.main', fontSize: 24 }} />
                 )}
               </Box>
               <Box sx={{ flex: 1 }}>
@@ -487,12 +480,16 @@ export default function PatientProfilePage() {
                   sx={
                     hasEmergencyCard
                       ? {
-                          borderColor: '#16A34A',
-                          color: '#16A34A',
+                          borderColor: 'success.main',
+                          color: 'success.main',
                           borderRadius: 2,
                           '&:hover': { bgcolor: 'rgba(5,150,105,0.08)' },
                         }
-                      : { bgcolor: '#DC2626', borderRadius: 2, '&:hover': { bgcolor: '#B91C1C' } }
+                      : {
+                          bgcolor: 'error.main',
+                          borderRadius: 2,
+                          '&:hover': { bgcolor: 'error.dark' },
+                        }
                   }
                 >
                   {hasEmergencyCard ? t('updateEmergencyCard') : t('setupEmergencyCard')}
@@ -549,24 +546,6 @@ export default function PatientProfilePage() {
           });
         }}
       />
-
-      {/* Bottom Navigation */}
-      <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={3}>
-        <BottomNavigation
-          value={3}
-          onChange={(_, v) => {
-            if (v === 0) router.push('/dashboard/patient');
-            if (v === 1) router.push('/dashboard/patient/reports');
-            if (v === 2) router.push('/dashboard/patient/access-log');
-          }}
-          showLabels
-        >
-          <BottomNavigationAction label={tc('bottomNav.home')} icon={<HomeIcon />} />
-          <BottomNavigationAction label="Reports" icon={<AssignmentOutlinedIcon />} />
-          <BottomNavigationAction label={tc('bottomNav.accessLog')} icon={<HistoryIcon />} />
-          <BottomNavigationAction label={tc('bottomNav.profile')} icon={<PersonIcon />} />
-        </BottomNavigation>
-      </Paper>
 
       <Snackbar
         open={snackbar.open}

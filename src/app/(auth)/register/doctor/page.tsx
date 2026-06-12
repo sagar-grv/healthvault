@@ -99,7 +99,7 @@ export default function DoctorRegisterPage() {
     <Box
       sx={{
         minHeight: '100vh',
-        bgcolor: '#F9FAFB',
+        bgcolor: 'background.default',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -121,7 +121,8 @@ export default function DoctorRegisterPage() {
           maxWidth: 420,
           boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
           borderRadius: 3,
-          border: '1px solid #E5E7EB',
+          border: '1px solid',
+          borderColor: 'divider',
         }}
       >
         <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
@@ -155,7 +156,7 @@ export default function DoctorRegisterPage() {
             <Box>
               <Typography
                 variant="body2"
-                sx={{ fontWeight: 700, color: '#047857', lineHeight: 1.2 }}
+                sx={{ fontWeight: 700, color: 'secondary.dark', lineHeight: 1.2 }}
               >
                 Doctor Account
               </Typography>
@@ -172,7 +173,7 @@ export default function DoctorRegisterPage() {
             Already have one?{' '}
             <Link
               href="/login"
-              style={{ color: '#059669', fontWeight: 600, textDecoration: 'none' }}
+              style={{ color: 'secondary.main', fontWeight: 600, textDecoration: 'none' }}
             >
               Sign in
             </Link>
@@ -252,7 +253,7 @@ export default function DoctorRegisterPage() {
                     <Link
                       href="/terms"
                       target="_blank"
-                      style={{ color: '#059669', fontWeight: 600 }}
+                      style={{ color: 'secondary.main', fontWeight: 600 }}
                       onClick={(e) => e.stopPropagation()}
                     >
                       Terms & Conditions
@@ -261,7 +262,7 @@ export default function DoctorRegisterPage() {
                     <Link
                       href="/terms#privacy"
                       target="_blank"
-                      style={{ color: '#059669', fontWeight: 600 }}
+                      style={{ color: 'secondary.main', fontWeight: 600 }}
                       onClick={(event) => event.stopPropagation()}
                     >
                       Privacy Policy
@@ -298,10 +299,10 @@ export default function DoctorRegisterPage() {
             disabled={loading}
             sx={{
               py: 1.25,
-              borderColor: '#E5E7EB',
-              color: '#374151',
-              bgcolor: 'white',
-              '&:hover': { bgcolor: '#F9FAFB', borderColor: '#D1D5DB' },
+              borderColor: 'divider',
+              color: 'text.secondary',
+              bgcolor: 'background.paper',
+              '&:hover': { bgcolor: 'background.default', borderColor: 'grey.300' },
             }}
           >
             Sign up with Google

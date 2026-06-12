@@ -326,7 +326,7 @@ export default function HealthInterpreter({
                       sx={{ display: 'flex', gap: 1, mb: 0.75, alignItems: 'flex-start' }}
                     >
                       <CheckCircleIcon
-                        sx={{ fontSize: 16, color: '#059669', mt: 0.2, flexShrink: 0 }}
+                        sx={{ fontSize: 16, color: 'secondary.main', mt: 0.2, flexShrink: 0 }}
                       />
                       <Typography variant="body2" sx={{ lineHeight: 1.5 }}>
                         {point}

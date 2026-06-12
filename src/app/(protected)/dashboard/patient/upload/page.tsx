@@ -211,11 +211,11 @@ export default function UploadReportPage() {
 
   const fileIcon =
     file?.type === 'application/pdf' ? (
-      <PictureAsPdfIcon sx={{ fontSize: 36, color: '#EF4444' }} />
+      <PictureAsPdfIcon sx={{ fontSize: 36, color: 'error.main' }} />
     ) : file?.type?.startsWith('image/') ? (
       <ImageIcon sx={{ fontSize: 36, color: '#8B5CF6' }} />
     ) : (
-      <InsertDriveFileIcon sx={{ fontSize: 36, color: '#2563EB' }} />
+      <InsertDriveFileIcon sx={{ fontSize: 36, color: 'primary.main' }} />
     );
 
   return (
@@ -278,7 +278,8 @@ export default function UploadReportPage() {
             onDrop={handleDrop}
             onClick={() => document.getElementById('file-input')?.click()}
             sx={{
-              border: `2px dashed ${dragOver ? '#2563EB' : file ? '#059669' : 'transparent'}`,
+              border: '2px dashed',
+              borderColor: dragOver ? 'primary.main' : file ? 'secondary.main' : 'transparent',
               outline: `${dragOver || file ? 0 : 1}px solid`,
               outlineColor: 'divider',
               borderRadius: 3,
@@ -292,7 +293,7 @@ export default function UploadReportPage() {
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               mb: 3,
-              '&:hover': { borderColor: '#2563EB', bgcolor: 'rgba(37,99,235,0.08)' },
+              '&:hover': { borderColor: 'primary.main', bgcolor: 'rgba(37,99,235,0.08)' },
             }}
           >
             {file ? (
@@ -336,7 +337,7 @@ export default function UploadReportPage() {
                     mb: 2,
                   }}
                 >
-                  <CloudUploadIcon sx={{ fontSize: 28, color: '#2563EB' }} />
+                  <CloudUploadIcon sx={{ fontSize: 28, color: 'primary.main' }} />
                 </Box>
                 <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
                   {t('dropPrompt')}

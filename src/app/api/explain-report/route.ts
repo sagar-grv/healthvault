@@ -70,10 +70,30 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { extractedData, language = 'en' } = body;
+    const { extractedData, language = 'en', reportId } = body;
 
     if (!extractedData || typeof extractedData !== 'object') {
       return NextResponse.json({ error: 'extractedData is required' }, { status: 400 });
+    }
+
+    // Verify report ownership if reportId is provided
+    if (reportId) {
+      const { data: report } = await supabase
+        .from('reports')
+        .select('patient_id')
+        .eq('id', reportId)
+        .single();
+
+      if (!report || report.patient_id !== user.id) {
+        await logAuditEntry(supabase, {
+          user_id: user.id,
+          report_id: reportId,
+          action: 'explain_report',
+          flagged: true,
+          flag_reason: 'Unauthorized access attempt — report ownership mismatch',
+        });
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      }
     }
 
     if (!SUPPORTED_LANGUAGES[language]) {

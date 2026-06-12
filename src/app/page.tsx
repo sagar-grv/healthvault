@@ -27,21 +27,21 @@ const features = [
     title: 'Private by Default',
     desc: 'Every report is private until you choose to share it. Your data, your rules.',
     color: '#EFF6FF',
-    iconColor: '#2563EB',
+    iconColor: 'primary.main',
   },
   {
     icon: <VisibilityIcon />,
     title: 'Full Audit Trail',
     desc: 'See exactly who viewed your records and when. Complete transparency.',
     color: '#F0FDF4',
-    iconColor: '#059669',
+    iconColor: 'secondary.main',
   },
   {
     icon: <DevicesIcon />,
     title: 'Any Device',
     desc: 'Works on your ₹8,000 phone or a clinic desktop. Even on slow internet.',
-    color: '#F9FAFB',
-    iconColor: '#374151',
+    color: 'background.default',
+    iconColor: 'text.secondary',
   },
   {
     icon: <SpeedIcon />,
@@ -156,7 +156,7 @@ export default function HomePage() {
             sx={{
               mb: 3,
               bgcolor: '#DBEAFE',
-              color: '#1D4ED8',
+              color: 'primary.dark',
               fontWeight: 600,
               border: '1px solid #BFDBFE',
             }}
@@ -244,7 +244,8 @@ export default function HomePage() {
                     alignItems: 'center',
                     gap: 0.75,
                     bgcolor: 'rgba(255,255,255,0.7)',
-                    border: '1px solid #E5E7EB',
+                    border: '1px solid',
+                    borderColor: 'divider',
                     borderRadius: 99,
                     px: 1.5,
                     py: 0.5,
@@ -252,7 +253,7 @@ export default function HomePage() {
                   }}
                 >
                   <CheckCircleIcon sx={{ fontSize: 14, color: 'secondary.main' }} />
-                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#374151' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                     {f}
                   </Typography>
                 </Box>
@@ -269,7 +270,7 @@ export default function HomePage() {
             <Chip
               label="How it works"
               size="small"
-              sx={{ mb: 2, bgcolor: '#F3F4F6', color: '#374151', fontWeight: 600 }}
+              sx={{ mb: 2, bgcolor: '#F3F4F6', color: 'text.secondary', fontWeight: 600 }}
             />
             <Typography variant="h2" sx={{ mb: 1.5 }}>
               Simple as 1-2-3
@@ -310,7 +311,7 @@ export default function HomePage() {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                       <Typography
                         variant="caption"
-                        sx={{ fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.08em' }}
+                        sx={{ fontWeight: 700, color: 'grey.400', letterSpacing: '0.08em' }}
                       >
                         {step.number}
                       </Typography>
@@ -344,7 +345,7 @@ export default function HomePage() {
               <Chip
                 label="For doctors"
                 size="small"
-                sx={{ mb: 2, bgcolor: '#D1FAE5', color: '#065F46', fontWeight: 600 }}
+                sx={{ mb: 2, bgcolor: '#D1FAE5', color: 'secondary.dark', fontWeight: 600 }}
               />
               <Typography variant="h2" sx={{ mb: 2 }}>
                 Not another clinic system.
@@ -361,7 +362,7 @@ export default function HomePage() {
                 'ABDM-compliant design',
               ].map((f) => (
                 <Box key={f} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                  <CheckCircleIcon sx={{ fontSize: 18, color: '#059669' }} />
+                  <CheckCircleIcon sx={{ fontSize: 18, color: 'secondary.main' }} />
                   <Typography variant="body2" sx={{ fontWeight: 500 }}>
                     {f}
                   </Typography>
@@ -389,7 +390,10 @@ export default function HomePage() {
                 }}
               >
                 <CardContent sx={{ p: 3 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#065F46', mb: 1.5 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontWeight: 600, color: 'secondary.dark', mb: 1.5 }}
+                  >
                     Doctor&apos;s view
                   </Typography>
                   <Box sx={{ bgcolor: 'white', borderRadius: 2.5, p: 2, mb: 1.5 }}>
@@ -401,7 +405,7 @@ export default function HomePage() {
                         fontFamily: 'var(--font-mono)',
                         fontWeight: 700,
                         fontSize: '1.1rem',
-                        color: '#059669',
+                        color: 'secondary.main',
                         letterSpacing: '0.08em',
                       }}
                     >
@@ -436,7 +440,7 @@ export default function HomePage() {
                           justifyContent: 'center',
                         }}
                       >
-                        <VisibilityIcon sx={{ fontSize: 16, color: '#2563EB' }} />
+                        <VisibilityIcon sx={{ fontSize: 16, color: 'primary.main' }} />
                       </Box>
                       <Typography variant="body2" sx={{ fontWeight: 500 }}>
                         {r}
@@ -516,8 +520,8 @@ export default function HomePage() {
               size="large"
               sx={{
                 bgcolor: 'white',
-                color: '#1D4ED8',
-                '&:hover': { bgcolor: '#F9FAFB' },
+                color: 'primary.dark',
+                '&:hover': { bgcolor: 'background.default' },
                 px: 4,
                 py: 1.75,
                 boxShadow: '0 8px 24px rgba(0,0,0,0.15)',

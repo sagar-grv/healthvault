@@ -53,7 +53,7 @@ export default function ShareContent({ healthId, expiryTimestamp }: ShareContent
       <Box
         sx={{
           minHeight: '100vh',
-          bgcolor: '#F9FAFB',
+          bgcolor: 'background.default',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -63,7 +63,7 @@ export default function ShareContent({ healthId, expiryTimestamp }: ShareContent
       >
         <Card sx={{ width: '100%', maxWidth: 400, borderRadius: 3 }}>
           <CardContent sx={{ p: 3, textAlign: 'center' }}>
-            <LinkIcon sx={{ fontSize: 36, color: '#2563EB', mb: 1 }} />
+            <LinkIcon sx={{ fontSize: 36, color: 'primary.main', mb: 1 }} />
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
               HealthVault Share
             </Typography>

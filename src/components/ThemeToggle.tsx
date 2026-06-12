@@ -17,7 +17,7 @@ export default function ThemeToggle({ size = 'small' }: { size?: 'small' | 'medi
         size={size}
         aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
         sx={{
-          color: isDark ? '#FBD26A' : '#6B7280',
+          color: isDark ? '#FBD26A' : 'text.secondary',
           transition: 'color 0.2s ease, transform 0.2s ease',
           '&:hover': { transform: 'rotate(20deg)' },
         }}
