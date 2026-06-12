@@ -64,6 +64,14 @@ Commit `6729f16`: 6 issues fixed across 4 files
 
 **Production migration applied**: `get_doctor_display_info` SECURITY DEFINER function (bypasses RLS to expose only doctor name + clinic, no email/phone)
 
+### Patients Page Infinite Loading Loop Fix
+
+| Fix                                                           | Commit  | Status  |
+| ------------------------------------------------------------- | ------- | ------- |
+| Removed `onShareViewed` from SharedWithMePanel useEffect deps | 1c4ace5 | ✅ Live |
+
+**Root cause**: `SharedWithMePanel` useEffect depended on `onShareViewed`. `PatientsClient` passes an inline arrow function that changes every render, triggering infinite re-fetch loops. Production logs confirmed 5+ repeated `getSharedReportDetails` calls per share open.
+
 ---
 
 ## Production Status
@@ -100,7 +108,7 @@ Commit `6729f16`: 6 issues fixed across 4 files
 
 | Metric              | Value                      |
 | ------------------- | -------------------------- |
-| Deploy Frequency    | 5 pushes today             |
+| Deploy Frequency    | 6 pushes today             |
 | Lead Time           | ~1 hour (fix → merge)      |
 | Change Failure Rate | 0% (all checks green)      |
 | MTTR                | ~20 min (root cause → fix) |
