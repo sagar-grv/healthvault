@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import Box from '@mui/material/Box';
@@ -7,6 +8,7 @@ import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
+import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Paper from '@mui/material/Paper';
@@ -14,6 +16,9 @@ import BottomNavigation from '@mui/material/BottomNavigation';
 import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 import Avatar from '@mui/material/Avatar';
 import Chip from '@mui/material/Chip';
+import Divider from '@mui/material/Divider';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import VisibilityIcon from '@mui/icons-material/VisibilityOutlined';
@@ -21,17 +26,35 @@ import HomeIcon from '@mui/icons-material/Home';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import HistoryIcon from '@mui/icons-material/History';
 import PersonIcon from '@mui/icons-material/PersonOutlined';
+import GroupIcon from '@mui/icons-material/PeopleOutlined';
 import { AccessLog } from '@/types';
+import { revokeShare } from '../actions';
+
+interface ShareInfo {
+  id: string;
+  doctor_id: string;
+  report_ids: string[];
+  shared_at: string;
+  viewed_at: string | null;
+  doctor: { full_name: string; clinic_name: string | null } | null;
+}
 
 interface AccessLogClientProps {
   logs: AccessLog[];
+  shares: ShareInfo[];
 }
 
-export default function AccessLogClient({ logs }: AccessLogClientProps) {
+export default function AccessLogClient({ logs, shares: initialShares }: AccessLogClientProps) {
   const router = useRouter();
   const t = useTranslations('accessLog');
   const tc = useTranslations('common');
   const locale = useLocale();
+  const [shares, setShares] = useState(initialShares);
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error';
+  }>({ open: false, message: '', severity: 'success' });
 
   // Relative time — inside component to access t()
   const formatRelativeTime = (dateStr: string) => {
@@ -236,6 +259,92 @@ export default function AccessLogClient({ logs }: AccessLogClientProps) {
             ))}
           </Box>
         )}
+
+        {/* Shared With Section */}
+        {shares.length > 0 && (
+          <Box sx={{ mt: 4 }} className="animate-fade-in-up">
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+              <GroupIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 600,
+                  color: 'text.secondary',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  fontSize: '0.75rem',
+                }}
+              >
+                Shared With
+              </Typography>
+              <Chip
+                label={shares.length}
+                size="small"
+                color="primary"
+                sx={{ height: 20, fontSize: '0.7rem' }}
+              />
+            </Box>
+            <Card>
+              {shares.map((share, idx) => (
+                <Box key={share.id}>
+                  <CardContent
+                    sx={{
+                      p: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 2,
+                      '&:last-child': { pb: 2 },
+                    }}
+                  >
+                    <Avatar
+                      sx={{
+                        width: 38,
+                        height: 38,
+                        bgcolor: 'rgba(5,150,105,0.15)',
+                        color: 'success.main',
+                        fontSize: '0.9rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {share.doctor?.full_name?.charAt(0)?.toUpperCase() || 'D'}
+                    </Avatar>
+                    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 600 }} noWrap>
+                        Dr. {share.doctor?.full_name || 'Unknown'}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {share.report_ids.length} report{share.report_ids.length !== 1 ? 's' : ''} ·
+                        Shared{' '}
+                        {new Date(share.shared_at).toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                        })}
+                        {share.viewed_at ? ' · Viewed' : ' · Not viewed'}
+                      </Typography>
+                    </Box>
+                    <Button
+                      size="small"
+                      color="error"
+                      onClick={async () => {
+                        const result = await revokeShare(share.id);
+                        if (result.error) {
+                          setSnackbar({ open: true, message: result.error, severity: 'error' });
+                          return;
+                        }
+                        setShares((prev) => prev.filter((s) => s.id !== share.id));
+                        setSnackbar({ open: true, message: 'Share revoked', severity: 'success' });
+                      }}
+                      sx={{ textTransform: 'none' }}
+                    >
+                      Revoke
+                    </Button>
+                  </CardContent>
+                  {idx < shares.length - 1 && <Divider />}
+                </Box>
+              ))}
+            </Card>
+          </Box>
+        )}
       </Box>
 
       <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={0}>
@@ -254,6 +363,21 @@ export default function AccessLogClient({ logs }: AccessLogClientProps) {
           <BottomNavigationAction label={tc('bottomNav.profile')} icon={<PersonIcon />} />
         </BottomNavigation>
       </Paper>
+
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
@@ -22,7 +22,6 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
-import Snackbar from '@mui/material/Snackbar';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/PersonOutlined';
@@ -31,27 +30,18 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CloseIcon from '@mui/icons-material/Close';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServicesOutlined';
+import PeopleIcon from '@mui/icons-material/PeopleOutlined';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, DoctorProfile } from '@/types';
 import { isValidHealthId, normalizeHealthId } from '@/lib/utils/health-id';
 import ThemeToggle from '@/components/ThemeToggle';
 import { QRCodeSVG } from 'qrcode.react';
-import SharedWithMePanel from '@/components/doctor/SharedWithMePanel';
-import { searchPatient, getSharedReports } from './actions';
+import { searchPatient } from './actions';
 
 // Lazy load AI assistant — only loaded after page renders
 const DoctorAIAssistant = dynamic(() => import('@/components/doctor/DoctorAIAssistant'), {
   ssr: false,
 });
-
-interface SharedReport {
-  id: string;
-  patient_id: string;
-  report_ids: string[];
-  shared_at: string;
-  viewed_at: string | null;
-  patient: { full_name: string; health_id: string }[];
-}
 
 interface DoctorDashboardClientProps {
   profile: Profile;
@@ -68,37 +58,7 @@ export default function DoctorDashboardClient({
   const [searchInput, setSearchInput] = useState('');
   const [searchError, setSearchError] = useState('');
   const [isPending, startTransition] = useTransition();
-  const [sharedWithMe, setSharedWithMe] = useState<SharedReport[]>([]);
   const [showMyQR, setShowMyQR] = useState(false);
-  const [selectedShareId, setSelectedShareId] = useState<string | null>(null);
-  const [newShareToast, setNewShareToast] = useState(false);
-
-  useEffect(() => {
-    getSharedReports().then((res) => {
-      if ('shares' in res) setSharedWithMe(res.shares ?? []);
-    });
-  }, []);
-
-  // Poll for new shares every 30s
-  useEffect(() => {
-    const interval = setInterval(() => {
-      getSharedReports().then((res) => {
-        if ('shares' in res) {
-          const newShares = res.shares ?? [];
-          setSharedWithMe((prev) => {
-            const prevCount = prev.filter((s) => !s.viewed_at).length;
-            const newCount = newShares.filter((s) => !s.viewed_at).length;
-            if (newCount > prevCount && prev.length > 0) {
-              setNewShareToast(true);
-              setTimeout(() => setNewShareToast(false), 4000);
-            }
-            return newShares;
-          });
-        }
-      });
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Use server action for search — eliminates 3 client→Supabase round-trips
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
@@ -448,92 +408,44 @@ export default function DoctorDashboardClient({
             </Card>
           )}
 
-          {/* Shared With Me Section */}
-          {sharedWithMe.length > 0 && (
-            <Box className="animate-fade-in-up" sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                <Typography
-                  variant="body2"
+          {/* Shared With Me — link to patients page */}
+          <Card
+            className="animate-fade-in-up"
+            sx={{
+              mb: 3,
+              bgcolor: 'rgba(37,99,235,0.08)',
+              border: '1px solid rgba(37,99,235,0.25)',
+              boxShadow: 'none',
+            }}
+          >
+            <CardActionArea onClick={() => router.push('/dashboard/doctor/patients')}>
+              <CardContent sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box
                   sx={{
-                    fontWeight: 600,
-                    color: 'text.secondary',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    fontSize: '0.75rem',
+                    width: 44,
+                    height: 44,
+                    borderRadius: 2,
+                    background: 'linear-gradient(135deg, #2563EB, #3B82F6)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
                   }}
                 >
-                  Shared With Me
-                </Typography>
-                <Chip
-                  label={sharedWithMe.filter((s) => !s.viewed_at).length}
-                  size="small"
-                  color="primary"
-                  sx={{ height: 20, fontSize: '0.7rem' }}
-                />
-              </Box>
-              <Card>
-                {sharedWithMe.slice(0, 5).map((share, idx) => {
-                  const patient = share.patient?.[0];
-                  const isNew = !share.viewed_at;
-                  return (
-                    <Box key={share.id}>
-                      <CardActionArea onClick={() => setSelectedShareId(share.id)}>
-                        <CardContent
-                          sx={{
-                            p: 2,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 2,
-                            '&:last-child': { pb: 2 },
-                          }}
-                        >
-                          <Avatar
-                            sx={{
-                              width: 38,
-                              height: 38,
-                              bgcolor: 'rgba(37,99,235,0.15)',
-                              color: 'primary.main',
-                              fontSize: '0.9rem',
-                              fontWeight: 700,
-                            }}
-                          >
-                            {patient?.full_name?.charAt(0)?.toUpperCase() || '?'}
-                          </Avatar>
-                          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="body1" sx={{ fontWeight: 600 }} noWrap>
-                                {patient?.full_name || 'Unknown Patient'}
-                              </Typography>
-                              {isNew && (
-                                <Chip
-                                  label="New"
-                                  size="small"
-                                  color="warning"
-                                  sx={{ height: 18, fontSize: '0.6rem' }}
-                                />
-                              )}
-                            </Box>
-                            <Typography
-                              variant="caption"
-                              sx={{
-                                fontFamily: 'var(--font-mono)',
-                                color: 'text.secondary',
-                                fontWeight: 500,
-                              }}
-                            >
-                              {patient?.health_id} · {share.report_ids.length} reports
-                            </Typography>
-                          </Box>
-                          <ArrowForwardIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
-                        </CardContent>
-                      </CardActionArea>
-                      {idx < Math.min(sharedWithMe.length, 5) - 1 && <Divider />}
-                    </Box>
-                  );
-                })}
-              </Card>
-            </Box>
-          )}
+                  <PeopleIcon sx={{ color: 'white', fontSize: 22 }} />
+                </Box>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                    Shared With Me
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Patients who shared their reports with you
+                  </Typography>
+                </Box>
+                <ArrowForwardIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+              </CardContent>
+            </CardActionArea>
+          </Card>
 
           {/* Recent Patients */}
           {recentPatients.length > 0 && (
@@ -666,30 +578,6 @@ export default function DoctorDashboardClient({
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Shared With Me Panel */}
-      <SharedWithMePanel
-        open={!!selectedShareId}
-        onClose={() => setSelectedShareId(null)}
-        shareId={selectedShareId}
-        onShareViewed={(sid) => {
-          setSharedWithMe((prev) =>
-            prev.map((s) => (s.id === sid ? { ...s, viewed_at: new Date().toISOString() } : s))
-          );
-        }}
-      />
-
-      {/* New Share Toast */}
-      <Snackbar
-        open={newShareToast}
-        autoHideDuration={4000}
-        onClose={() => setNewShareToast(false)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert severity="success" variant="filled" onClose={() => setNewShareToast(false)}>
-          New reports shared with you! Check &quot;Shared With Me&quot; below.
-        </Alert>
-      </Snackbar>
     </>
   );
 }

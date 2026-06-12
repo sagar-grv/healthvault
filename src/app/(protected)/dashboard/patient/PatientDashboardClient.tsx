@@ -22,8 +22,6 @@ import Alert from '@mui/material/Alert';
 import BottomNavigation from '@mui/material/BottomNavigation';
 import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 import Paper from '@mui/material/Paper';
-import Divider from '@mui/material/Divider';
-import Avatar from '@mui/material/Avatar';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AddIcon from '@mui/icons-material/Add';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -43,12 +41,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, Report } from '@/types';
 import { REPORT_TYPES, REPORT_TYPE_COLORS } from '@/constants';
-import {
-  checkUploadAllowed,
-  recordUpload,
-  getPatientShares,
-  revokeShare,
-} from '@/app/(protected)/dashboard/patient/actions';
+import { checkUploadAllowed, recordUpload } from '@/app/(protected)/dashboard/patient/actions';
 import { setAiLanguage, syncLanguageFromProfile } from '@/lib/utils/language';
 import { optimizeImage, isOptimizableImage } from '@/lib/utils/image-optimizer';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -102,21 +95,12 @@ export default function PatientDashboardClient({
   const [langPickerOpen, setLangPickerOpen] = useState(false);
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
   const [doctorQRShareOpen, setDoctorQRShareOpen] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [shares, setShares] = useState<any[]>([]);
   const [qrPopupOpen, setQrPopupOpen] = useState(false);
 
   // Sync language preference from DB profile on mount (cross-device sync)
   useEffect(() => {
     syncLanguageFromProfile(profile.preferred_language);
   }, [profile.preferred_language]);
-
-  // Fetch patient shares on mount
-  useEffect(() => {
-    getPatientShares().then((res) => {
-      if ('shares' in res && res.shares) setShares(res.shares);
-    });
-  }, []);
 
   const handleCopyId = async () => {
     if (profile.health_id) {
@@ -257,16 +241,6 @@ export default function PatientDashboardClient({
     if (viewingReport?.id === reportId) setViewingReport(null);
     setReports((prev) => prev.filter((r) => r.id !== reportId));
     setSnackbar({ open: true, message: 'Report deleted.', severity: 'success' });
-  };
-
-  const handleRevoke = async (shareId: string) => {
-    const result = await revokeShare(shareId);
-    if (result.error) {
-      setSnackbar({ open: true, message: result.error, severity: 'error' });
-      return;
-    }
-    setShares((prev) => prev.filter((s) => s.id !== shareId));
-    setSnackbar({ open: true, message: 'Share revoked', severity: 'success' });
   };
 
   const handleLogout = async () => {
@@ -807,69 +781,6 @@ export default function PatientDashboardClient({
           </Box>
         )}
       </Box>
-
-      {/* Shared With Section */}
-      {shares.length > 0 && (
-        <Box sx={{ px: 2, maxWidth: 600, mx: 'auto', mt: 3 }} className="animate-fade-in-up">
-          <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 700 }}>
-            Shared With
-          </Typography>
-          <Card>
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            {shares.map((share: any, idx: number) => {
-              const doctor = share.doctor;
-              return (
-                <Box key={share.id}>
-                  <CardContent
-                    sx={{
-                      p: 2,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 2,
-                      '&:last-child': { pb: 2 },
-                    }}
-                  >
-                    <Avatar
-                      sx={{
-                        width: 38,
-                        height: 38,
-                        bgcolor: 'rgba(5,150,105,0.15)',
-                        color: 'success.main',
-                        fontSize: '0.9rem',
-                        fontWeight: 700,
-                      }}
-                    >
-                      {doctor?.full_name?.charAt(0)?.toUpperCase() || 'D'}
-                    </Avatar>
-                    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                      <Typography variant="body1" sx={{ fontWeight: 600 }} noWrap>
-                        Dr. {doctor?.full_name || 'Unknown'}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {share.report_ids.length} report{share.report_ids.length !== 1 ? 's' : ''} ·
-                        Shared{' '}
-                        {new Date(share.shared_at).toLocaleDateString('en-IN', {
-                          day: 'numeric',
-                          month: 'short',
-                        })}
-                      </Typography>
-                    </Box>
-                    <Button
-                      size="small"
-                      color="error"
-                      onClick={() => handleRevoke(share.id)}
-                      sx={{ textTransform: 'none' }}
-                    >
-                      Revoke
-                    </Button>
-                  </CardContent>
-                  {idx < shares.length - 1 && <Divider />}
-                </Box>
-              );
-            })}
-          </Card>
-        </Box>
-      )}
 
       {/* FAB — opens Add Report sheet (Scan / Upload) */}
       <Fab
