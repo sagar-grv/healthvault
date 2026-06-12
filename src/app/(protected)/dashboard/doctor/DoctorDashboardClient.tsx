@@ -31,12 +31,10 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CloseIcon from '@mui/icons-material/Close';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServicesOutlined';
-import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, DoctorProfile } from '@/types';
 import { isValidHealthId, normalizeHealthId } from '@/lib/utils/health-id';
 import ThemeToggle from '@/components/ThemeToggle';
-import QRScannerDialog from '@/components/doctor/QRScannerDialog';
 import { QRCodeSVG } from 'qrcode.react';
 import { searchPatient, getSharedReports } from './actions';
 
@@ -69,7 +67,6 @@ export default function DoctorDashboardClient({
   const [searchInput, setSearchInput] = useState('');
   const [searchError, setSearchError] = useState('');
   const [isPending, startTransition] = useTransition();
-  const [qrOpen, setQrOpen] = useState(false);
   const [sharedWithMe, setSharedWithMe] = useState<SharedReport[]>([]);
   const [showMyQR, setShowMyQR] = useState(false);
 
@@ -291,51 +288,6 @@ export default function DoctorDashboardClient({
             </Card>
           </Box>
 
-          {/* QR Scanner Button — Primary Action */}
-          <Card
-            className="animate-fade-in-up"
-            sx={{
-              mb: 3,
-              bgcolor: 'rgba(37,99,235,0.08)',
-              border: '1px solid rgba(37,99,235,0.25)',
-              boxShadow: 'none',
-            }}
-          >
-            <CardContent sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box
-                sx={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 2,
-                  background: 'linear-gradient(135deg, #2563EB, #3B82F6)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <QrCodeScannerIcon sx={{ color: 'white', fontSize: 24 }} />
-              </Box>
-              <Box sx={{ flexGrow: 1 }}>
-                <Typography variant="body1" sx={{ fontWeight: 700 }}>
-                  Scan patient QR code
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Quick access — scan instead of typing Health ID
-                </Typography>
-              </Box>
-              <Button
-                variant="contained"
-                color="primary"
-                size="small"
-                onClick={() => setQrOpen(true)}
-                sx={{ fontWeight: 600, textTransform: 'none' }}
-              >
-                Scan
-              </Button>
-            </CardContent>
-          </Card>
-
           {/* My QR Code — show QR for patients to scan */}
           <Card
             className="animate-fade-in-up"
@@ -359,7 +311,7 @@ export default function DoctorDashboardClient({
                   flexShrink: 0,
                 }}
               >
-                <QrCodeScannerIcon sx={{ color: 'white', fontSize: 24 }} />
+                <QRCodeSVG value={`hv-doctor:${profile.id}`} size={28} level="M" />
               </Box>
               <Box sx={{ flexGrow: 1 }}>
                 <Typography variant="body1" sx={{ fontWeight: 700 }}>
@@ -645,16 +597,6 @@ export default function DoctorDashboardClient({
         profile={profile}
         doctorProfile={doctorProfile}
         recentPatients={recentPatients}
-      />
-
-      {/* QR Scanner Dialog */}
-      <QRScannerDialog
-        open={qrOpen}
-        onClose={() => setQrOpen(false)}
-        onScan={(healthId) => {
-          setQrOpen(false);
-          router.push(`/dashboard/doctor/patient/${encodeURIComponent(healthId)}`);
-        }}
       />
 
       {/* My QR Code Dialog */}

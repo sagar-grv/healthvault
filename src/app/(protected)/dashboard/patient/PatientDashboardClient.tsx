@@ -543,6 +543,26 @@ export default function PatientDashboardClient({
                   >
                     Share with Doctor
                   </Button>
+                  <Button
+                    size="small"
+                    onClick={() => setDoctorQRShareOpen(true)}
+                    sx={{
+                      color: 'white',
+                      bgcolor: 'rgba(16,185,129,0.30)',
+                      border: '1px solid rgba(16,185,129,0.5)',
+                      backdropFilter: 'blur(4px)',
+                      borderRadius: 2,
+                      fontWeight: 700,
+                      '&:hover': {
+                        bgcolor: 'rgba(16,185,129,0.45)',
+                        transform: 'translateY(-1px)',
+                      },
+                      fontSize: '0.75rem',
+                      py: 0.6,
+                    }}
+                  >
+                    Scan Doctor QR
+                  </Button>
                 </Box>
               </Box>
 
