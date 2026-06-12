@@ -2,7 +2,6 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import AppBar from '@mui/material/AppBar';
@@ -23,6 +22,7 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import Snackbar from '@mui/material/Snackbar';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/PersonOutlined';
@@ -36,6 +36,7 @@ import { Profile, DoctorProfile } from '@/types';
 import { isValidHealthId, normalizeHealthId } from '@/lib/utils/health-id';
 import ThemeToggle from '@/components/ThemeToggle';
 import { QRCodeSVG } from 'qrcode.react';
+import SharedWithMePanel from '@/components/doctor/SharedWithMePanel';
 import { searchPatient, getSharedReports } from './actions';
 
 // Lazy load AI assistant — only loaded after page renders
@@ -69,11 +70,34 @@ export default function DoctorDashboardClient({
   const [isPending, startTransition] = useTransition();
   const [sharedWithMe, setSharedWithMe] = useState<SharedReport[]>([]);
   const [showMyQR, setShowMyQR] = useState(false);
+  const [selectedShareId, setSelectedShareId] = useState<string | null>(null);
+  const [newShareToast, setNewShareToast] = useState(false);
 
   useEffect(() => {
     getSharedReports().then((res) => {
       if ('shares' in res) setSharedWithMe(res.shares ?? []);
     });
+  }, []);
+
+  // Poll for new shares every 30s
+  useEffect(() => {
+    const interval = setInterval(() => {
+      getSharedReports().then((res) => {
+        if ('shares' in res) {
+          const newShares = res.shares ?? [];
+          setSharedWithMe((prev) => {
+            const prevCount = prev.filter((s) => !s.viewed_at).length;
+            const newCount = newShares.filter((s) => !s.viewed_at).length;
+            if (newCount > prevCount && prev.length > 0) {
+              setNewShareToast(true);
+              setTimeout(() => setNewShareToast(false), 4000);
+            }
+            return newShares;
+          });
+        }
+      });
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // Use server action for search — eliminates 3 client→Supabase round-trips
@@ -453,10 +477,7 @@ export default function DoctorDashboardClient({
                   const isNew = !share.viewed_at;
                   return (
                     <Box key={share.id}>
-                      <CardActionArea
-                        component={Link}
-                        href={`/dashboard/doctor/shared/${share.id}`}
-                      >
+                      <CardActionArea onClick={() => setSelectedShareId(share.id)}>
                         <CardContent
                           sx={{
                             p: 2,
@@ -645,6 +666,30 @@ export default function DoctorDashboardClient({
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Shared With Me Panel */}
+      <SharedWithMePanel
+        open={!!selectedShareId}
+        onClose={() => setSelectedShareId(null)}
+        shareId={selectedShareId}
+        onShareViewed={(sid) => {
+          setSharedWithMe((prev) =>
+            prev.map((s) => (s.id === sid ? { ...s, viewed_at: new Date().toISOString() } : s))
+          );
+        }}
+      />
+
+      {/* New Share Toast */}
+      <Snackbar
+        open={newShareToast}
+        autoHideDuration={4000}
+        onClose={() => setNewShareToast(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert severity="success" variant="filled" onClose={() => setNewShareToast(false)}>
+          New reports shared with you! Check &quot;Shared With Me&quot; below.
+        </Alert>
+      </Snackbar>
     </>
   );
 }
