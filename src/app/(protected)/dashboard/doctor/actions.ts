@@ -48,39 +48,6 @@ export async function searchPatient(
   redirect(`/dashboard/doctor/patient/${encodeURIComponent(normalized)}`);
 }
 
-export async function getSharedReports() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return { error: 'Not authenticated' };
-  }
-
-  const { data: shares, error } = await supabase
-    .from('shared_reports')
-    .select(
-      `
-      id,
-      patient_id,
-      report_ids,
-      shared_at,
-      viewed_at,
-      patient:profiles!shared_reports_patient_id_fkey(full_name, health_id)
-    `
-    )
-    .eq('doctor_id', user.id)
-    .order('shared_at', { ascending: false });
-
-  if (error) {
-    return { error: 'Failed to load shared reports' };
-  }
-
-  return { shares: shares || [] };
-}
-
 export async function markShareViewed(shareId: string) {
   const supabase = await createClient();
   const {
@@ -116,19 +83,10 @@ export async function getSharedReportDetails(shareId: string) {
     return { error: 'Not authenticated' };
   }
 
-  // Fetch share record
+  // Fetch share record — NO join (PostgREST join fails due to RLS)
   const { data: share, error: shareError } = await supabase
     .from('shared_reports')
-    .select(
-      `
-      id,
-      patient_id,
-      report_ids,
-      shared_at,
-      viewed_at,
-      patient:profiles!shared_reports_patient_id_fkey(id, full_name, health_id)
-    `
-    )
+    .select('id, patient_id, report_ids, shared_at, viewed_at')
     .eq('id', shareId)
     .eq('doctor_id', user.id)
     .single();
@@ -137,10 +95,19 @@ export async function getSharedReportDetails(shareId: string) {
     return { error: 'Share not found' };
   }
 
-  // Fetch the actual reports
+  // Fetch patient profile directly — bypasses RLS join issue
+  const { data: patientProfile } = await supabase
+    .from('profiles')
+    .select('id, full_name, health_id')
+    .eq('id', share.patient_id)
+    .single();
+
+  // Fetch reports — only needed columns, not select('*')
   const { data: reports, error: reportsError } = await supabase
     .from('reports')
-    .select('*')
+    .select(
+      'id, patient_id, title, report_type, report_date, file_path, file_name, file_size, mime_type, notes, thumbnail_path, is_shareable, is_starred, uploaded_at, updated_at'
+    )
     .in('id', share.report_ids)
     .order('report_date', { ascending: false });
 
@@ -148,25 +115,24 @@ export async function getSharedReportDetails(shareId: string) {
     return { error: 'Failed to load reports' };
   }
 
-  // Mark as viewed (fire-and-forget)
-  await supabase
-    .from('shared_reports')
-    .update({ viewed_at: new Date().toISOString() })
-    .eq('id', shareId);
-
-  // Log access (fire-and-forget)
-  const { data: doctorProfile } = await supabase
-    .from('profiles')
-    .select('full_name')
-    .eq('id', user.id)
-    .single();
-
-  await supabase.from('access_logs').insert({
-    patient_id: share.patient_id,
-    doctor_id: user.id,
-    doctor_name: doctorProfile?.full_name || '',
-    reports_viewed: share.report_ids,
+  // Fire-and-forget: don't await these — they run in background
+  Promise.all([
+    supabase
+      .from('shared_reports')
+      .update({ viewed_at: new Date().toISOString() })
+      .eq('id', shareId),
+    supabase.from('access_logs').insert({
+      patient_id: share.patient_id,
+      doctor_id: user.id,
+      doctor_name: patientProfile?.full_name || '',
+      reports_viewed: share.report_ids,
+    }),
+  ]).catch(() => {
+    // Silent fail for fire-and-forget
   });
 
-  return { share, reports: reports || [] };
+  return {
+    share: { ...share, patient: patientProfile ? [patientProfile] : [] },
+    reports: reports || [],
+  };
 }
