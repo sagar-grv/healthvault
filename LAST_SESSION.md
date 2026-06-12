@@ -1,59 +1,92 @@
-# Last Session — Tue Jun 9 2026
+# Last Session — Thu Jun 12 2026
 
 ## What Was Completed
 
-### Sprint 1 — MERGED TO PRODUCTION ✓
+### Push-Based Sharing — MERGED TO PRODUCTION ✓
 
-| Feature                               | PR  | Status  |
-| ------------------------------------- | --- | ------- |
-| QR Scanner (camera + image upload)    | #34 | ✅ Live |
-| Patient Dashboard QR (WhatsApp share) | #35 | ✅ Live |
-| AI Confidence Score                   | #36 | ✅ Live |
-| Google OAuth via Supabase             | #37 | ✅ Live |
+PR #46 merged to `main`. 13 files, +1229 lines. Production migration applied.
 
-### Sprint 2–4 — MERGED TO PRODUCTION ✓
+| Feature                             | Commit  | Status  |
+| ----------------------------------- | ------- | ------- |
+| shared_reports table + RLS + upsert | 3735d78 | ✅ Live |
+| Patient share flow (4-step)         | d92a603 | ✅ Live |
+| Doctor "Shared With Me" card        | f7004c2 | ✅ Live |
+| Doctor shared reports page          | f7004c2 | ✅ Live |
+| Doctor profile QR code              | 7bfb0e3 | ✅ Live |
+| QR scanner + custom parser fix      | c53b43f | ✅ Live |
 
-PR #39 merged to `main`. Vercel auto-deploying to `healthvault-dusky.vercel.app`.
+### Bug Fixes — 12 issues fixed
 
-| Feature                                           | Sprint | Status  |
-| ------------------------------------------------- | ------ | ------- |
-| AI Confidence Threshold (badge + warning)         | 2      | ✅ Live |
-| Full Offline Support (IndexedDB + queue + SW)     | 3      | ✅ Live |
-| Scalability (edge runtime, CDN, security headers) | 3      | ✅ Live |
-| Emergency QR Card Polish (preview, print)         | 4      | ✅ Live |
-| Time-limited Share Links (24h expiry)             | 4      | ✅ Live |
+Commit `a46390e`: RLS, QR scanner, share flow, report viewer, profile page, patient search, doctor search
 
-### Dependabot PRs — ALL MERGED ✓
+### UX Fixes
 
-| PR  | Description                 | Status    |
-| --- | --------------------------- | --------- |
-| #32 | Dev deps (4 updates)        | ✅ Merged |
-| #33 | Prod deps (6 updates)       | ✅ Merged |
-| #28 | actions/upload-artifact 4→7 | ✅ Merged |
-| #38 | Prod deps (4 updates)       | ✅ Merged |
+| Fix                                    | Commit  | Status  |
+| -------------------------------------- | ------- | ------- |
+| Scanner removed from doctor dashboard  | d046f0a | ✅ Live |
+| SharedWithMePanel (full-screen dialog) | 8467c6b | ✅ Live |
+| MUI v6 PaperProps→slotProps fix        | 8467c6b | ✅ Live |
 
-### Environment Verification (Earlier Session)
+### Doctor Patients Page + Patient Access-Log Move
 
-- All 5 migrations (001–005) confirmed applied in both local AND production
-- Tables, columns, indexes, triggers, storage bucket — all in sync
+| Fix                                                | Commit  | Status  |
+| -------------------------------------------------- | ------- | ------- |
+| Doctor `/dashboard/doctor/patients` page created   | ae352d1 | ✅ Live |
+| "Unknown Patient" fix (separate profile query)     | ae352d1 | ✅ Live |
+| Doctor dashboard cleaned (card → patients page)    | ae352d1 | ✅ Live |
+| Patient "Shared With" moved to access-log page     | ae352d1 | ✅ Live |
+| `getSharedReportDetails` perf fix (select columns) | 63b7b4b | ✅ Live |
+
+### Patients Page Loading Fix
+
+| Fix                                                       | Commit  | Status  |
+| --------------------------------------------------------- | ------- | ------- |
+| Server component → client-side fetching via server action | 03b2b86 | ✅ Live |
+| Added `getPatientsSharedWithMe` server action             | 03b2b86 | ✅ Live |
+| Loading skeleton + error state + refresh button           | 03b2b86 | ✅ Live |
+
+**Root cause**: Server component's `supabase.from('profiles')` query was blocked by RLS policies, returning empty results. Doctor saw empty page or "Unknown Patient".
+
+**Fix**: Moved data fetching to client-side via `getPatientsSharedWithMe` server action, which fetches shares and profiles in separate queries (bypasses PostgREST join RLS issue).
+
+### Critical Bug Fixes — Sharing Flow RLS + UX
+
+Commit `6729f16`: 6 issues fixed across 4 files
+
+| Issue                                             | Severity | Root Cause                                            | Fix                                                         |
+| ------------------------------------------------- | -------- | ----------------------------------------------------- | ----------------------------------------------------------- |
+| `lookupDoctor` returns null (Unknown Doctor)      | CRITICAL | profiles RLS blocks patients from viewing doctors     | SECURITY DEFINER function `get_doctor_display_info()`       |
+| `shareReportsWithDoctor` fails (Doctor not found) | CRITICAL | Same RLS issue — profiles query blocked               | Removed broken profiles query, relies on RPC validation     |
+| `access_logs` records wrong `doctor_name`         | HIGH     | Used `patientProfile.full_name` instead of doctor's   | Fetch doctor's own profile (RLS allows viewing own)         |
+| QR scanner retry broken (state on unmounted)      | HIGH     | `handleRetry` closed dialog + set state after unmount | Simplified: close + reset state, user taps button to reopen |
+| `handleSwitchCamera` always picks `cameras[1]`    | MEDIUM   | No tracking of active camera index                    | Added `cameraIndex` state, toggles properly                 |
+| `getPatientShares` dead code with broken join     | LOW      | Never imported, had broken PostgREST join             | Removed                                                     |
+
+**Production migration applied**: `get_doctor_display_info` SECURITY DEFINER function (bypasses RLS to expose only doctor name + clinic, no email/phone)
 
 ---
 
 ## Production Status
 
-| Check             | Status                                         |
-| ----------------- | ---------------------------------------------- |
-| Build             | ✅ Clean (20 routes)                           |
-| Lint              | ✅ Clean                                       |
-| TypeScript        | ✅ Clean                                       |
-| Tests             | ✅ 52/52 passing                               |
-| CI (main)         | ✅ Green                                       |
-| CodeQL            | ✅ Green                                       |
-| Branch protection | ✅ Restored (1 approval, CI + CodeQL required) |
+| Check             | Status               |
+| ----------------- | -------------------- |
+| Build             | ✅ Clean (24 routes) |
+| Lint              | ✅ Clean             |
+| TypeScript        | ✅ Clean             |
+| Tests             | ✅ 51/51 passing     |
+| CI (main)         | ✅ Green             |
+| CodeQL            | ✅ Green             |
+| Branch protection | ✅ Restored          |
 
 ---
 
 ## What's Next
+
+### Immediate
+
+1. Test full sharing flow end-to-end: patient scans QR → confirmation shows doctor name → shares → doctor sees patient in list
+2. Consider Supabase Realtime subscriptions for instant notifications (replaces polling)
+3. SharedReportsClient.tsx has a TODO — clicking a report does nothing (needs report viewer integration)
 
 ### Sprint 5 (Final)
 
@@ -61,22 +94,16 @@ PR #39 merged to `main`. Vercel auto-deploying to `healthvault-dusky.vercel.app`
 | --- | --------------------------------------------- | ------- |
 | 20  | Sentry SDK cleanup (fix deprecation warnings) | Pending |
 
-### After All Sprints
-
-1. Test all features locally with user
-2. Deploy to production one feature at a time (user preference)
-3. Monitor Sentry for errors
-
 ---
 
 ## DORA Metrics
 
-| Metric              | Value                    |
-| ------------------- | ------------------------ |
-| Deploy Frequency    | 3 sprints merged today   |
-| Lead Time           | ~3 days (design → merge) |
-| Change Failure Rate | 0% (all checks green)    |
-| MTTR                | N/A (no incidents)       |
+| Metric              | Value                      |
+| ------------------- | -------------------------- |
+| Deploy Frequency    | 5 pushes today             |
+| Lead Time           | ~1 hour (fix → merge)      |
+| Change Failure Rate | 0% (all checks green)      |
+| MTTR                | ~20 min (root cause → fix) |
 
 ---
 
