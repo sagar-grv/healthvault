@@ -29,7 +29,6 @@ interface Message {
 interface DoctorAIAssistantProps {
   profile: Profile;
   doctorProfile: DoctorProfile | null;
-  recentPatients: { id: string; full_name: string; health_id: string | null }[];
 }
 
 // ── Suggested questions ────────────────────────────────────────────────────────
@@ -84,11 +83,7 @@ function TypingIndicator() {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export default function DoctorAIAssistant({
-  profile,
-  doctorProfile,
-  recentPatients,
-}: DoctorAIAssistantProps) {
+export default function DoctorAIAssistant({ profile, doctorProfile }: DoctorAIAssistantProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -100,8 +95,6 @@ export default function DoctorAIAssistant({
 
   const firstName = profile.full_name?.split(' ')[0] || 'Doctor';
   const specialty = doctorProfile?.specialization || doctorProfile?.qualification || '';
-  const hasPatients = recentPatients.length > 0;
-  const healthIds = recentPatients.map((p) => p.health_id).filter((id): id is string => !!id);
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -149,7 +142,6 @@ export default function DoctorAIAssistant({
         body: JSON.stringify({
           message: trimmed,
           history,
-          recentPatientHealthIds: healthIds,
         }),
       });
 
@@ -333,15 +325,14 @@ export default function DoctorAIAssistant({
                   sx={{ fontSize: 16, color: 'secondary.main', flexShrink: 0, mt: 0.2 }}
                 />
                 <Typography variant="body2" sx={{ fontSize: '0.82rem', lineHeight: 1.5 }}>
-                  {hasPatients
-                    ? `Hello Dr. ${firstName}! I have access to your ${recentPatients.length} recent patient${recentPatients.length > 1 ? 's' : ''}'s shared records. Ask me anything.`
-                    : `Hello Dr. ${firstName}! I don't have any patient data yet — search for a patient first to unlock patient-specific insights. I can still answer general medical questions.`}
+                  Hello Dr. {firstName}! Search for a patient by Health ID to see their records. I
+                  can answer general medical questions or help analyze patient data.
                 </Typography>
               </Box>
             )}
 
             {/* Suggested question chips */}
-            {showSuggestions && hasPatients && (
+            {showSuggestions && (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
                 {SUGGESTED_QUESTIONS.map((q) => (
                   <Chip
