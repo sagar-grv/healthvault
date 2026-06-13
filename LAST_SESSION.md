@@ -1,93 +1,84 @@
-# Last Session — 2026-06-12
+# Last Session — 2026-06-13
 
-## Completed: Full Codebase Remediation (14 tasks)
+## Completed: Doctor Patients Tab Combined With Access History
 
-All 14 identified issues from the audit were fixed and verified.
+### What Changed
 
-### 1. CI Fix
+- Reworked `src/app/(protected)/dashboard/doctor/patients/page.tsx` to fetch:
+  - shared patients from `shared_reports`
+  - doctor access logs from `access_logs`
+  - search history from `search_attempts`
+  - patient profiles for both shared and viewed records
+- Rebuilt `src/app/(protected)/dashboard/doctor/patients/PatientsClient.tsx` to show:
+  - top summary cards
+  - existing shared-patients section
+  - new access-history timeline section
+  - shared-report refresh via `router.refresh()`
+- Kept the existing `/dashboard/doctor/patients` route and bottom-nav tab as the combined doctor activity page
 
-- Added `TextEncoder`/`TextDecoder` polyfill + `whatwg-fetch` import to `jest.setup.ts`
-- Root cause: jsdom lacks `TextEncoder` (Node 18+) and `Request` (needed by Next.js 16 `next/cache`)
+### Verification
 
-### 2. Orphan Components Deleted
+- `npm run lint` completed with 1 pre-existing warning in `coverage/lcov-report/block-navigation.js`
+- `npm run build` passed cleanly
 
-- `AISummaryDialog.tsx`, `ReportExplanation.tsx`, `AuthSync.tsx` — zero imports across codebase
+### Files Changed
 
-### 3. Broken Sign Out
+- `src/app/(protected)/dashboard/doctor/patients/page.tsx`
+- `src/app/(protected)/dashboard/doctor/patients/PatientsClient.tsx`
 
-- Created `src/app/api/auth/signout/route.ts` (POST → `supabase.auth.signOut()`)
-- Replaced invalid `<a onClick={'use server'}>` with `<button onClick={fetch('/api/auth/signout')}>`
+### DORA / Delivery Notes
 
-### 4. Report Ownership Check
+- Lead time: not measured
+- Deployment: not run in this session
+- Merge status: not merged
 
-- `/api/explain-report` now requires `reportId` and verifies `patient_id` ownership on `reports` table
-- Failed attempts logged as flagged audit entries
+## Completed: 3 Bug Fixes / UX Improvements
 
-### 5. Unhandled Promise Rejection
+### 1. QR Share Empty Reports Bug (PR #48)
 
-- Added `.catch(() => {})` to fire-and-forget `Promise.all` in `doctor/patient/[healthId]/page.tsx`
+- **Root cause**: `PatientBottomNav.tsx` passed `reports={[]}` to `DoctorQRShareFlow`, which never fetched reports itself
+- **Fix**: `DoctorQRShareFlow` now queries Supabase for patient's reports via `createClient` when entering `'selecting'` state; added loading spinner + "No reports available" empty state; uses `localReports` state instead of prop
+- **Merged**: `5321bad` on main
 
-### 6. Shared Report Detail Dialog
+### 2. Remove Recent Patients from Doctor Dashboard (PR #49)
 
-- Wired `selectedReport` state + MUI `Dialog` in `SharedReportsClient.tsx`
-- Shows title, type, date, file name, notes
+- Removed "Recent Patients" section + "Patients Seen" stats card from `DoctorDashboardClient.tsx`
+- Removed `access_logs` query + dedup loop from `doctor/page.tsx`
+- Removed unused imports: `CardActionArea`, `Divider`, `AccessTimeIcon`
+- Stripped `recentPatients` prop from `DoctorAIAssistant`, simplified greeting, removed patient-dependent suggested chips
+- **Merged**: `7476d4c` on main
 
-### 7. Doctor AI Assistant
+### 3. Revoked-Share Awareness on Doctor Patient Detail Page (PR #49)
 
-- Chat persists across open/close (removed `setMessages([])` on close)
-- Added inline `MarkdownContent` renderer (bold, italic, lists, line breaks)
-
-### 8. Types
-
-- Added `'admin'` to `UserRole`
-- Added 6 new interfaces: `EmergencyProfile`, `ConsentLog`, `UploadAttempt`, `AiAuditLog`, `AiUsage`, `SharedReport`
-
-### 9. Weak RNG in health-id.ts
-
-- Replaced `Math.random()` loop with `crypto.getRandomValues()`
-
-### 10. Loading Boundaries
-
-- Added `loading.tsx` to `onboarding/doctor` and `onboarding/patient`
-
-### 11. Error Boundary
-
-- Added `src/app/(protected)/error.tsx` covering all protected routes (dashboard already had its own)
-
-### 12. Patient Bottom Nav Extraction
-
-- Created `PatientBottomNav.tsx` (centralized, pathname-driven active tab)
-- Created `patient/layout.tsx` wrapping all 4 patient pages
-- Removed duplicate nav (~120 lines each) from 4 pages
-- Updated tests
-
-### 13. Middleware Migration
-
-- Renamed `middleware.ts` → `proxy.ts`
-- Renamed export `middleware` → `proxy`
-- No `next.config` changes needed
-- Deprecation warning eliminated
-
-### 14. Hex Colors → Theme Tokens
-
-- ~170 hex values across 36 files examined
-- ~90 replaced with MUI theme tokens (`background.default`, `primary.main`, `divider`, etc.)
-- Unique tints, gradients, rgba values preserved intentionally
-- `theme.ts` and `globals.css` left as-is (source of truth)
+- `patient/[healthId]/page.tsx` now queries `shared_reports` table in `Promise.all` with reports query (zero extra latency)
+- `PatientViewClient` shows patient name/avatar + "Access Revoked" card when no active share exists
+- Hides all reports and AI insights when share is revoked
 
 ## Verification
 
 - **Tests**: 52/52 pass
 - **TypeScript**: 0 errors
-- **ESLint**: 0 errors
-- **Build**: Clean, no middleware deprecation warning
+- **ESLint**: 0 errors (1 warning: unused eslint-disable directive)
+- **Build**: Clean
+- **CI**: All checks pass (Lint, TypeScript, Unit Tests, Build, CodeQL, Vercel)
 
-## Branch Strategy
+## Branch Protection
 
-- On `main`, ahead of `origin/main` by 2 commits (design theme updates from previous session)
-- Working tree has all unremediated changes staged for commit
+- Re-enabled on `main`: requires 1 approving review, CI checks (Lint, TypeScript, Unit Tests, Build), enforce admins, no force pushes
+- Feature branch `feat/revoke-share-optimization` deleted after merge
+
+## Files Changed (this session)
+
+- `src/components/patient/DoctorQRShareFlow.tsx` — self-fetches reports
+- `src/app/(protected)/dashboard/doctor/page.tsx` — removed access_logs query
+- `src/app/(protected)/dashboard/doctor/DoctorDashboardClient.tsx` — removed Recent Patients, stats card, recentPatients prop
+- `src/app/(protected)/dashboard/doctor/patient/[healthId]/page.tsx` — added shared_reports parallel query
+- `src/app/(protected)/dashboard/doctor/patient/[healthId]/PatientViewClient.tsx` — hasActiveShare conditional rendering
+- `src/components/doctor/DoctorAIAssistant.tsx` — removed recentPatients prop, updated greeting
 
 ## Next Steps
 
-- Push to origin/main (requires user approval)
-- Future: Consider Sentry setup, E2E Playwright tests, Dependabot updates
+- Test Vercel production deployment
+- Consider Sentry setup for error tracking
+- E2E Playwright tests for critical flows (QR share, patient access, revocation)
+- Dependabot updates if any pending
