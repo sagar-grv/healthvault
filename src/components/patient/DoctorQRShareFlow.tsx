@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -25,6 +25,7 @@ import {
 } from '@mui/icons-material';
 import dynamic from 'next/dynamic';
 import { shareReportsWithDoctor, lookupDoctor } from '@/app/(protected)/dashboard/patient/actions';
+import { createClient } from '@/lib/supabase/client';
 import { REPORT_TYPES } from '@/constants';
 import type { Report } from '@/types';
 
@@ -61,8 +62,37 @@ export default function DoctorQRShareFlow({ open, onClose, reports }: DoctorQRSh
   const [selectedReports, setSelectedReports] = useState<Set<string>>(new Set());
   const [errorMessage, setErrorMessage] = useState('');
   const [sharing, setSharing] = useState(false);
+  const [localReports, setLocalReports] = useState<Report[]>(reports);
+  const [loadingReports, setLoadingReports] = useState(false);
 
   const showScanner = open && state === 'scanning';
+
+  // Fetch patient's own reports when entering selecting state
+  useEffect(() => {
+    if (state === 'selecting' && localReports.length === 0) {
+      const fetchReports = async () => {
+        setLoadingReports(true);
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          setLoadingReports(false);
+          return;
+        }
+
+        const { data } = await supabase
+          .from('reports')
+          .select('*')
+          .eq('patient_id', user.id)
+          .order('uploaded_at', { ascending: false });
+
+        if (data) setLocalReports(data);
+        setLoadingReports(false);
+      };
+      fetchReports();
+    }
+  }, [state, localReports.length]);
 
   const resetState = () => {
     setState('scanning');
@@ -149,10 +179,10 @@ export default function DoctorQRShareFlow({ open, onClose, reports }: DoctorQRSh
 
   // Select all reports
   const selectAll = () => {
-    if (selectedReports.size === reports.length) {
+    if (selectedReports.size === localReports.length) {
       setSelectedReports(new Set());
     } else {
-      setSelectedReports(new Set(reports.map((r) => r.id)));
+      setSelectedReports(new Set(localReports.map((r) => r.id)));
     }
   };
 
@@ -235,50 +265,62 @@ export default function DoctorQRShareFlow({ open, onClose, reports }: DoctorQRSh
             <FormControlLabel
               control={
                 <Checkbox
-                  checked={selectedReports.size === reports.length && reports.length > 0}
-                  indeterminate={selectedReports.size > 0 && selectedReports.size < reports.length}
+                  checked={selectedReports.size === localReports.length && localReports.length > 0}
+                  indeterminate={
+                    selectedReports.size > 0 && selectedReports.size < localReports.length
+                  }
                   onChange={selectAll}
                 />
               }
-              label={`Select All (${reports.length} reports)`}
+              label={`Select All (${localReports.length} reports)`}
             />
           </Box>
-          <List dense>
-            {reports.map((report) => (
-              <ListItem key={report.id} sx={{ px: 0 }}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={selectedReports.has(report.id)}
-                      onChange={() => toggleReport(report.id)}
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {report.title}
-                      </Typography>
-                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.25 }}>
-                        <Chip
-                          label={getReportTypeLabel(report.report_type)}
-                          size="small"
-                          sx={{ height: 18, fontSize: '0.65rem' }}
-                        />
-                        <Typography variant="caption" color="text.secondary">
-                          {new Date(report.report_date).toLocaleDateString('en-IN', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
+          {loadingReports ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress size={32} />
+            </Box>
+          ) : localReports.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+              No reports available to share. Upload reports from the dashboard first.
+            </Typography>
+          ) : (
+            <List dense>
+              {localReports.map((report) => (
+                <ListItem key={report.id} sx={{ px: 0 }}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={selectedReports.has(report.id)}
+                        onChange={() => toggleReport(report.id)}
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {report.title}
                         </Typography>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.25 }}>
+                          <Chip
+                            label={getReportTypeLabel(report.report_type)}
+                            size="small"
+                            sx={{ height: 18, fontSize: '0.65rem' }}
+                          />
+                          <Typography variant="caption" color="text.secondary">
+                            {new Date(report.report_date).toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </Typography>
+                        </Box>
                       </Box>
-                    </Box>
-                  }
-                  sx={{ m: 0, alignItems: 'flex-start' }}
-                />
-              </ListItem>
-            ))}
-          </List>
+                    }
+                    sx={{ m: 0, alignItems: 'flex-start' }}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          )}
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button onClick={handleClose}>Cancel</Button>
