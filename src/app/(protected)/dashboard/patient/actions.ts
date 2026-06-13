@@ -128,6 +128,6 @@ export async function revokeShare(shareId: string) {
     return { error: 'Failed to revoke share' };
   }
 
-  revalidatePath('/dashboard/patient');
+  revalidatePath('/dashboard/patient/access-log');
   return { success: true };
 }

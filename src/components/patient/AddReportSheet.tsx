@@ -1,5 +1,6 @@
 'use client';
 
+import { useTheme, Theme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Drawer from '@mui/material/Drawer';
 import Typography from '@mui/material/Typography';
@@ -13,26 +14,28 @@ interface AddReportSheetProps {
   onUploadFile: () => void;
 }
 
-const ACTIONS = [
-  {
-    id: 'scan',
-    icon: (color: string) => <ScanReportIcon size={40} color={color} />,
-    title: 'Scan Report',
-    subtitle: 'Point camera at your medical report',
-    bg: 'rgba(37,99,235,0.08)',
-    iconColor: 'primary.light',
-    borderColor: 'rgba(37,99,235,0.25)',
-  },
-  {
-    id: 'upload',
-    icon: (color: string) => <UploadCloudIcon size={40} color={color} />,
-    title: 'Upload from Phone',
-    subtitle: 'Choose a PDF or image from gallery',
-    bg: 'rgba(5,150,105,0.08)',
-    iconColor: 'secondary.light',
-    borderColor: 'rgba(5,150,105,0.25)',
-  },
-] as const;
+function getActions(theme: Theme) {
+  return [
+    {
+      id: 'scan',
+      icon: (color: string) => <ScanReportIcon size={40} color={color} />,
+      title: 'Scan Report',
+      subtitle: 'Point camera at your medical report',
+      bg: 'rgba(37,99,235,0.08)',
+      iconColor: theme.palette.primary.main,
+      borderColor: 'rgba(37,99,235,0.25)',
+    },
+    {
+      id: 'upload',
+      icon: (color: string) => <UploadCloudIcon size={40} color={color} />,
+      title: 'Upload from Phone',
+      subtitle: 'Choose a PDF or image from gallery',
+      bg: 'rgba(5,150,105,0.08)',
+      iconColor: theme.palette.secondary.main,
+      borderColor: 'rgba(5,150,105,0.25)',
+    },
+  ] as const;
+}
 
 export default function AddReportSheet({
   open,
@@ -40,6 +43,9 @@ export default function AddReportSheet({
   onScanReport,
   onUploadFile,
 }: AddReportSheetProps) {
+  const theme = useTheme();
+  const ACTIONS = getActions(theme);
+
   const handlers: Record<string, () => void> = {
     scan: onScanReport,
     upload: onUploadFile,

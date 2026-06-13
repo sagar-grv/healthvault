@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import Box from '@mui/material/Box';
@@ -18,6 +19,7 @@ import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
+import Breadcrumbs from '@mui/material/Breadcrumbs';
 import Chip from '@mui/material/Chip';
 import Tooltip from '@mui/material/Tooltip';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -34,6 +36,20 @@ import { REPORT_TYPES, REPORT_TYPE_COLORS, ACCEPTED_FILE_TYPES, MAX_FILE_SIZE } 
 import { optimizeImage, isOptimizableImage, formatFileSize } from '@/lib/utils/image-optimizer';
 import { checkUploadAllowed, recordUpload } from '@/app/(protected)/dashboard/patient/actions';
 import ThemeToggle from '@/components/ThemeToggle';
+
+const uploadKeyframes = `
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+@keyframes scaleUp {
+  from { transform: scale(0.85); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+`;
 
 const CameraCapture = dynamic(() => import('@/components/patient/CameraCapture'), { ssr: false });
 
@@ -57,16 +73,18 @@ export default function UploadReportPage() {
     original: number;
     compressed: number;
   } | null>(null);
+  const [uploadDone, setUploadDone] = useState(false);
+  const [redirectCountdown, setRedirectCountdown] = useState(0);
 
   // Handle camera capture — pre-fills the file field with the first captured image
-  const handleCameraCapture = (images: Blob[]) => {
+  const handleCameraCapture = (images: Blob[], captureTitle?: string) => {
     setShowCamera(false);
     if (!images.length) return;
     const blob = images[0];
     const capturedFile = new File([blob], 'scanned-report.jpg', { type: 'image/jpeg' });
     setFile(capturedFile);
     setCompressionInfo(null);
-    if (!title) setTitle('Scanned Report');
+    if (!title) setTitle(captureTitle || 'Scanned Report');
     if (!reportDate) setReportDate(new Date().toISOString().split('T')[0]);
   };
 
@@ -104,7 +122,6 @@ export default function UploadReportPage() {
     setUploading(true);
 
     try {
-      // Rate limit check
       const rateCheck = await checkUploadAllowed();
       if (!rateCheck.allowed) {
         setError(rateCheck.error || 'Upload limit reached');
@@ -122,7 +139,6 @@ export default function UploadReportPage() {
         return;
       }
 
-      // Step 1: Optimize image (skip for PDFs)
       let uploadBlob: Blob | File = file;
       let uploadFileName = file.name;
       let uploadMimeType = file.type;
@@ -141,12 +157,10 @@ export default function UploadReportPage() {
           thumbnailBlob = optimized.thumbnail;
           setCompressionInfo({ original: file.size, compressed: optimized.compressedSize });
         } catch {
-          // If optimization fails, upload original
           uploadBlob = file;
         }
       }
 
-      // Step 2: Upload to Supabase Storage
       setProgress(20);
       setProgressLabel(t('uploading'));
       const reportId = crypto.randomUUID();
@@ -162,7 +176,6 @@ export default function UploadReportPage() {
       }
       setProgress(70);
 
-      // Step 3: Upload thumbnail (if generated)
       let thumbnailPath: string | null = null;
       if (thumbnailBlob) {
         setProgressLabel(t('savingThumbnail'));
@@ -173,7 +186,6 @@ export default function UploadReportPage() {
       }
       setProgress(85);
 
-      // Step 4: Save to database
       setProgressLabel(t('savingReport'));
       const { error: dbError } = await supabase.from('reports').insert({
         id: reportId,
@@ -200,14 +212,28 @@ export default function UploadReportPage() {
       setProgress(100);
       setProgressLabel(t('done'));
       await recordUpload();
-      router.push('/dashboard/patient');
-      router.refresh();
+      setUploading(false);
+      setUploadDone(true);
+      setRedirectCountdown(2);
     } catch {
       setError(t('unknownError'));
-    } finally {
       setUploading(false);
     }
   };
+
+  // Auto-redirect after upload success
+  useEffect(() => {
+    if (redirectCountdown > 0) {
+      const timer = setTimeout(() => {
+        setRedirectCountdown((c) => c - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+    if (redirectCountdown === 0 && uploadDone) {
+      router.push('/dashboard/patient?uploaded=1');
+      router.refresh();
+    }
+  }, [redirectCountdown, uploadDone, router]);
 
   const fileIcon =
     file?.type === 'application/pdf' ? (
@@ -220,6 +246,7 @@ export default function UploadReportPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 4 }}>
+      <style>{uploadKeyframes}</style>
       <AppBar position="sticky" color="inherit" elevation={0}>
         <Toolbar>
           <IconButton edge="start" onClick={() => router.push('/dashboard/patient')}>
@@ -238,25 +265,109 @@ export default function UploadReportPage() {
         </Toolbar>
       </AppBar>
 
-      {uploading && (
+      <Breadcrumbs sx={{ px: 2, pt: 1.5 }} aria-label="breadcrumb">
+        <Link
+          href="/dashboard/patient"
+          style={{ color: 'inherit', textDecoration: 'none', fontSize: '0.8rem' }}
+        >
+          Dashboard
+        </Link>
+        <Typography color="text.primary" sx={{ fontSize: '0.8rem' }}>
+          Upload Report
+        </Typography>
+      </Breadcrumbs>
+
+      {/* Upload progress overlay */}
+      {(uploading || uploadDone) && (
         <Box
           sx={{
-            position: 'sticky',
-            top: 64,
-            zIndex: 10,
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1300,
             bgcolor: 'background.paper',
-            px: 2,
-            py: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 3,
+            px: 4,
           }}
         >
-          <LinearProgress
-            variant="determinate"
-            value={progress}
-            sx={{ height: 4, borderRadius: 2 }}
-          />
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-            {progressLabel || `${t('uploading')} ${progress}%`}
-          </Typography>
+          {uploadDone ? (
+            /* Success state with auto-redirect */
+            <Box sx={{ textAlign: 'center', animation: 'scaleUp 0.3s ease' }}>
+              <Box
+                sx={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: '50%',
+                  bgcolor: 'rgba(5,150,105,0.12)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mx: 'auto',
+                  mb: 2,
+                }}
+              >
+                <Box
+                  component="svg"
+                  viewBox="0 0 24 24"
+                  sx={{ width: 40, height: 40, color: 'success.main' }}
+                >
+                  <path
+                    d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"
+                    fill="currentColor"
+                  />
+                </Box>
+              </Box>
+              <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
+                {t('done') || 'Report uploaded!'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Redirecting to dashboard in {redirectCountdown}s...
+              </Typography>
+            </Box>
+          ) : (
+            /* In-progress state */
+            <Box sx={{ textAlign: 'center', width: '100%', maxWidth: 320 }}>
+              <Box
+                sx={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
+                  bgcolor: 'rgba(37,99,235,0.10)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mx: 'auto',
+                  mb: 2,
+                  animation: 'pulse 1.5s ease-in-out infinite',
+                }}
+              >
+                <Box
+                  component="svg"
+                  viewBox="0 0 24 24"
+                  sx={{ width: 28, height: 28, color: 'primary.main' }}
+                >
+                  <path
+                    d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm-3.06 16L7.4 14.46l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41L10.94 18z"
+                    fill="currentColor"
+                  />
+                </Box>
+              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                {progressLabel || t('uploading')}
+              </Typography>
+              <LinearProgress
+                variant="determinate"
+                value={progress}
+                sx={{ height: 6, borderRadius: 3, mb: 1.5 }}
+              />
+              <Typography variant="caption" color="text.secondary">
+                {progress}%
+              </Typography>
+            </Box>
+          )}
         </Box>
       )}
 
@@ -408,7 +519,10 @@ export default function UploadReportPage() {
                 value={reportDate}
                 onChange={(e) => setReportDate(e.target.value)}
                 required
-                slotProps={{ inputLabel: { shrink: true } }}
+                slotProps={{
+                  inputLabel: { shrink: true },
+                  htmlInput: { max: new Date().toISOString().split('T')[0] },
+                }}
                 sx={{ mb: 2 }}
               />
               <TextField

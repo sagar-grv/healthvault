@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Box from '@mui/material/Box';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
@@ -16,7 +17,9 @@ import Switch from '@mui/material/Switch';
 import Fab from '@mui/material/Fab';
 import Tooltip from '@mui/material/Tooltip';
 import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -26,13 +29,12 @@ import LockIcon from '@mui/icons-material/Lock';
 import PublicIcon from '@mui/icons-material/Public';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import PersonIcon from '@mui/icons-material/PersonOutlined';
-import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
-import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import TranslateIcon from '@mui/icons-material/Translate';
 import LanguageIcon from '@mui/icons-material/Language';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServicesOutlined';
+import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
+import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import { useTranslations } from 'next-intl';
-import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, Report } from '@/types';
 import { REPORT_TYPES, REPORT_TYPE_COLORS } from '@/constants';
@@ -60,10 +62,6 @@ const LanguagePicker = dynamic(() => import('@/components/patient/LanguagePicker
 const AppointmentShareSheet = dynamic(() => import('@/components/patient/AppointmentShareSheet'), {
   ssr: false,
 });
-const DoctorQRShareFlow = dynamic(() => import('@/components/patient/DoctorQRShareFlow'), {
-  ssr: false,
-});
-
 interface PatientDashboardClientProps {
   profile: Profile;
   reports: Report[];
@@ -74,6 +72,7 @@ export default function PatientDashboardClient({
   reports: initialReports,
 }: PatientDashboardClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const t = useTranslations('dashboard');
   const [reports, setReports] = useState<Report[]>(initialReports);
   const [snackbar, setSnackbar] = useState<{
@@ -88,8 +87,20 @@ export default function PatientDashboardClient({
   const [uploadingCamera, setUploadingCamera] = useState(false);
   const [langPickerOpen, setLangPickerOpen] = useState(false);
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
-  const [doctorQRShareOpen, setDoctorQRShareOpen] = useState(false);
-  const [qrPopupOpen, setQrPopupOpen] = useState(false);
+
+  const [shareConfirmReport, setShareConfirmReport] = useState<Report | null>(null);
+
+  // Show snackbar on successful upload redirect
+  useEffect(() => {
+    if (searchParams.get('uploaded') === '1') {
+      requestAnimationFrame(() => {
+        setSnackbar({ open: true, message: 'Report uploaded successfully!', severity: 'success' });
+      });
+      const url = new URL(window.location.href);
+      url.searchParams.delete('uploaded');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [searchParams]);
 
   // Sync language preference from DB profile on mount (cross-device sync)
   useEffect(() => {
@@ -113,91 +124,6 @@ export default function PatientDashboardClient({
 
   const handleWhatsAppShare = async () => {
     const message = `My HealthVault ID is ${profile.health_id}. Use this to view my medical records on HealthVault.`;
-    try {
-      const canvas = document.createElement('canvas');
-      const size = 512;
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-        return;
-      }
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, size, size);
-
-      const tempDiv = document.createElement('div');
-      tempDiv.style.position = 'absolute';
-      tempDiv.style.left = '-9999px';
-      document.body.appendChild(tempDiv);
-
-      const { createRoot } = await import('react-dom/client');
-      const { QRCodeSVG: QRGen } = await import('qrcode.react');
-      const React = await import('react');
-
-      const root = createRoot(tempDiv);
-      await new Promise<void>((resolve) => {
-        root.render(
-          React.default.createElement(QRGen, {
-            value: profile.health_id || '',
-            size: 512,
-            level: 'M',
-          })
-        );
-        setTimeout(resolve, 100);
-      });
-
-      const sharedSvg = tempDiv.querySelector('svg');
-      if (sharedSvg) {
-        const svgData = new XMLSerializer().serializeToString(sharedSvg);
-        const img = new Image();
-        const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-        const url = URL.createObjectURL(svgBlob);
-        await new Promise<void>((resolve) => {
-          img.onload = () => {
-            ctx.drawImage(img, 0, 0, size, size);
-            URL.revokeObjectURL(url);
-            resolve();
-          };
-          img.onerror = () => {
-            URL.revokeObjectURL(url);
-            resolve();
-          };
-          img.src = url;
-        });
-      }
-
-      root.unmount();
-      document.body.removeChild(tempDiv);
-
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, 'image/png', 1.0)
-      );
-      if (blob && navigator.share && navigator.canShare) {
-        const file = new File([blob], 'healthvault-qr.png', { type: 'image/png' });
-        const shareData = { text: message, files: [file] };
-        if (navigator.canShare(shareData)) {
-          await navigator.share(shareData);
-          return;
-        }
-      }
-      // Fallback: download
-      if (blob) {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'healthvault-qr.png';
-        a.click();
-        URL.revokeObjectURL(a.href);
-        setSnackbar({
-          open: true,
-          message: 'QR downloaded. Share it with your doctor.',
-          severity: 'info',
-        });
-        return;
-      }
-    } catch {
-      // cancelled
-    }
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
@@ -245,7 +171,7 @@ export default function PatientDashboardClient({
 
   // Handle camera capture — A6: use profile.id instead of auth.getUser()
   //                         A7: parallel thumbnail upload + DB insert
-  const handleCameraCapture = async (images: Blob[]) => {
+  const handleCameraCapture = async (images: Blob[], captureTitle?: string) => {
     setShowCamera(false);
     if (!images.length) return;
     setUploadingCamera(true);
@@ -302,7 +228,7 @@ export default function PatientDashboardClient({
           .insert({
             id: reportId,
             patient_id: userId,
-            title: 'Captured Report',
+            title: captureTitle || 'Captured Report',
             report_type: 'other',
             file_path: filePath,
             file_name: uploadName,
@@ -367,24 +293,36 @@ export default function PatientDashboardClient({
         <Toolbar sx={{ minHeight: '56px !important' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
             <Box
+              component={Link}
+              href="/dashboard/patient"
               sx={{
-                width: 26,
-                height: 26,
-                borderRadius: 1.5,
-                background: 'linear-gradient(135deg, #1D4ED8, #3B82F6)',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
+                gap: 1,
+                textDecoration: 'none',
+                color: 'inherit',
               }}
             >
-              <Typography sx={{ color: 'white', fontSize: 11, fontWeight: 800 }}>HV</Typography>
+              <Box
+                sx={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: 1.5,
+                  background: 'linear-gradient(135deg, #1D4ED8, #3B82F6)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Typography sx={{ color: 'white', fontSize: 11, fontWeight: 800 }}>HV</Typography>
+              </Box>
+              <Typography
+                variant="h6"
+                sx={{ fontWeight: 800, color: 'primary.main', fontSize: '1rem' }}
+              >
+                HealthVault
+              </Typography>
             </Box>
-            <Typography
-              variant="h6"
-              sx={{ fontWeight: 800, color: 'primary.main', fontSize: '1rem' }}
-            >
-              HealthVault
-            </Typography>
           </Box>
           {/* Language picker chip — tap to open full language selector */}
           <Chip
@@ -449,7 +387,6 @@ export default function PatientDashboardClient({
             </Typography>
 
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2.5 }}>
-              {/* Left: ID info */}
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography
                   className="health-id-text"
@@ -511,65 +448,8 @@ export default function PatientDashboardClient({
                   >
                     Share with Doctor
                   </Button>
-                  <Button
-                    size="small"
-                    onClick={() => setDoctorQRShareOpen(true)}
-                    sx={{
-                      color: 'white',
-                      bgcolor: 'rgba(16,185,129,0.30)',
-                      border: '1px solid rgba(16,185,129,0.5)',
-                      backdropFilter: 'blur(4px)',
-                      borderRadius: 2,
-                      fontWeight: 700,
-                      '&:hover': {
-                        bgcolor: 'rgba(16,185,129,0.45)',
-                        transform: 'translateY(-1px)',
-                      },
-                      fontSize: '0.75rem',
-                      py: 0.6,
-                    }}
-                  >
-                    Scan Doctor QR
-                  </Button>
                 </Box>
               </Box>
-
-              {/* Right: QR Code — tap to enlarge for scanning */}
-              <Tooltip title="Tap to show QR for scanning">
-                <Box
-                  onClick={() => setQrPopupOpen(true)}
-                  sx={{
-                    bgcolor: 'background.paper',
-                    borderRadius: 2.5,
-                    p: 1.2,
-                    flexShrink: 0,
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 0.5,
-                    cursor: 'pointer',
-                    transition: 'transform 0.15s ease',
-                    '&:hover': { transform: 'scale(1.05)' },
-                    '&:active': { transform: 'scale(0.97)' },
-                  }}
-                >
-                  <Box id="qr-share-canvas">
-                    <QRCodeSVG value={profile.health_id || ''} size={90} level="M" />
-                  </Box>
-                  <Typography
-                    sx={{
-                      fontSize: '0.55rem',
-                      color: 'text.secondary',
-                      fontWeight: 700,
-                      letterSpacing: '0.05em',
-                      textAlign: 'center',
-                    }}
-                  >
-                    TAP TO SHOW
-                  </Typography>
-                </Box>
-              </Tooltip>
             </Box>
           </CardContent>
         </Card>
@@ -718,7 +598,7 @@ export default function PatientDashboardClient({
                         )}
                         <Switch
                           checked={report.is_shareable}
-                          onChange={() => handleToggleShareable(report.id, report.is_shareable)}
+                          onChange={() => setShareConfirmReport(report)}
                           size="small"
                           color="secondary"
                         />
@@ -837,6 +717,40 @@ export default function PatientDashboardClient({
         />
       )}
 
+      {/* Share confirmation dialog */}
+      <Dialog
+        open={!!shareConfirmReport}
+        onClose={() => setShareConfirmReport(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>
+          {shareConfirmReport?.is_shareable ? 'Make report private?' : 'Share report?'}
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            {shareConfirmReport?.is_shareable
+              ? `This will make ${shareConfirmReport?.title} private. Doctors will no longer be able to view it.`
+              : `This will make ${shareConfirmReport?.title} visible to your doctors. They will be able to access it through your Health ID.`}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShareConfirmReport(null)}>Cancel</Button>
+          <Button
+            onClick={() => {
+              if (shareConfirmReport) {
+                handleToggleShareable(shareConfirmReport.id, shareConfirmReport.is_shareable);
+              }
+              setShareConfirmReport(null);
+            }}
+            color={shareConfirmReport?.is_shareable ? 'warning' : 'success'}
+            variant="contained"
+          >
+            {shareConfirmReport?.is_shareable ? 'Make Private' : 'Share'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Camera Capture (full screen) */}
       {showCamera && (
         <CameraCapture onCapture={handleCameraCapture} onClose={() => setShowCamera(false)} />
@@ -865,75 +779,7 @@ export default function PatientDashboardClient({
         healthId={profile.health_id || ''}
         onCopy={handleCopyId}
         onWhatsApp={handleWhatsAppShare}
-        onScanDoctorQR={() => {
-          setShareSheetOpen(false);
-          setDoctorQRShareOpen(true);
-        }}
       />
-
-      {/* Doctor QR Share Flow */}
-      <DoctorQRShareFlow
-        open={doctorQRShareOpen}
-        onClose={() => setDoctorQRShareOpen(false)}
-        reports={reports}
-      />
-
-      {/* QR Code Popup — large QR for doctor to scan */}
-      <Dialog
-        open={qrPopupOpen}
-        onClose={() => setQrPopupOpen(false)}
-        maxWidth="xs"
-        fullWidth
-        slotProps={{
-          paper: {
-            sx: {
-              borderRadius: 4,
-              textAlign: 'center',
-              py: 3,
-            },
-          },
-        }}
-      >
-        <DialogContent
-          sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}
-        >
-          <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
-            Show this QR to your doctor
-          </Typography>
-          <Box
-            sx={{
-              bgcolor: 'background.paper',
-              borderRadius: 3,
-              p: 2.5,
-              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-            }}
-          >
-            <QRCodeSVG value={profile.health_id || ''} size={220} level="H" />
-          </Box>
-          <Typography
-            sx={{
-              fontFamily: 'monospace',
-              fontSize: '1.3rem',
-              fontWeight: 800,
-              letterSpacing: '0.12em',
-              color: 'primary.main',
-            }}
-          >
-            {profile.health_id}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {profile.full_name}
-          </Typography>
-          <Button
-            variant="contained"
-            fullWidth
-            onClick={() => setQrPopupOpen(false)}
-            sx={{ borderRadius: 2.5, py: 1.4, mt: 1 }}
-          >
-            Done
-          </Button>
-        </DialogContent>
-      </Dialog>
     </Box>
   );
 }
