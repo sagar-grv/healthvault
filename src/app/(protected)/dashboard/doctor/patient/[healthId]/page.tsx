@@ -41,19 +41,31 @@ export default async function DoctorPatientViewPage({
         reports={[]}
         doctorId={user.id}
         doctorName={doctorProfile.full_name}
+        hasActiveShare={false}
       />
     );
   }
 
-  // Fetch columns matching Report type for the doctor's view
-  const { data: reports } = await supabase
-    .from('reports')
-    .select(
-      'id, title, report_type, file_path, file_name, file_size, mime_type, report_date, notes, thumbnail_path, uploaded_at, updated_at, is_shareable, is_starred, patient_id'
-    )
-    .eq('patient_id', patient.id)
-    .eq('is_shareable', true)
-    .order('report_date', { ascending: false });
+  // Fetch reports + check active share in parallel
+  const [reportsResult, activeShareResult] = await Promise.all([
+    supabase
+      .from('reports')
+      .select(
+        'id, title, report_type, file_path, file_name, file_size, mime_type, report_date, notes, thumbnail_path, uploaded_at, updated_at, is_shareable, is_starred, patient_id'
+      )
+      .eq('patient_id', patient.id)
+      .eq('is_shareable', true)
+      .order('report_date', { ascending: false }),
+    supabase
+      .from('shared_reports')
+      .select('id')
+      .eq('patient_id', patient.id)
+      .eq('doctor_id', user.id)
+      .maybeSingle(),
+  ]);
+
+  const reports = reportsResult.data ?? [];
+  const hasActiveShare = !!activeShareResult.data;
 
   // Log access — fire and forget, does not block page render
   Promise.all([
@@ -61,7 +73,7 @@ export default async function DoctorPatientViewPage({
       patient_id: patient.id,
       doctor_id: user.id,
       doctor_name: doctorProfile.full_name,
-      reports_viewed: (reports ?? []).map((r) => r.id),
+      reports_viewed: reports.map((r) => r.id),
     }),
     supabase
       .from('search_attempts')
@@ -77,9 +89,10 @@ export default async function DoctorPatientViewPage({
       found={true}
       healthId={decodedHealthId}
       patientName={patient.full_name}
-      reports={reports ?? []}
+      reports={reports}
       doctorId={user.id}
       doctorName={doctorProfile.full_name}
+      hasActiveShare={hasActiveShare}
     />
   );
 }

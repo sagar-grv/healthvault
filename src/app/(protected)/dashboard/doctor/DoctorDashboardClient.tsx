@@ -14,12 +14,11 @@ import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
-import CardActionArea from '@mui/material/CardActionArea';
+
 import Alert from '@mui/material/Alert';
 import Chip from '@mui/material/Chip';
 import InputAdornment from '@mui/material/InputAdornment';
 import Avatar from '@mui/material/Avatar';
-import Divider from '@mui/material/Divider';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -29,7 +28,6 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/PersonOutlined';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CloseIcon from '@mui/icons-material/Close';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServicesOutlined';
@@ -49,13 +47,11 @@ const DoctorAIAssistant = dynamic(() => import('@/components/doctor/DoctorAIAssi
 interface DoctorDashboardClientProps {
   profile: Profile;
   doctorProfile: DoctorProfile | null;
-  recentPatients: { id: string; full_name: string; health_id: string | null }[];
 }
 
 export default function DoctorDashboardClient({
   profile,
   doctorProfile,
-  recentPatients,
 }: DoctorDashboardClientProps) {
   const router = useRouter();
   const [searchInput, setSearchInput] = useState('');
@@ -224,24 +220,6 @@ export default function DoctorDashboardClient({
               sx={{
                 flex: 1,
                 textAlign: 'center',
-                bgcolor: 'rgba(5,150,105,0.08)',
-                border: '1px solid rgba(5,150,105,0.30)',
-                boxShadow: 'none',
-              }}
-            >
-              <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Typography variant="h4" sx={{ color: 'success.main', fontWeight: 800 }}>
-                  {recentPatients.length}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-                  Patients Seen
-                </Typography>
-              </CardContent>
-            </Card>
-            <Card
-              sx={{
-                flex: 1,
-                textAlign: 'center',
                 bgcolor: doctorProfile?.is_verified
                   ? 'rgba(5,150,105,0.08)'
                   : 'rgba(245,158,11,0.08)',
@@ -353,106 +331,25 @@ export default function DoctorDashboardClient({
             </CardContent>
           </Card>
 
-          {/* First-time info for new doctors */}
-          {recentPatients.length === 0 && (
-            <Card
-              sx={{
-                mb: 3,
-                bgcolor: 'rgba(245,158,11,0.08)',
-                border: '1px solid rgba(245,158,11,0.30)',
-                boxShadow: 'none',
-              }}
-            >
-              <CardContent sx={{ p: 2.5 }}>
-                <Typography
-                  variant="body2"
-                  sx={{ fontWeight: 600, color: 'warning.dark', mb: 0.5 }}
-                >
-                  How it works
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Ask your patient for their HealthVault Health ID. Type it above to see their
-                  shared medical history — prescriptions, lab reports, and scans from any clinic.
-                </Typography>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Recent Patients */}
-          {recentPatients.length > 0 && (
-            <Box className="animate-fade-in-up">
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                <AccessTimeIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontWeight: 600,
-                    color: 'text.secondary',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    fontSize: '0.75rem',
-                  }}
-                >
-                  Recent Patients
-                </Typography>
-              </Box>
-              <Card>
-                {recentPatients.map((patient, idx) => (
-                  <Box key={patient.id}>
-                    <CardActionArea
-                      onClick={() =>
-                        patient.health_id
-                          ? router.push(
-                              `/dashboard/doctor/patient/${encodeURIComponent(patient.health_id)}`
-                            )
-                          : undefined
-                      }
-                    >
-                      <CardContent
-                        sx={{
-                          p: 2,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 2,
-                          '&:last-child': { pb: 2 },
-                        }}
-                      >
-                        <Avatar
-                          sx={{
-                            width: 38,
-                            height: 38,
-                            bgcolor: 'rgba(5,150,105,0.15)',
-                            color: 'success.main',
-                            fontSize: '0.9rem',
-                            fontWeight: 700,
-                          }}
-                        >
-                          {patient.full_name.charAt(0).toUpperCase()}
-                        </Avatar>
-                        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                          <Typography variant="body1" sx={{ fontWeight: 600 }} noWrap>
-                            {patient.full_name}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              fontFamily: 'var(--font-mono)',
-                              color: 'text.secondary',
-                              fontWeight: 500,
-                            }}
-                          >
-                            {patient.health_id}
-                          </Typography>
-                        </Box>
-                        <ArrowForwardIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
-                      </CardContent>
-                    </CardActionArea>
-                    {idx < recentPatients.length - 1 && <Divider />}
-                  </Box>
-                ))}
-              </Card>
-            </Box>
-          )}
+          {/* Info for doctors */}
+          <Card
+            sx={{
+              mb: 3,
+              bgcolor: 'rgba(245,158,11,0.08)',
+              border: '1px solid rgba(245,158,11,0.30)',
+              boxShadow: 'none',
+            }}
+          >
+            <CardContent sx={{ p: 2.5 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, color: 'warning.dark', mb: 0.5 }}>
+                How it works
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Ask your patient for their HealthVault Health ID. Type it above to see their shared
+                medical history — prescriptions, lab reports, and scans from any clinic.
+              </Typography>
+            </CardContent>
+          </Card>
         </Box>
       </Box>
 
@@ -483,11 +380,7 @@ export default function DoctorDashboardClient({
       </Tooltip>
 
       {/* Floating AI Assistant */}
-      <DoctorAIAssistant
-        profile={profile}
-        doctorProfile={doctorProfile}
-        recentPatients={recentPatients}
-      />
+      <DoctorAIAssistant profile={profile} doctorProfile={doctorProfile} />
 
       {/* My QR Code Dialog */}
       <Dialog open={showMyQR} onClose={() => setShowMyQR(false)} maxWidth="xs" fullWidth>
