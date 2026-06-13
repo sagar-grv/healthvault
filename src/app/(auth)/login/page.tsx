@@ -27,6 +27,8 @@ function LoginForm() {
     return '';
   });
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetSending, setResetSending] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +46,30 @@ function LoginForm() {
     } catch {
       setError('Something went wrong. Please try again.');
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setError('Enter your email address first');
+      return;
+    }
+    setResetSending(true);
+    setError('');
+    try {
+      const supabase = createClient();
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+      });
+      if (resetError) {
+        setError(resetError.message);
+      } else {
+        setResetSent(true);
+      }
+    } catch {
+      setError('Something went wrong. Try again.');
+    } finally {
+      setResetSending(false);
     }
   };
 
@@ -147,8 +173,31 @@ function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="current-password"
-              sx={{ mb: 3 }}
+              sx={{ mb: 1 }}
             />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
+              {resetSent ? (
+                <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
+                  Reset link sent! Check your email.
+                </Typography>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={resetSending}
+                  sx={{
+                    textTransform: 'none',
+                    fontSize: '0.8rem',
+                    color: 'text.secondary',
+                    p: 0,
+                    minWidth: 'auto',
+                    '&:hover': { color: 'primary.main', bgcolor: 'transparent' },
+                  }}
+                >
+                  {resetSending ? 'Sending...' : 'Forgot password?'}
+                </Button>
+              )}
+            </Box>
             <Button
               type="submit"
               variant="contained"

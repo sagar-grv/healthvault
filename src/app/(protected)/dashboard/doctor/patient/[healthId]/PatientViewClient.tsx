@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import AppBar from '@mui/material/AppBar';
@@ -16,6 +17,7 @@ import DialogContent from '@mui/material/DialogContent';
 import Alert from '@mui/material/Alert';
 import Avatar from '@mui/material/Avatar';
 import Divider from '@mui/material/Divider';
+import Breadcrumbs from '@mui/material/Breadcrumbs';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import DescriptionIcon from '@mui/icons-material/DescriptionOutlined';
 import CloseIcon from '@mui/icons-material/Close';
@@ -95,6 +97,18 @@ export default function PatientViewClient({
           </Box>
         </Toolbar>
       </AppBar>
+
+      <Breadcrumbs sx={{ px: 2, pt: 1.5 }} aria-label="breadcrumb">
+        <Link
+          href="/dashboard/doctor"
+          style={{ color: 'inherit', textDecoration: 'none', fontSize: '0.8rem' }}
+        >
+          Dashboard
+        </Link>
+        <Typography color="text.primary" sx={{ fontSize: '0.8rem' }}>
+          {patientName}
+        </Typography>
+      </Breadcrumbs>
 
       <Box sx={{ px: 2, py: 3, maxWidth: 600, mx: 'auto' }}>
         {/* Not Found */}

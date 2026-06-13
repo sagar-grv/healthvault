@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import ReportsPageClient from './ReportsPageClient';
@@ -26,10 +27,12 @@ export default async function ReportsPage() {
   ]);
 
   return (
-    <ReportsPageClient
-      reports={reports || []}
-      totalCount={count ?? 0}
-      initialHasMore={(reports?.length ?? 0) === PAGE_SIZE}
-    />
+    <Suspense fallback={<div />}>
+      <ReportsPageClient
+        reports={reports || []}
+        totalCount={count ?? 0}
+        initialHasMore={(reports?.length ?? 0) === PAGE_SIZE}
+      />
+    </Suspense>
   );
 }

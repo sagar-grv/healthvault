@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import Box from '@mui/material/Box';
@@ -13,7 +13,10 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Avatar from '@mui/material/Avatar';
 import Chip from '@mui/material/Chip';
+import Collapse from '@mui/material/Collapse';
 import Divider from '@mui/material/Divider';
+import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import Dialog from '@mui/material/Dialog';
@@ -23,7 +26,8 @@ import DialogActions from '@mui/material/DialogActions';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import VisibilityIcon from '@mui/icons-material/VisibilityOutlined';
-import GroupIcon from '@mui/icons-material/PeopleOutlined';
+import SearchIcon from '@mui/icons-material/Search';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { AccessLog } from '@/types';
 import { revokeShare } from '../actions';
 
@@ -46,6 +50,8 @@ export default function AccessLogClient({ logs, shares: initialShares }: AccessL
   const t = useTranslations('accessLog');
   const locale = useLocale();
   const [shares, setShares] = useState(initialShares);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [expandedDoctor, setExpandedDoctor] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -56,7 +62,6 @@ export default function AccessLogClient({ logs, shares: initialShares }: AccessL
     shareId: null,
   });
 
-  // Relative time — inside component to access t()
   const formatRelativeTime = (dateStr: string) => {
     const now = new Date();
     const date = new Date(dateStr);
@@ -70,7 +75,6 @@ export default function AccessLogClient({ logs, shares: initialShares }: AccessL
     if (diffHours < 24) return t('hoursAgo', { count: diffHours });
     if (diffDays < 7) return t('daysAgo', { count: diffDays });
 
-    // Use locale-aware date formatting
     const displayLocale = locale === 'hi' ? 'hi-IN' : 'en-IN';
     return date.toLocaleDateString(displayLocale, {
       day: 'numeric',
@@ -89,6 +93,32 @@ export default function AccessLogClient({ logs, shares: initialShares }: AccessL
       minute: '2-digit',
     });
   };
+
+  // Group logs by doctor
+  const groupedLogs = useMemo(() => {
+    const filtered = searchQuery.trim()
+      ? logs.filter((l) => l.doctor_name.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+      : logs;
+
+    const map = new Map<string, { doctorName: string; logs: AccessLog[]; totalReports: number }>();
+    for (const log of filtered) {
+      const key = log.doctor_id;
+      const existing = map.get(key);
+      const count = (log.reports_viewed || []).length;
+      if (existing) {
+        existing.logs.push(log);
+        existing.totalReports += count;
+      } else {
+        map.set(key, { doctorName: log.doctor_name, logs: [log], totalReports: count });
+      }
+    }
+    return Array.from(map.values()).sort(
+      (a, b) =>
+        new Date(b.logs[0].searched_at).getTime() - new Date(a.logs[0].searched_at).getTime()
+    );
+  }, [logs, searchQuery]);
+
+  const uniqueDoctors = new Set(logs.map((l) => l.doctor_id)).size;
 
   return (
     <Box sx={{ pb: 10, minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -112,7 +142,7 @@ export default function AccessLogClient({ logs, shares: initialShares }: AccessL
 
       <Box sx={{ px: 2, py: 3, maxWidth: 600, mx: 'auto' }}>
         {/* Stats */}
-        <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
+        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
           <Card
             sx={{
               flex: 1,
@@ -142,7 +172,7 @@ export default function AccessLogClient({ logs, shares: initialShares }: AccessL
           >
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
               <Typography variant="h3" sx={{ color: 'success.dark', mb: 0.25 }}>
-                {new Set(logs.map((l) => l.doctor_id)).size}
+                {uniqueDoctors}
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
                 {t('uniqueDoctors')}
@@ -150,6 +180,27 @@ export default function AccessLogClient({ logs, shares: initialShares }: AccessL
             </CardContent>
           </Card>
         </Box>
+
+        {/* Search */}
+        {logs.length > 0 && (
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Search by doctor name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              },
+            }}
+            sx={{ mb: 2.5, '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
+          />
+        )}
 
         {/* Empty State */}
         {logs.length === 0 && (
@@ -190,151 +241,137 @@ export default function AccessLogClient({ logs, shares: initialShares }: AccessL
           </Card>
         )}
 
-        {/* Timeline */}
-        {logs.length > 0 && (
-          <Box className="stagger-children">
-            {logs.map((log) => (
-              <Box key={log.id} sx={{ display: 'flex', gap: 2, mb: 2.5 }}>
-                {/* Avatar */}
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    pt: 0.5,
-                  }}
-                >
-                  <Avatar
-                    sx={{
-                      width: 38,
-                      height: 38,
-                      flexShrink: 0,
-                      background: 'linear-gradient(135deg, #047857, #10B981)',
-                      fontSize: '0.85rem',
-                      fontWeight: 700,
-                      boxShadow: '0 2px 8px rgba(5,150,105,0.25)',
-                    }}
-                  >
-                    {log.doctor_name.replace('Dr. ', '').charAt(0).toUpperCase()}
-                  </Avatar>
-                </Box>
-
-                {/* Content */}
-                <Card sx={{ flex: 1 }}>
-                  <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        justifyContent: 'space-between',
-                        mb: 0.5,
-                      }}
-                    >
-                      <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                        Dr. {log.doctor_name.replace('Dr. ', '')}
-                      </Typography>
-                      <Chip
-                        label={formatRelativeTime(log.searched_at)}
-                        size="small"
-                        sx={{
-                          bgcolor: 'action.hover',
-                          color: 'text.secondary',
-                          fontWeight: 500,
-                          fontSize: '0.68rem',
-                        }}
-                      />
-                    </Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                      {formatFullTime(log.searched_at)}
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                      <VisibilityIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
-                      <Typography variant="caption" color="text.secondary">
-                        {t('viewedReports', { count: (log.reports_viewed || []).length })}
-                      </Typography>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Box>
-            ))}
-          </Box>
+        {/* Grouped by doctor */}
+        {groupedLogs.length === 0 && logs.length > 0 && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            No doctors match your search.
+          </Alert>
         )}
 
-        {/* Shared With Section */}
-        {shares.length > 0 && (
-          <Box sx={{ mt: 4 }} className="animate-fade-in-up">
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-              <GroupIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-              <Typography
-                variant="body2"
-                sx={{
-                  fontWeight: 600,
-                  color: 'text.secondary',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  fontSize: '0.75rem',
-                }}
-              >
-                Shared With
-              </Typography>
-              <Chip
-                label={shares.length}
-                size="small"
-                color="primary"
-                sx={{ height: 20, fontSize: '0.7rem' }}
-              />
-            </Box>
-            <Card>
-              {shares.map((share, idx) => (
-                <Box key={share.id}>
+        {groupedLogs.length > 0 && (
+          <Box className="stagger-children">
+            {groupedLogs.map((group) => {
+              const expanded = expandedDoctor === group.doctorName;
+              const hasShare = shares.find(
+                (s) => s.doctor?.full_name?.toLowerCase() === group.doctorName.toLowerCase()
+              );
+              return (
+                <Card key={group.doctorName} sx={{ mb: 2, overflow: 'hidden' }}>
                   <CardContent
+                    onClick={() => setExpandedDoctor(expanded ? null : group.doctorName)}
                     sx={{
                       p: 2,
                       display: 'flex',
                       alignItems: 'center',
                       gap: 2,
-                      '&:last-child': { pb: 2 },
+                      cursor: 'pointer',
+                      transition: 'bgcolor 0.15s',
+                      '&:hover': { bgcolor: 'action.hover' },
+                      '&:last-child': { pb: expanded ? 1 : 2 },
                     }}
                   >
                     <Avatar
                       sx={{
-                        width: 38,
-                        height: 38,
-                        bgcolor: 'rgba(5,150,105,0.15)',
-                        color: 'success.main',
+                        width: 40,
+                        height: 40,
+                        flexShrink: 0,
+                        background: 'linear-gradient(135deg, #047857, #10B981)',
                         fontSize: '0.9rem',
                         fontWeight: 700,
+                        boxShadow: '0 2px 8px rgba(5,150,105,0.25)',
                       }}
                     >
-                      {share.doctor?.full_name?.charAt(0)?.toUpperCase() || 'D'}
+                      {group.doctorName.replace('Dr. ', '').charAt(0).toUpperCase()}
                     </Avatar>
                     <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                       <Typography variant="body1" sx={{ fontWeight: 600 }} noWrap>
-                        Dr. {share.doctor?.full_name || 'Unknown'}
+                        Dr. {group.doctorName.replace('Dr. ', '')}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {share.report_ids.length} report{share.report_ids.length !== 1 ? 's' : ''} ·
-                        Shared{' '}
-                        {new Date(share.shared_at).toLocaleDateString('en-IN', {
-                          day: 'numeric',
-                          month: 'short',
-                        })}
-                        {share.viewed_at ? ' · Viewed' : ' · Not viewed'}
-                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                        <Chip
+                          label={formatRelativeTime(group.logs[0].searched_at)}
+                          size="small"
+                          sx={{
+                            bgcolor: 'action.hover',
+                            color: 'text.secondary',
+                            fontWeight: 500,
+                            height: 20,
+                            fontSize: '0.68rem',
+                          }}
+                        />
+                        <Typography variant="caption" color="text.secondary">
+                          {group.logs.length} visit{group.logs.length !== 1 ? 's' : ''}
+                          {' · '}
+                          {group.totalReports} report{group.totalReports !== 1 ? 's' : ''}
+                        </Typography>
+                      </Box>
                     </Box>
-                    <Button
-                      size="small"
-                      color="error"
-                      onClick={() => setRevokeConfirm({ open: true, shareId: share.id })}
-                      sx={{ textTransform: 'none' }}
+                    {hasShare && (
+                      <Button
+                        size="small"
+                        color="error"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setRevokeConfirm({ open: true, shareId: hasShare.id });
+                        }}
+                        sx={{ textTransform: 'none', flexShrink: 0, mr: 1 }}
+                      >
+                        Revoke
+                      </Button>
+                    )}
+                    <Box
+                      sx={{
+                        transition: 'transform 0.25s',
+                        transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                        color: 'text.disabled',
+                      }}
                     >
-                      Revoke
-                    </Button>
+                      <ExpandMoreIcon />
+                    </Box>
                   </CardContent>
-                  {idx < shares.length - 1 && <Divider />}
-                </Box>
-              ))}
-            </Card>
+                  <Collapse in={expanded}>
+                    <Divider />
+                    <Box sx={{ px: 2, py: 1.5 }}>
+                      {group.logs.map((log, idx) => (
+                        <Box
+                          key={log.id}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.5,
+                            py: 1,
+                            borderBottom: idx < group.logs.length - 1 ? '1px solid' : 'none',
+                            borderColor: 'divider',
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: '50%',
+                              bgcolor: 'primary.main',
+                              flexShrink: 0,
+                            }}
+                          />
+                          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {formatFullTime(log.searched_at)}
+                            </Typography>
+                          </Box>
+                          <Chip
+                            icon={<VisibilityIcon sx={{ fontSize: 12 }} />}
+                            label={`${(log.reports_viewed || []).length} reports`}
+                            size="small"
+                            variant="outlined"
+                            sx={{ height: 22, fontSize: '0.65rem' }}
+                          />
+                        </Box>
+                      ))}
+                    </Box>
+                  </Collapse>
+                </Card>
+              );
+            })}
           </Box>
         )}
       </Box>

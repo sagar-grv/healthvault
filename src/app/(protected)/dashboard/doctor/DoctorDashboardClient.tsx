@@ -3,10 +3,12 @@
 import { useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Box from '@mui/material/Box';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
+import Fab from '@mui/material/Fab';
 import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
@@ -22,6 +24,7 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import Tooltip from '@mui/material/Tooltip';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/PersonOutlined';
@@ -30,8 +33,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CloseIcon from '@mui/icons-material/Close';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServicesOutlined';
-import PeopleIcon from '@mui/icons-material/PeopleOutlined';
-import QrCodeIcon from '@mui/icons-material/QrCode';
+import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, DoctorProfile } from '@/types';
 import { isValidHealthId, normalizeHealthId } from '@/lib/utils/health-id';
@@ -108,24 +110,36 @@ export default function DoctorDashboardClient({
           <Toolbar sx={{ minHeight: '56px !important' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
               <Box
+                component={Link}
+                href="/dashboard/doctor"
                 sx={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: 1.5,
-                  background: 'linear-gradient(135deg, #047857, #10B981)',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
+                  gap: 1,
+                  textDecoration: 'none',
+                  color: 'inherit',
                 }}
               >
-                <Typography sx={{ color: 'white', fontSize: 11, fontWeight: 800 }}>HV</Typography>
+                <Box
+                  sx={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: 1.5,
+                    background: 'linear-gradient(135deg, #047857, #10B981)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Typography sx={{ color: 'white', fontSize: 11, fontWeight: 800 }}>HV</Typography>
+                </Box>
+                <Typography
+                  variant="h6"
+                  sx={{ fontWeight: 800, color: 'secondary.main', fontSize: '1rem' }}
+                >
+                  HealthVault
+                </Typography>
               </Box>
-              <Typography
-                variant="h6"
-                sx={{ fontWeight: 800, color: 'secondary.main', fontSize: '1rem' }}
-              >
-                HealthVault
-              </Typography>
             </Box>
             <Chip
               icon={<MedicalServicesIcon sx={{ fontSize: 13 }} />}
@@ -273,51 +287,6 @@ export default function DoctorDashboardClient({
             </Card>
           </Box>
 
-          {/* My QR Code — show QR for patients to scan */}
-          <Card
-            className="animate-fade-in-up"
-            sx={{
-              mb: 3,
-              bgcolor: 'rgba(5,150,105,0.08)',
-              border: '1px solid rgba(5,150,105,0.30)',
-              boxShadow: 'none',
-            }}
-          >
-            <CardContent sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box
-                sx={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 2,
-                  background: 'linear-gradient(135deg, #047857, #10B981)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <QrCodeIcon sx={{ color: 'white', fontSize: 22 }} />
-              </Box>
-              <Box sx={{ flexGrow: 1 }}>
-                <Typography variant="body1" sx={{ fontWeight: 700 }}>
-                  My QR Code
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Show this to patients so they can share reports with you
-                </Typography>
-              </Box>
-              <Button
-                variant="contained"
-                color="success"
-                size="small"
-                onClick={() => setShowMyQR(true)}
-                sx={{ fontWeight: 600, textTransform: 'none' }}
-              >
-                Show
-              </Button>
-            </CardContent>
-          </Card>
-
           {/* Search Card — Primary Element */}
           <Card
             className="animate-fade-in-up"
@@ -409,45 +378,6 @@ export default function DoctorDashboardClient({
             </Card>
           )}
 
-          {/* Shared With Me — link to patients page */}
-          <Card
-            className="animate-fade-in-up"
-            sx={{
-              mb: 3,
-              bgcolor: 'rgba(37,99,235,0.08)',
-              border: '1px solid rgba(37,99,235,0.25)',
-              boxShadow: 'none',
-            }}
-          >
-            <CardActionArea onClick={() => router.push('/dashboard/doctor/patients')}>
-              <CardContent sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box
-                  sx={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 2,
-                    background: 'linear-gradient(135deg, #2563EB, #3B82F6)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <PeopleIcon sx={{ color: 'white', fontSize: 22 }} />
-                </Box>
-                <Box sx={{ flexGrow: 1 }}>
-                  <Typography variant="body1" sx={{ fontWeight: 700 }}>
-                    Shared With Me
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Patients who shared their reports with you
-                  </Typography>
-                </Box>
-                <ArrowForwardIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
-              </CardContent>
-            </CardActionArea>
-          </Card>
-
           {/* Recent Patients */}
           {recentPatients.length > 0 && (
             <Box className="animate-fade-in-up">
@@ -525,6 +455,32 @@ export default function DoctorDashboardClient({
           )}
         </Box>
       </Box>
+
+      {/* Floating QR FAB — above AI Assistant */}
+      <Tooltip title="My QR Code" placement="left">
+        <Fab
+          onClick={() => setShowMyQR(true)}
+          sx={{
+            position: 'fixed',
+            bottom: 'calc(80px + 56px + 12px + env(safe-area-inset-bottom, 0px))',
+            right: 20,
+            width: 44,
+            height: 44,
+            background: 'linear-gradient(135deg, #0F766E, #14B8A6)',
+            color: 'white',
+            boxShadow: '0 4px 16px rgba(20,184,166,0.45)',
+            zIndex: 1200,
+            '&:hover': {
+              background: 'linear-gradient(135deg, #115E59, #0F766E)',
+              transform: 'scale(1.08)',
+            },
+            transition: 'all 0.2s ease',
+          }}
+          aria-label="Show my QR code"
+        >
+          <QrCodeScannerIcon sx={{ fontSize: 20 }} />
+        </Fab>
+      </Tooltip>
 
       {/* Floating AI Assistant */}
       <DoctorAIAssistant

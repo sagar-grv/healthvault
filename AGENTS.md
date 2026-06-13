@@ -118,6 +118,8 @@ Trigger: Every session start + on-demand (`check errors`)
 
 ## 5. Agent Team Structure (Replaces 6-person team)
 
+### Core Development Agents
+
 | Real Team Role             | AI Agent          | File                                    | Responsibility                           |
 | -------------------------- | ----------------- | --------------------------------------- | ---------------------------------------- |
 | Product Manager + Eng Lead | Planner           | `.opencode/agents/planner.md`           | Requirements → plan, architecture, scope |
@@ -126,6 +128,36 @@ Trigger: Every session start + on-demand (`check errors`)
 | Security Engineer          | Security Reviewer | `.opencode/agents/security-reviewer.md` | Pre-PR security review                   |
 | DevOps Engineer            | CI/CD (Auto)      | `.github/workflows/*.yml`               | Build, test, deploy automation           |
 | SRE + Incident Commander   | Monitor           | `.opencode/agents/monitor.md`           | Error tracking, RCA, fix proposals       |
+
+### Multi-Model Pipeline Agents (Decoupled AI Stages)
+
+| Pipeline Stage | AI Agent        | File                                  | NVIDIA Model                                                                                      | Responsibility                                            |
+| -------------- | --------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Stage 1        | UX Psychologist | `.opencode/agents/ux-psychologist.md` | `deepseek-ai/deepseek-r1`                                                                         | Validate user flow for cognitive friction before planning |
+| Stage 2        | Architect       | `.opencode/agents/architect.md`       | `z-ai/glm-5.1` (primary), `moonshotai/kimi-k2.6` (fallback)                                       | Map DB→API→Frontend dependency order before coding        |
+| Stage 3        | Layout Engineer | `.opencode/agents/layout-engineer.md` | `qwen/qwen-2.5-coder-32b-instruct` (primary), `nvidia/llama-3.3-nemotron-70b-instruct` (fallback) | Spatial-aware frontend refactoring without breaking state |
+
+### Pipeline Integration with Feature Workflow
+
+```
+"plan: <feature>"
+  → Stage 1: UX Psychologist validates flow (deepseek-r1)     [GATE: PASS/REVISE]
+  → Stage 2: Architect maps dependencies (glm-5.1)            [GATE: LOW/MEDIUM/HIGH risk]
+  → Planner creates plan from validated flow + dependency map
+  → Builder implements in dependency order
+  → Stage 3: Layout Engineer refactors UI (qwen-2.5-coder)     [IF NEEDED]
+  → Security Reviewer audits before push
+  → CI/CD runs on push
+  → User approves → merge → deploy
+```
+
+### Pipeline Code
+
+All pipeline model routing is in `src/lib/ai/multi-model-pipeline.ts`:
+
+- `callThoughtAI(productContext, currentUserFlow, proposedFlow)` — Stage 1
+- `callArchAI(techStack, approvedFlow, dbSchema, apiRoutes, frontendCoupling)` — Stage 2
+- `callLayoutAI(currentLayoutMap, desiredLayoutMap, componentCode)` — Stage 3
 
 ## 6. Session Continuity
 

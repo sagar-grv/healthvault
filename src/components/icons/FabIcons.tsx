@@ -18,41 +18,27 @@ export function ScanReportIcon({ size = 32, color = 'currentColor' }: SvgIconPro
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* Document body */}
-      <rect
-        x="6"
-        y="4"
-        width="14"
-        height="18"
-        rx="2"
-        stroke={color}
-        strokeWidth="1.8"
-        fill="none"
-      />
-      {/* Document lines (content) */}
-      <line x1="9" y1="9" x2="17" y2="9" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
-      <line x1="9" y1="12" x2="17" y2="12" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
-      <line x1="9" y1="15" x2="14" y2="15" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
-      {/* Scan viewfinder corners (top-left) */}
+      <rect x="3" y="3" width="20" height="22" rx="3" stroke={color} strokeWidth="2" fill="none" />
+      <line x1="7" y1="9" x2="19" y2="9" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
+      <line x1="7" y1="13" x2="19" y2="13" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
+      <line x1="7" y1="17" x2="14" y2="17" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
       <path
-        d="M18 6 L24 6 L24 12"
+        d="M25 8 L25 2 L19 2"
         stroke={color}
-        strokeWidth="2.2"
+        strokeWidth="2.4"
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
       />
-      {/* Scan viewfinder corners (bottom-right) */}
       <path
-        d="M18 26 L24 26 L24 20"
+        d="M25 28 L25 22 L19 22"
         stroke={color}
-        strokeWidth="2.2"
+        strokeWidth="2.4"
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
       />
-      {/* Camera lens dot in center of viewfinder */}
-      <circle cx="21" cy="16" r="2.5" stroke={color} strokeWidth="1.6" fill="none" />
+      <circle cx="25" cy="15" r="2.5" stroke={color} strokeWidth="2" fill="none" />
     </svg>
   );
 }
@@ -67,21 +53,26 @@ export function UploadCloudIcon({ size = 32, color = 'currentColor' }: SvgIconPr
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* Cloud shape */}
       <path
-        d="M8 22C5.239 22 3 19.761 3 17C3 14.478 4.84 12.388 7.252 12.054C7.08 11.585 6.988 11.078 6.988 10.55C6.988 7.879 9.195 5.714 11.916 5.714C12.81 5.714 13.646 5.966 14.355 6.404C15.39 4.688 17.314 3.536 19.5 3.536C22.813 3.536 25.5 6.188 25.5 9.464C25.5 9.604 25.494 9.742 25.482 9.878C27.442 10.492 28.85 12.315 28.85 14.464C28.85 17.146 26.655 19.321 23.95 19.321"
+        d="M7 22C4.24 22 2 19.76 2 17C2 14.48 3.84 12.39 6.25 12.06C6.08 11.59 6 11.08 6 10.55C6 7.88 8.21 5.71 10.93 5.71C11.82 5.71 12.66 5.96 13.37 6.4C14.4 4.69 16.33 3.54 18.52 3.54C21.83 3.54 24.52 6.19 24.52 9.46C24.52 9.6 24.51 9.74 24.5 9.88C26.46 10.49 27.87 12.32 27.87 14.46C27.87 17.15 25.67 19.32 22.97 19.32"
         stroke={color}
-        strokeWidth="1.8"
+        strokeWidth="2"
         strokeLinecap="round"
         fill="none"
       />
-      {/* Up arrow stem */}
-      <line x1="16" y1="28" x2="16" y2="16" stroke={color} strokeWidth="2" strokeLinecap="round" />
-      {/* Up arrow head */}
+      <line
+        x1="16"
+        y1="28"
+        x2="16"
+        y2="16"
+        stroke={color}
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
       <path
         d="M11 20 L16 15 L21 20"
         stroke={color}
-        strokeWidth="2"
+        strokeWidth="2.2"
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"

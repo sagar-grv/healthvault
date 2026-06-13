@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import Box from '@mui/material/Box';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
@@ -23,7 +24,7 @@ import {
 } from '@/lib/utils/document-scanner';
 
 interface CameraCaptureProps {
-  onCapture: (images: Blob[]) => void;
+  onCapture: (images: Blob[], title?: string) => void;
   onClose: () => void;
 }
 
@@ -45,6 +46,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
   const [detecting, setDetecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
+  const [capturedTitle, setCapturedTitle] = useState('');
 
   // Start camera
   useEffect(() => {
@@ -309,8 +311,8 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     if (videoRef.current?.srcObject) {
       (videoRef.current.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
     }
-    onCapture(capturedPages);
-  }, [capturedPages, onCapture]);
+    onCapture(capturedPages, capturedTitle || undefined);
+  }, [capturedPages, capturedTitle, onCapture]);
 
   const handleClose = useCallback(() => {
     if (videoRef.current?.srcObject) {
@@ -497,15 +499,29 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         {stage === 'camera' && (
           <>
             {capturedPages.length > 0 && (
-              <Button
-                variant="contained"
-                color="success"
-                startIcon={<CheckIcon />}
-                onClick={finishCapture}
-                sx={{ borderRadius: 3 }}
-              >
-                Done ({capturedPages.length})
-              </Button>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <TextField
+                  value={capturedTitle}
+                  onChange={(e) => setCapturedTitle(e.target.value)}
+                  placeholder="Report name (optional)"
+                  size="small"
+                  sx={{
+                    input: { color: 'white', fontSize: '0.85rem' },
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
+                    '& .MuiInputBase-input::placeholder': { color: 'rgba(255,255,255,0.5)' },
+                    minWidth: 180,
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<CheckIcon />}
+                  onClick={finishCapture}
+                  sx={{ borderRadius: 3, whiteSpace: 'nowrap' }}
+                >
+                  Done ({capturedPages.length})
+                </Button>
+              </Box>
             )}
             <IconButton
               onClick={capturePhoto}

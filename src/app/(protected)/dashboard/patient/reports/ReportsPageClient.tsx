@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
@@ -15,6 +16,10 @@ import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import SearchIcon from '@mui/icons-material/Search';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
@@ -23,9 +28,12 @@ import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import TranslateIcon from '@mui/icons-material/Translate';
 import LockIcon from '@mui/icons-material/Lock';
 import PublicIcon from '@mui/icons-material/Public';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Report } from '@/types';
 import { REPORT_TYPES, REPORT_TYPE_COLORS } from '@/constants';
+import Breadcrumbs from '@mui/material/Breadcrumbs';
+import ListSubheader from '@mui/material/ListSubheader';
 import ThemeToggle from '@/components/ThemeToggle';
 
 const ReportDetailDialog = dynamic(() => import('@/components/patient/ReportDetailDialog'), {
@@ -52,8 +60,10 @@ export default function ReportsPageClient({
   const [reports, setReports] = useState<Report[]>(initialReports);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState(FILTER_ALL);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [search, setSearch] = useState(searchParams.get('q') ?? '');
+  const [filterType, setFilterType] = useState(searchParams.get('type') ?? FILTER_ALL);
   const [viewingReport, setViewingReport] = useState<Report | null>(null);
   const [interpretingReport, setInterpretingReport] = useState<Report | null>(null);
   const [snackbar, setSnackbar] = useState({
@@ -61,6 +71,8 @@ export default function ReportsPageClient({
     message: '',
     severity: 'success' as const,
   });
+  const [deleteConfirm, setDeleteConfirm] = useState<Report | null>(null);
+  const [shareConfirm, setShareConfirm] = useState<Report | null>(null);
 
   const handleLoadMore = async () => {
     setLoadingMore(true);
@@ -93,6 +105,27 @@ export default function ReportsPageClient({
     return list;
   }, [reports, filterType, search]);
 
+  // Group filtered reports by month/year
+  const grouped = useMemo(() => {
+    const groups: Record<string, Report[]> = {};
+    for (const report of filtered) {
+      const d = new Date(report.report_date);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(report);
+    }
+    return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
+  }, [filtered]);
+
+  // Sync filters to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set('q', search);
+    if (filterType !== FILTER_ALL) params.set('type', filterType);
+    const qs = params.toString();
+    router.replace(`/dashboard/patient/reports${qs ? `?${qs}` : ''}`, { scroll: false });
+  }, [search, filterType, router]);
+
   const handleToggleStar = async (reportId: string, current: boolean) => {
     const supabase = createClient();
     const { error } = await supabase
@@ -124,14 +157,15 @@ export default function ReportsPageClient({
     }
   };
 
-  const handleDelete = async (reportId: string, filePath: string) => {
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
     const supabase = createClient();
-    // Run storage remove + DB delete in parallel (was sequential — risk of orphan rows)
     await Promise.all([
-      supabase.storage.from('reports').remove([filePath]),
-      supabase.from('reports').delete().eq('id', reportId),
+      supabase.storage.from('reports').remove([deleteConfirm.file_path]),
+      supabase.from('reports').delete().eq('id', deleteConfirm.id),
     ]);
-    setReports((prev) => prev.filter((r) => r.id !== reportId));
+    setReports((prev) => prev.filter((r) => r.id !== deleteConfirm.id));
+    setDeleteConfirm(null);
     setSnackbar({ open: true, message: 'Report deleted', severity: 'success' });
   };
 
@@ -214,6 +248,18 @@ export default function ReportsPageClient({
         </Box>
       </AppBar>
 
+      <Breadcrumbs sx={{ px: 2, pt: 1.5 }} aria-label="breadcrumb">
+        <Link
+          href="/dashboard/patient"
+          style={{ color: 'inherit', textDecoration: 'none', fontSize: '0.8rem' }}
+        >
+          Dashboard
+        </Link>
+        <Typography color="text.primary" sx={{ fontSize: '0.8rem' }}>
+          My Reports
+        </Typography>
+      </Breadcrumbs>
+
       <Box sx={{ px: 2, py: 2 }}>
         {/* Empty state */}
         {filtered.length === 0 && (
@@ -228,130 +274,143 @@ export default function ReportsPageClient({
           </Box>
         )}
 
-        {/* Report cards */}
-        {filtered.map((report) => {
-          const typeColor = getTypeColor(report.report_type);
+        {/* Report cards — grouped by month/year */}
+        {grouped.map(([monthKey, monthReports]) => {
+          const [year, monthNum] = monthKey.split('-');
+          const monthName = new Date(parseInt(year), parseInt(monthNum) - 1).toLocaleDateString(
+            'en-IN',
+            { month: 'long', year: 'numeric' }
+          );
           return (
-            <Card
-              key={report.id}
-              sx={{
-                mb: 1.5,
-                borderRadius: 3,
-                border: report.is_starred ? '1.5px solid' : '1px solid',
-                borderColor: report.is_starred ? 'warning.light' : 'divider',
-                boxShadow: report.is_starred ? '0 2px 8px rgba(251,191,36,0.15)' : 'none',
-                cursor: 'pointer',
-              }}
-              onClick={() => setViewingReport(report)}
-            >
-              <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                  {/* Type indicator */}
-                  <Box
+            <Box key={monthKey} sx={{ mb: 2 }}>
+              <ListSubheader
+                sx={{
+                  bgcolor: 'transparent',
+                  px: 0,
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  color: 'text.secondary',
+                  lineHeight: 2,
+                }}
+              >
+                {monthName}
+              </ListSubheader>
+              {monthReports.map((report) => {
+                const typeColor = getTypeColor(report.report_type);
+                return (
+                  <Card
+                    key={report.id}
                     sx={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: 2,
-                      bgcolor: typeColor.bg,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
+                      mb: 1.5,
+                      borderRadius: 3,
+                      border: report.is_starred ? '1.5px solid' : '1px solid',
+                      borderColor: report.is_starred ? 'warning.light' : 'divider',
+                      boxShadow: report.is_starred ? '0 2px 8px rgba(251,191,36,0.15)' : 'none',
+                      cursor: 'pointer',
                     }}
+                    onClick={() => setViewingReport(report)}
                   >
-                    <AssignmentOutlinedIcon sx={{ fontSize: 22, color: typeColor.color }} />
-                  </Box>
-
-                  {/* Content */}
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography
-                      variant="body1"
-                      sx={{
-                        fontWeight: 600,
-                        lineHeight: 1.3,
-                        mb: 0.25,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {report.title}
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                      <Chip
-                        label={getTypeLabel(report.report_type)}
-                        size="small"
-                        sx={{
-                          bgcolor: typeColor.bg,
-                          color: typeColor.color,
-                          fontWeight: 600,
-                          fontSize: '0.65rem',
-                          height: 20,
-                        }}
-                      />
-                      <Typography variant="caption" color="text.secondary">
-                        {new Date(report.report_date).toLocaleDateString('en-IN', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </Typography>
-                    </Box>
-                  </Box>
-
-                  {/* Actions */}
-                  <Box
-                    sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {/* Star */}
-                    <IconButton
-                      size="small"
-                      onClick={() => handleToggleStar(report.id, report.is_starred)}
-                      sx={{ color: report.is_starred ? 'warning.main' : 'text.disabled' }}
-                    >
-                      {report.is_starred ? (
-                        <StarIcon sx={{ fontSize: 20 }} />
-                      ) : (
-                        <StarBorderIcon sx={{ fontSize: 20 }} />
-                      )}
-                    </IconButton>
-
-                    {/* Share toggle */}
-                    <IconButton
-                      size="small"
-                      onClick={() => handleToggleShareable(report.id, report.is_shareable)}
-                      sx={{ color: report.is_shareable ? 'success.main' : 'text.disabled' }}
-                    >
-                      {report.is_shareable ? (
-                        <PublicIcon sx={{ fontSize: 18 }} />
-                      ) : (
-                        <LockIcon sx={{ fontSize: 18 }} />
-                      )}
-                    </IconButton>
-
-                    {/* Explain */}
-                    <IconButton
-                      size="small"
-                      onClick={() => setInterpretingReport(report)}
-                      sx={{ color: 'primary.main' }}
-                      aria-label="Explain in my language"
-                    >
-                      <TranslateIcon sx={{ fontSize: 18 }} />
-                    </IconButton>
-
-                    {/* Delete */}
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDelete(report.id, report.file_path)}
-                      sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}
-                    >
-                      <DeleteOutlinedIcon sx={{ fontSize: 18 }} />
-                    </IconButton>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
+                    <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                        <Box
+                          sx={{
+                            width: 42,
+                            height: 42,
+                            borderRadius: 2,
+                            bgcolor: typeColor.bg,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <AssignmentOutlinedIcon sx={{ fontSize: 22, color: typeColor.color }} />
+                        </Box>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography
+                            variant="body1"
+                            sx={{
+                              fontWeight: 600,
+                              lineHeight: 1.3,
+                              mb: 0.25,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {report.title}
+                          </Typography>
+                          <Box
+                            sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}
+                          >
+                            <Chip
+                              label={getTypeLabel(report.report_type)}
+                              size="small"
+                              sx={{
+                                bgcolor: typeColor.bg,
+                                color: typeColor.color,
+                                fontWeight: 600,
+                                fontSize: '0.65rem',
+                                height: 20,
+                              }}
+                            />
+                            <Typography variant="caption" color="text.secondary">
+                              {new Date(report.report_date).toLocaleDateString('en-IN', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                              })}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        <Box
+                          sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <IconButton
+                            size="small"
+                            onClick={() => handleToggleStar(report.id, report.is_starred)}
+                            sx={{ color: report.is_starred ? 'warning.main' : 'text.disabled' }}
+                          >
+                            {report.is_starred ? (
+                              <StarIcon sx={{ fontSize: 20 }} />
+                            ) : (
+                              <StarBorderIcon sx={{ fontSize: 20 }} />
+                            )}
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => setShareConfirm(report)}
+                            sx={{ color: report.is_shareable ? 'success.main' : 'text.disabled' }}
+                          >
+                            {report.is_shareable ? (
+                              <PublicIcon sx={{ fontSize: 18 }} />
+                            ) : (
+                              <LockIcon sx={{ fontSize: 18 }} />
+                            )}
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => setInterpretingReport(report)}
+                            sx={{ color: 'primary.main' }}
+                            aria-label="Explain in my language"
+                          >
+                            <TranslateIcon sx={{ fontSize: 18 }} />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => setDeleteConfirm(report)}
+                            sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}
+                          >
+                            <DeleteOutlinedIcon sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </Box>
           );
         })}
 
@@ -390,6 +449,52 @@ export default function ReportsPageClient({
           onClose={() => setInterpretingReport(null)}
         />
       )}
+
+      {/* Share confirmation */}
+      <Dialog open={!!shareConfirm} onClose={() => setShareConfirm(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>
+          {shareConfirm?.is_shareable ? 'Make report private?' : 'Share report?'}
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            {shareConfirm?.is_shareable
+              ? `This will make ${shareConfirm?.title} private. Doctors will no longer be able to view it.`
+              : `This will make ${shareConfirm?.title} visible to your doctors. They will be able to access it through your Health ID.`}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShareConfirm(null)}>Cancel</Button>
+          <Button
+            onClick={() => {
+              if (shareConfirm) {
+                handleToggleShareable(shareConfirm.id, shareConfirm.is_shareable);
+              }
+              setShareConfirm(null);
+            }}
+            color={shareConfirm?.is_shareable ? 'warning' : 'success'}
+            variant="contained"
+          >
+            {shareConfirm?.is_shareable ? 'Make Private' : 'Share'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete confirmation */}
+      <Dialog open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Delete report?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete <strong>{deleteConfirm?.title}</strong>? This action
+            cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+          <Button onClick={confirmDelete} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={snackbar.open}

@@ -198,7 +198,7 @@ export default function DoctorAIAssistant({
           }}
           sx={{
             position: 'fixed',
-            bottom: 24,
+            bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))',
             right: 20,
             width: 56,
             height: 56,
