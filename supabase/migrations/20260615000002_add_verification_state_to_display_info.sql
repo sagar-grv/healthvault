@@ -1,6 +1,8 @@
 -- Add verification_state to get_doctor_display_info function
 
-CREATE OR REPLACE FUNCTION public.get_doctor_display_info(p_doctor_id UUID)
+DROP FUNCTION IF EXISTS public.get_doctor_display_info(UUID);
+
+CREATE FUNCTION public.get_doctor_display_info(p_doctor_id UUID)
 RETURNS TABLE(full_name TEXT, clinic_name TEXT, verification_state TEXT)
 LANGUAGE plpgsql
 SECURITY DEFINER
