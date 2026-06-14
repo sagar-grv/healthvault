@@ -28,6 +28,7 @@ import { shareReportsWithDoctor, lookupDoctor } from '@/app/(protected)/dashboar
 import { createClient } from '@/lib/supabase/client';
 import { REPORT_TYPES } from '@/constants';
 import type { Report } from '@/types';
+import VerificationBadge from '@/components/VerificationBadge';
 
 const QRScannerDialog = dynamic(() => import('@/components/doctor/QRScannerDialog'), {
   ssr: false,
@@ -59,6 +60,7 @@ export default function DoctorQRShareFlow({ open, onClose, reports }: DoctorQRSh
   const [doctorId, setDoctorId] = useState<string | null>(null);
   const [doctorName, setDoctorName] = useState('');
   const [clinicName, setClinicName] = useState('');
+  const [doctorVerificationState, setDoctorVerificationState] = useState('unverified');
   const [selectedReports, setSelectedReports] = useState<Set<string>>(new Set());
   const [errorMessage, setErrorMessage] = useState('');
   const [sharing, setSharing] = useState(false);
@@ -141,6 +143,7 @@ export default function DoctorQRShareFlow({ open, onClose, reports }: DoctorQRSh
     const doc = await lookupDoctor(extractedDoctorId);
     setDoctorName(doc.full_name || '');
     setClinicName(doc.clinic_name || '');
+    setDoctorVerificationState(doc.verification_state || 'unverified');
 
     setState('confirming');
   }, []);
@@ -227,6 +230,7 @@ export default function DoctorQRShareFlow({ open, onClose, reports }: DoctorQRSh
               {clinicName}
             </Typography>
           )}
+          <VerificationBadge state={doctorVerificationState} size="small" />
           <Typography variant="body2" color="text.secondary" gutterBottom>
             Share your reports with this doctor?
           </Typography>

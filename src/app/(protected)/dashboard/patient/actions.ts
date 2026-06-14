@@ -13,10 +13,15 @@ export async function lookupDoctor(doctorUserId: string) {
     p_doctor_id: doctorUserId,
   });
 
-  if (error || !data) return { full_name: null, clinic_name: null };
+  if (error || !data)
+    return { full_name: null, clinic_name: null, verification_state: 'unverified' };
   // RPC returns array — extract first row
   const row = Array.isArray(data) ? data[0] : data;
-  return { full_name: row?.full_name ?? null, clinic_name: row?.clinic_name ?? null };
+  return {
+    full_name: row?.full_name ?? null,
+    clinic_name: row?.clinic_name ?? null,
+    verification_state: row?.verification_state ?? 'unverified',
+  };
 }
 
 export async function checkUploadAllowed(): Promise<{ allowed: boolean; error?: string }> {
