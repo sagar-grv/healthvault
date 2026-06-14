@@ -1,3 +1,5 @@
+import { VerificationState } from './verification';
+
 export type UserRole = 'patient' | 'doctor' | 'admin';
 
 export interface EmergencyProfile {
@@ -73,7 +75,10 @@ export interface DoctorProfile {
   clinic_address: string | null;
   city: string | null;
   hpr_id: string | null;
-  is_verified: boolean;
+  verification_state: VerificationState;
+  verification_submitted_at: string | null;
+  rejection_reason: string | null;
+  verified_at: string | null;
   created_at: string;
 }
 

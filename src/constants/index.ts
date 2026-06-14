@@ -65,3 +65,20 @@ export const CURRENT_TERMS_VERSION = '1.0';
 export const CONSENT_TYPES = {
   TERMS_OF_SERVICE: 'terms_of_service',
 } as const;
+
+export const VERIFICATION_STATES = {
+  UNVERIFIED: 'unverified',
+  PENDING: 'pending',
+  AUTO_VERIFIED: 'auto_verified',
+  ADMIN_VERIFIED: 'admin_verified',
+  REJECTED: 'rejected',
+} as const;
+
+export const VERIFICATION_METHODS = {
+  NMC_SCRAPE: 'nmc_scrape',
+  AI_OCR: 'ai_ocr',
+  GOV_API: 'gov_api',
+  ADMIN_REVIEW: 'admin_review',
+} as const;
+
+export const VERIFICATION_CONFIDENCE_THRESHOLD = 0.7;

@@ -220,10 +220,11 @@ export default function DoctorDashboardClient({
               sx={{
                 flex: 1,
                 textAlign: 'center',
-                bgcolor: doctorProfile?.is_verified
-                  ? 'rgba(5,150,105,0.08)'
-                  : 'rgba(245,158,11,0.08)',
-                border: `1px solid ${doctorProfile?.is_verified ? 'rgba(5,150,105,0.30)' : 'rgba(245,158,11,0.35)'}`,
+                bgcolor:
+                  doctorProfile?.verification_state === 'admin_verified'
+                    ? 'rgba(5,150,105,0.08)'
+                    : 'rgba(245,158,11,0.08)',
+                border: `1px solid ${doctorProfile?.verification_state === 'admin_verified' ? 'rgba(5,150,105,0.30)' : 'rgba(245,158,11,0.35)'}`,
                 boxShadow: 'none',
               }}
             >
@@ -231,14 +232,19 @@ export default function DoctorDashboardClient({
                 <Typography
                   variant="h4"
                   sx={{
-                    color: doctorProfile?.is_verified ? 'success.main' : 'warning.main',
+                    color:
+                      doctorProfile?.verification_state === 'admin_verified'
+                        ? 'success.main'
+                        : 'warning.main',
                     fontWeight: 800,
                   }}
                 >
-                  {doctorProfile?.is_verified ? '✓' : '—'}
+                  {doctorProfile?.verification_state === 'admin_verified' ? '✓' : '—'}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-                  {doctorProfile?.is_verified ? 'Verified' : 'Unverified'}
+                  {doctorProfile?.verification_state === 'admin_verified'
+                    ? 'Verified'
+                    : 'Unverified'}
                 </Typography>
               </CardContent>
             </Card>
