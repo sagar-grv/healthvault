@@ -92,6 +92,31 @@ export async function getPatientsSharedWithMe() {
   return { shares: enriched };
 }
 
+/** Submit doctor profile for verification. Sets state to 'pending'. */
+export async function submitForVerification() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { error: 'Not authenticated' };
+  }
+
+  const { error } = await supabase
+    .from('doctor_profiles')
+    .update({ verification_state: 'pending' })
+    .eq('id', user.id)
+    .in('verification_state', ['unverified', 'rejected']);
+
+  if (error) {
+    return { error: 'Failed to submit for verification' };
+  }
+
+  return { success: true };
+}
+
 export async function markShareViewed(shareId: string) {
   const supabase = await createClient();
   const {

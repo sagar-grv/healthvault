@@ -100,6 +100,7 @@ export default function DoctorOnboardingPage() {
           specialization: specialization || null,
           clinic_name: clinicName || null,
           city: city || null,
+          verification_state: 'pending',
         })
         .eq('id', user.id);
 
