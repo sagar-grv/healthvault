@@ -403,14 +403,15 @@ export default function PatientViewClient({
                     <WarningAmberIcon sx={{ fontSize: 28, color: 'error.main' }} />
                   </Box>
                   <Typography variant="h5" sx={{ mb: 1 }}>
-                    Access Revoked
+                    No Reports Available
                   </Typography>
                   <Typography
                     variant="body2"
                     color="text.secondary"
                     sx={{ maxWidth: 320, mx: 'auto' }}
                   >
-                    {patientName.split(' ')[0]} has revoked access to their reports.
+                    {patientName.split(' ')[0]} has not shared any reports with you yet. Ask them to
+                    share their medical reports.
                   </Typography>
                 </CardContent>
               </Card>

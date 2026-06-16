@@ -65,7 +65,7 @@ export default async function DoctorPatientViewPage({
   ]);
 
   const reports = reportsResult.data ?? [];
-  const hasActiveShare = !!activeShareResult.data;
+  const hasActiveShare = reports.length > 0 || !!activeShareResult.data;
 
   // Log access — fire and forget, does not block page render
   Promise.all([

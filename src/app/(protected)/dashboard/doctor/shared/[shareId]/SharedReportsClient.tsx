@@ -23,7 +23,11 @@ import {
   DialogActions,
   Button,
 } from '@mui/material';
-import { ArrowBack as BackIcon, Description as ReportIcon } from '@mui/icons-material';
+import {
+  ArrowBack as BackIcon,
+  Description as ReportIcon,
+  InsertDriveFile as InsertDriveFileIcon,
+} from '@mui/icons-material';
 import { getSharedReportDetails } from '@/app/(protected)/dashboard/doctor/actions';
 import { REPORT_TYPE_COLORS } from '@/constants';
 import type { Report, Profile } from '@/types';
@@ -162,7 +166,26 @@ export default function SharedReportsClient({ shareId }: { shareId: string }) {
           })}
         </List>
 
-        {reports.length === 0 && <Alert severity="info">No reports found in this share.</Alert>}
+        {reports.length === 0 && (
+          <Box
+            sx={{
+              textAlign: 'center',
+              py: 6,
+              border: '2px dashed',
+              borderColor: 'divider',
+              borderRadius: 2,
+              bgcolor: 'transparent',
+            }}
+          >
+            <InsertDriveFileIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+            <Typography variant="h6" sx={{ mb: 0.5 }}>
+              No reports found
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              This share does not contain any reports.
+            </Typography>
+          </Box>
+        )}
       </Box>
 
       {/* Report detail dialog */}

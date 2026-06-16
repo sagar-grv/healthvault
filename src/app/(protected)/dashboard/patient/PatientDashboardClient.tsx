@@ -90,6 +90,7 @@ export default function PatientDashboardClient({
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   const [shareConfirmReport, setShareConfirmReport] = useState<Report | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<Report | null>(null);
 
   // Show snackbar on successful upload redirect
   useEffect(() => {
@@ -635,7 +636,7 @@ export default function PatientDashboardClient({
                         size="small"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDeleteReport(report.id, report.file_path);
+                          setDeleteConfirm(report);
                         }}
                         sx={{
                           color: 'text.disabled',
@@ -753,6 +754,32 @@ export default function PatientDashboardClient({
             variant="contained"
           >
             {shareConfirmReport?.is_shareable ? 'Make Private' : 'Share'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Delete report?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete <strong>{deleteConfirm?.title}</strong>? This action
+            cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+          <Button
+            onClick={() => {
+              if (deleteConfirm) {
+                handleDeleteReport(deleteConfirm.id, deleteConfirm.file_path);
+              }
+              setDeleteConfirm(null);
+            }}
+            color="error"
+            variant="contained"
+          >
+            Delete
           </Button>
         </DialogActions>
       </Dialog>

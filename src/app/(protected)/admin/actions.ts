@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { requireAdmin, updateVerificationState } from '@/lib/supabase/admin';
+import { requireAdmin, updateVerificationState, logAdminAction } from '@/lib/supabase/admin';
 
 /** Get overview stats for admin dashboard. */
 export async function getAdminStats() {
@@ -85,13 +85,13 @@ export async function getDoctorDetail(doctorId: string) {
     .from('doctor_verifications')
     .select('*')
     .eq('doctor_id', doctorId)
-    .order('verified_at', { ascending: false });
+    .order('created_at', { ascending: false });
 
   const { data: auditLogs } = await supabase
     .from('admin_audit_log')
     .select('*')
     .eq('target_id', doctorId)
-    .order('action_time', { ascending: false });
+    .order('created_at', { ascending: false });
 
   return { doctor, verifications: verifications ?? [], auditLogs: auditLogs ?? [] };
 }
@@ -121,6 +121,8 @@ export async function approveDoctor(doctorId: string) {
   const result = await updateVerificationState(doctorId, 'admin_verified', adminUser.id);
   if (result.error) return { error: result.error };
 
+  await logAdminAction(adminUser.id, 'approve_doctor', doctorId);
+
   return { success: true };
 }
 
@@ -135,6 +137,8 @@ export async function rejectDoctor(doctorId: string, reason: string) {
 
   const result = await updateVerificationState(doctorId, 'rejected', adminUser.id, reason);
   if (result.error) return { error: result.error };
+
+  await logAdminAction(adminUser.id, 'reject_doctor', doctorId, { reason });
 
   return { success: true };
 }
