@@ -28,6 +28,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import ThemeToggle from '@/components/ThemeToggle';
 import { MEDICAL_COUNCILS } from '@/constants';
 import { createClient } from '@/lib/supabase/client';
+import { submitForVerification } from '../actions';
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function DoctorProfilePage() {
@@ -47,6 +48,7 @@ export default function DoctorProfilePage() {
   const [userId, setUserId] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [reSubmitting, setReSubmitting] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -132,6 +134,27 @@ export default function DoctorProfilePage() {
       setSnackbar({ open: true, message: 'Something went wrong.', severity: 'error' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleResubmit = async () => {
+    setReSubmitting(true);
+    try {
+      const result = await submitForVerification();
+      if (result?.error) {
+        setSnackbar({ open: true, message: result.error, severity: 'error' });
+      } else {
+        setVerificationState('pending');
+        setSnackbar({
+          open: true,
+          message: 'Re-submitted for verification. Waiting for admin review.',
+          severity: 'success',
+        });
+      }
+    } catch {
+      setSnackbar({ open: true, message: 'Something went wrong.', severity: 'error' });
+    } finally {
+      setReSubmitting(false);
     }
   };
 
@@ -251,7 +274,7 @@ export default function DoctorProfilePage() {
 
             {/* Verification badge */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
-              {verificationState === 'admin_verified' || verificationState === 'auto_verified' ? (
+              {verificationState === 'admin_verified' ? (
                 <Chip
                   icon={<VerifiedIcon sx={{ fontSize: 14, color: 'secondary.light !important' }} />}
                   label="Verified"
@@ -312,6 +335,28 @@ export default function DoctorProfilePage() {
                 }}
               />
             </Box>
+
+            {/* Re-submit for verification (shown when rejected) */}
+            {verificationState === 'rejected' && (
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleResubmit}
+                disabled={reSubmitting}
+                sx={{
+                  mt: 1.5,
+                  color: 'white',
+                  borderColor: 'rgba(255,255,255,0.4)',
+                  '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' },
+                }}
+              >
+                {reSubmitting ? (
+                  <CircularProgress size={16} color="inherit" />
+                ) : (
+                  'Re-submit for Verification'
+                )}
+              </Button>
+            )}
 
             {/* Profile completion progress */}
             <Box>

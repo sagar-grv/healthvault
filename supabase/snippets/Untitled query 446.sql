@@ -1,0 +1,1 @@
+GRANT INSERT ON public.consent_logs TO authenticated;

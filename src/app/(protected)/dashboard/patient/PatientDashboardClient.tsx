@@ -87,6 +87,7 @@ export default function PatientDashboardClient({
   const [uploadingCamera, setUploadingCamera] = useState(false);
   const [langPickerOpen, setLangPickerOpen] = useState(false);
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   const [shareConfirmReport, setShareConfirmReport] = useState<Report | null>(null);
 
@@ -351,7 +352,12 @@ export default function PatientDashboardClient({
           >
             <PersonIcon sx={{ fontSize: 22 }} />
           </IconButton>
-          <IconButton onClick={handleLogout} aria-label="Logout" size="small" sx={{ ml: 0.5 }}>
+          <IconButton
+            onClick={() => setLogoutDialogOpen(true)}
+            aria-label="Logout"
+            size="small"
+            sx={{ ml: 0.5 }}
+          >
             <LogoutIcon sx={{ fontSize: 22 }} />
           </IconButton>
         </Toolbar>
@@ -747,6 +753,25 @@ export default function PatientDashboardClient({
             variant="contained"
           >
             {shareConfirmReport?.is_shareable ? 'Make Private' : 'Share'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Logout Confirmation Dialog */}
+      <Dialog
+        open={logoutDialogOpen}
+        onClose={() => setLogoutDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Log out of HealthVault?</DialogTitle>
+        <DialogContent>
+          <Typography>You can always log back in to access your health records.</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLogoutDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleLogout} color="error" variant="contained">
+            Log Out
           </Button>
         </DialogActions>
       </Dialog>

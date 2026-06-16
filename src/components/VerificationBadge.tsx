@@ -26,11 +26,6 @@ const stateConfig: Record<
     color: 'success',
     icon: <VerifiedIcon sx={{ fontSize: 14 }} />,
   },
-  auto_verified: {
-    label: 'Auto-Verified',
-    color: 'success',
-    icon: <VerifiedIcon sx={{ fontSize: 14 }} />,
-  },
   pending: {
     label: 'Pending',
     color: 'warning',
@@ -59,7 +54,7 @@ export default function VerificationBadge({
 }: VerificationBadgeProps) {
   const config = stateConfig[state] ?? stateConfig.unverified;
 
-  if (!showLabel && (state === 'admin_verified' || state === 'auto_verified')) {
+  if (!showLabel && state === 'admin_verified') {
     return <VerifiedIcon sx={{ fontSize: size === 'small' ? 18 : 22, color: 'success.main' }} />;
   }
 

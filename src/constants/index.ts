@@ -69,16 +69,12 @@ export const CONSENT_TYPES = {
 export const VERIFICATION_STATES = {
   UNVERIFIED: 'unverified',
   PENDING: 'pending',
-  AUTO_VERIFIED: 'auto_verified',
   ADMIN_VERIFIED: 'admin_verified',
   REJECTED: 'rejected',
 } as const;
 
 export const VERIFICATION_METHODS = {
   NMC_SCRAPE: 'nmc_scrape',
-  AI_OCR: 'ai_ocr',
   GOV_API: 'gov_api',
   ADMIN_REVIEW: 'admin_review',
 } as const;
-
-export const VERIFICATION_CONFIDENCE_THRESHOLD = 0.7;

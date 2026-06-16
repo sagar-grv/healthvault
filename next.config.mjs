@@ -32,7 +32,7 @@ const nextConfig = {
         { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
         { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
         {
-          key: 'Content-Security-Policy-Report-Only',
+          key: 'Content-Security-Policy',
           value:
             "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' https://*.supabase.co blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://www.googleapis.com; frame-ancestors 'none'; report-uri /api/csp-report",
         },

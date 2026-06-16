@@ -58,6 +58,7 @@ export default function DoctorDashboardClient({
   const [searchError, setSearchError] = useState('');
   const [isPending, startTransition] = useTransition();
   const [showMyQR, setShowMyQR] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   // Use server action for search — eliminates 3 client→Supabase round-trips
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
@@ -157,7 +158,12 @@ export default function DoctorDashboardClient({
             >
               <PersonIcon sx={{ fontSize: 22 }} />
             </IconButton>
-            <IconButton onClick={handleLogout} size="small" aria-label="Logout" sx={{ ml: 0.5 }}>
+            <IconButton
+              onClick={() => setLogoutDialogOpen(true)}
+              size="small"
+              aria-label="Logout"
+              sx={{ ml: 0.5 }}
+            >
               <LogoutIcon sx={{ fontSize: 22 }} />
             </IconButton>
           </Toolbar>
@@ -387,6 +393,25 @@ export default function DoctorDashboardClient({
 
       {/* Floating AI Assistant */}
       <DoctorAIAssistant profile={profile} doctorProfile={doctorProfile} />
+
+      {/* Logout Confirmation Dialog */}
+      <Dialog
+        open={logoutDialogOpen}
+        onClose={() => setLogoutDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Log out of HealthVault?</DialogTitle>
+        <DialogContent>
+          <Typography>You can always log back in to continue managing your patients.</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLogoutDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleLogout} color="error" variant="contained">
+            Log Out
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* My QR Code Dialog */}
       <Dialog open={showMyQR} onClose={() => setShowMyQR(false)} maxWidth="xs" fullWidth>

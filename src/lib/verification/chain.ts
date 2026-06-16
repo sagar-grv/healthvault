@@ -1,26 +1,17 @@
 import { createClient } from '@/lib/supabase/server';
 import { verifyWithNmc } from './nmc-scraper';
-import { verifyWithAiOcr } from './ai-ocr';
 import { verifyWithGovApi } from './gov-api';
-import { VERIFICATION_CONFIDENCE_THRESHOLD, type VerificationResult } from './types';
+import type { VerificationResult } from './types';
 
 interface ChainInput {
   doctorId: string;
   registrationNumber: string;
   councilName: string;
   qualification: string;
-  certificateBase64?: string;
   doctorName: string;
 }
 
-/**
- * Run the full verification chain for a doctor.
- * All APIs run regardless of earlier results (for audit trail).
- * Returns the aggregate result and saves each step to doctor_verifications.
- */
 export async function runVerificationChain(input: ChainInput): Promise<{
-  overallConfidence: number;
-  autoVerified: boolean;
   results: VerificationResult[];
 }> {
   const supabase = await createClient();
@@ -31,41 +22,18 @@ export async function runVerificationChain(input: ChainInput): Promise<{
   results.push(nmcResult);
   await saveVerificationResult(supabase, input.doctorId, nmcResult);
 
-  // Step 2: AI OCR (if certificate provided)
-  if (input.certificateBase64) {
-    const ocrResult = await verifyWithAiOcr(
-      input.certificateBase64,
-      input.doctorName,
-      input.registrationNumber,
-      input.councilName
-    );
-    results.push(ocrResult);
-    await saveVerificationResult(supabase, input.doctorId, ocrResult);
-  }
-
-  // Step 3: Gov API
+  // Step 2: Gov API
   const govResult = await verifyWithGovApi(input.registrationNumber);
   results.push(govResult);
   await saveVerificationResult(supabase, input.doctorId, govResult);
 
-  // Calculate average confidence from successful results
-  const successfulResults = results.filter((r) => r.status === 'success');
-  const overallConfidence =
-    successfulResults.length > 0
-      ? successfulResults.reduce((sum, r) => sum + r.confidence, 0) / successfulResults.length
-      : 0;
-
-  const autoVerified = overallConfidence >= VERIFICATION_CONFIDENCE_THRESHOLD;
-
-  // Update doctor's verification state
+  // Update doctor's verification state to pending (admin always reviews)
   await supabase
     .from('doctor_profiles')
-    .update({
-      verification_state: autoVerified ? 'auto_verified' : 'pending',
-    })
+    .update({ verification_state: 'pending' })
     .eq('id', input.doctorId);
 
-  return { overallConfidence, autoVerified, results };
+  return { results };
 }
 
 async function saveVerificationResult(

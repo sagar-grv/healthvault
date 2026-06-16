@@ -1,12 +1,12 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { requireAdmin, logAdminAction } from '@/lib/supabase/admin';
+import { requireAdmin, updateVerificationState } from '@/lib/supabase/admin';
 
 /** Get overview stats for admin dashboard. */
 export async function getAdminStats() {
-  const adminUser = await requireAdmin();
-  if (!adminUser) return { error: 'Unauthorized' };
+  const { user: adminUser, error: adminError } = await requireAdmin();
+  if (adminError || !adminUser) return { error: adminError || 'Unauthorized' };
 
   const supabase = await createClient();
 
@@ -35,8 +35,8 @@ export async function getAdminStats() {
 
 /** Get pending verification requests. */
 export async function getPendingVerifications() {
-  const adminUser = await requireAdmin();
-  if (!adminUser) return { error: 'Unauthorized' };
+  const { user: adminUser, error: adminError } = await requireAdmin();
+  if (adminError || !adminUser) return { error: adminError || 'Unauthorized' };
 
   const supabase = await createClient();
 
@@ -52,8 +52,8 @@ export async function getPendingVerifications() {
 
 /** Get all doctors with verification status. */
 export async function getAllDoctors() {
-  const adminUser = await requireAdmin();
-  if (!adminUser) return { error: 'Unauthorized' };
+  const { user: adminUser, error: adminError } = await requireAdmin();
+  if (adminError || !adminUser) return { error: adminError || 'Unauthorized' };
 
   const supabase = await createClient();
 
@@ -68,8 +68,8 @@ export async function getAllDoctors() {
 
 /** Get doctor detail with verification history. */
 export async function getDoctorDetail(doctorId: string) {
-  const adminUser = await requireAdmin();
-  if (!adminUser) return { error: 'Unauthorized' };
+  const { user: adminUser, error: adminError } = await requireAdmin();
+  if (adminError || !adminUser) return { error: adminError || 'Unauthorized' };
 
   const supabase = await createClient();
 
@@ -98,8 +98,8 @@ export async function getDoctorDetail(doctorId: string) {
 
 /** Get all patients. */
 export async function getAllPatients() {
-  const adminUser = await requireAdmin();
-  if (!adminUser) return { error: 'Unauthorized' };
+  const { user: adminUser, error: adminError } = await requireAdmin();
+  if (adminError || !adminUser) return { error: adminError || 'Unauthorized' };
 
   const supabase = await createClient();
 
@@ -115,45 +115,26 @@ export async function getAllPatients() {
 
 /** Approve a doctor verification. */
 export async function approveDoctor(doctorId: string) {
-  const adminUser = await requireAdmin();
-  if (!adminUser) return { error: 'Unauthorized' };
+  const { user: adminUser, error: adminError } = await requireAdmin();
+  if (adminError || !adminUser) return { error: adminError || 'Unauthorized' };
 
-  const supabase = await createClient();
-
-  const { error } = await supabase
-    .from('doctor_profiles')
-    .update({ verification_state: 'admin_verified' })
-    .eq('id', doctorId);
-
-  if (error) return { error: error.message };
-
-  await logAdminAction(adminUser.id, 'approve_doctor', doctorId, {
-    previousState: 'pending',
-    newState: 'admin_verified',
-  });
+  const result = await updateVerificationState(doctorId, 'admin_verified', adminUser.id);
+  if (result.error) return { error: result.error };
 
   return { success: true };
 }
 
 /** Reject a doctor verification with reason. */
 export async function rejectDoctor(doctorId: string, reason: string) {
-  const adminUser = await requireAdmin();
-  if (!adminUser) return { error: 'Unauthorized' };
+  if (!reason || reason.trim().length < 10) {
+    return { error: 'Rejection reason must be at least 10 characters' };
+  }
 
-  const supabase = await createClient();
+  const { user: adminUser, error: adminError } = await requireAdmin();
+  if (adminError || !adminUser) return { error: adminError || 'Unauthorized' };
 
-  const { error } = await supabase
-    .from('doctor_profiles')
-    .update({ verification_state: 'rejected' })
-    .eq('id', doctorId);
-
-  if (error) return { error: error.message };
-
-  await logAdminAction(adminUser.id, 'reject_doctor', doctorId, {
-    previousState: 'pending',
-    newState: 'rejected',
-    reason,
-  });
+  const result = await updateVerificationState(doctorId, 'rejected', adminUser.id, reason);
+  if (result.error) return { error: result.error };
 
   return { success: true };
 }

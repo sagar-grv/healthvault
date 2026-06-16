@@ -1,11 +1,6 @@
-export type VerificationState =
-  | 'unverified'
-  | 'pending'
-  | 'auto_verified'
-  | 'admin_verified'
-  | 'rejected';
+export type VerificationState = 'unverified' | 'pending' | 'admin_verified' | 'rejected';
 
-export type VerificationMethod = 'nmc_scrape' | 'ai_ocr' | 'gov_api' | 'admin_review';
+export type VerificationMethod = 'nmc_scrape' | 'gov_api' | 'admin_review';
 
 export type VerificationStatus = 'pending' | 'success' | 'failed' | 'error';
 

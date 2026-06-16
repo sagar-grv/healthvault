@@ -162,7 +162,7 @@ This pipeline was built for **[HealthVault](https://github.com/sagar-grv/healthv
 | **Frontend**   | Next.js, Vite, Nuxt, SvelteKit, Remix                     | Next.js 15+                  |
 | **Database**   | Supabase, Firebase, MongoDB, PostgreSQL, SQLite           | Supabase Postgres            |
 | **Auth**       | Supabase Auth, Firebase Auth, Clerk, Auth0, NextAuth      | Supabase Auth                |
-| **AI**         | Gemini, OpenAI, Claude, HuggingFace, or none              | Optional                     |
+| **AI**         | Gemini, OpenAI, Claude, or none                           | Optional                     |
 | **Deploy**     | Vercel, Netlify, Fly.io, Railway, Cloudflare, self-hosted | Vercel                       |
 | **E2E**        | Playwright, Cypress, or none                              | Playwright                   |
 | **Monitoring** | Sentry, LogRocket, Datadog, PostHog, or none              | Sentry                       |

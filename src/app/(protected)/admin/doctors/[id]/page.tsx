@@ -16,6 +16,8 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { getDoctorDetail, approveDoctor, rejectDoctor } from '../../actions';
 
 interface DoctorData {
@@ -26,6 +28,7 @@ interface DoctorData {
   specialization: string | null;
   clinic_name: string | null;
   city: string | null;
+  certificate_path: string | null;
   verification_state: string;
   created_at: string;
   profiles: { full_name: string; email: string; health_id: string; created_at: string } | null;
@@ -51,7 +54,6 @@ interface AuditRecord {
 
 const stateColors: Record<string, 'success' | 'warning' | 'error' | 'default'> = {
   admin_verified: 'success',
-  auto_verified: 'success',
   pending: 'warning',
   rejected: 'error',
   unverified: 'default',
@@ -249,6 +251,45 @@ export default function DoctorDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Uploaded Certificate */}
+      {doctor.certificate_path && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+              Uploaded Documents
+            </Typography>
+            <Box
+              component="a"
+              href={`/api/storage?path=${encodeURIComponent(doctor.certificate_path)}`}
+              target="_blank"
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+                p: 2,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 2,
+                textDecoration: 'none',
+                color: 'inherit',
+                '&:hover': { bgcolor: 'rgba(0,0,0,0.02)' },
+              }}
+            >
+              <InsertDriveFileIcon sx={{ color: 'error.main' }} />
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  Registration Certificate
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  View or download
+                </Typography>
+              </Box>
+              <OpenInNewIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+            </Box>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Verification chain results */}
       {verifications.length > 0 && (

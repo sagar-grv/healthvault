@@ -23,7 +23,6 @@ interface Doctor {
 
 const stateColors: Record<string, 'success' | 'warning' | 'error' | 'default'> = {
   admin_verified: 'success',
-  auto_verified: 'success',
   pending: 'warning',
   rejected: 'error',
   unverified: 'default',
