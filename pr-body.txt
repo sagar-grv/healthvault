@@ -1,0 +1,8 @@
+## Fix
+Admin users were signed out when hitting /dashboard because the role router only handled 'patient' and 'doctor'. Any other role (including 'admin') fell through to signOut + redirect to login.
+
+Added admin role redirect BEFORE the onboarding check so admin users skip onboarding and go straight to /admin.
+
+## Verification
+- 52/52 tests pass
+- Clean build

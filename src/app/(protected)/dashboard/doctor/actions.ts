@@ -213,7 +213,7 @@ export async function getSharedReportDetails(shareId: string) {
   };
 }
 
-/** Delete the current doctor's account and all associated data. */
+/** Schedule account deletion for 72h from now (soft delete). */
 export async function deleteAccount(): Promise<{ error?: string }> {
   const supabase = await createClient();
   const {
@@ -223,37 +223,29 @@ export async function deleteAccount(): Promise<{ error?: string }> {
 
   if (authError || !user) return { error: 'Not authenticated' };
 
-  // Create a service-role client to delete the auth user
-  const { createClient: createServiceClient } = await import('@supabase/supabase-js');
-  const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // Check if already scheduled
+  const { data: existing } = await supabase
+    .from('profiles')
+    .select('deleted_at, deletion_scheduled_at')
+    .eq('id', user.id)
+    .single();
 
-  if (!serviceUrl || !serviceKey) return { error: 'Server misconfigured' };
-
-  const serviceSupabase = createServiceClient(serviceUrl, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-
-  // 1. Delete storage files (certificates)
-  const { data: files } = await supabase.storage.from('certificates').list(user.id);
-  if (files && files.length > 0) {
-    const paths = files.map((f) => `${user.id}/${f.name}`);
-    await supabase.storage.from('certificates').remove(paths);
+  if (existing?.deleted_at) {
+    return { error: 'Account is already scheduled for deletion' };
   }
 
-  // 2. Delete DB rows in order (child tables first)
-  await supabase.from('shared_reports').delete().eq('doctor_id', user.id);
-  await supabase.from('access_logs').delete().eq('doctor_id', user.id);
-  await supabase.from('search_attempts').delete().eq('doctor_id', user.id);
-  await supabase.from('doctor_verifications').delete().eq('doctor_id', user.id);
-  await supabase.from('admin_audit_log').delete().eq('target_id', user.id);
-  await supabase.from('doctor_profiles').delete().eq('id', user.id);
-  await supabase.from('profiles').delete().eq('id', user.id);
+  // Schedule deletion for 72h from now
+  const scheduledAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      deleted_at: new Date().toISOString(),
+      deletion_scheduled_at: scheduledAt,
+    })
+    .eq('id', user.id);
 
-  // 3. Delete the Supabase Auth user (prevents login with same credentials)
-  const { error: deleteAuthError } = await serviceSupabase.auth.admin.deleteUser(user.id);
-  if (deleteAuthError) {
-    return { error: `Failed to delete auth account: ${deleteAuthError.message}` };
+  if (error) {
+    return { error: 'Failed to schedule account deletion' };
   }
 
   return {};

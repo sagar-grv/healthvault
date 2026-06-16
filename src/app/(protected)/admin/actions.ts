@@ -17,7 +17,11 @@ export async function getAdminStats() {
     { count: totalReports },
   ] = await Promise.all([
     supabase.from('doctor_profiles').select('*', { count: 'exact', head: true }),
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'patient'),
+    supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('role', 'patient')
+      .is('deleted_at', null),
     supabase
       .from('doctor_profiles')
       .select('*', { count: 'exact', head: true })
@@ -47,7 +51,11 @@ export async function getPendingVerifications() {
     .order('created_at', { ascending: true });
 
   if (error) return { error: error.message };
-  return { verifications: data ?? [] };
+
+  // Filter out soft-deleted profiles
+  const activeVerifications = (data ?? []).filter((v) => !v.profiles?.deleted_at);
+
+  return { verifications: activeVerifications };
 }
 
 /** Get all doctors with verification status. */
@@ -63,7 +71,11 @@ export async function getAllDoctors() {
     .order('created_at', { ascending: false });
 
   if (error) return { error: error.message };
-  return { doctors: data ?? [] };
+
+  // Filter out soft-deleted profiles
+  const activeDoctors = (data ?? []).filter((d) => !d.profiles?.deleted_at);
+
+  return { doctors: activeDoctors };
 }
 
 /** Get doctor detail with verification history. */
@@ -75,11 +87,12 @@ export async function getDoctorDetail(doctorId: string) {
 
   const { data: doctor, error: doctorError } = await supabase
     .from('doctor_profiles')
-    .select('*, profiles!inner(full_name, email, health_id, created_at)')
+    .select('*, profiles!inner(full_name, email, health_id, created_at, deleted_at)')
     .eq('id', doctorId)
     .single();
 
   if (doctorError) return { error: doctorError.message };
+  if (doctor?.profiles?.deleted_at) return { error: 'Account has been deleted' };
 
   const { data: verifications } = await supabase
     .from('doctor_verifications')
@@ -96,18 +109,24 @@ export async function getDoctorDetail(doctorId: string) {
   return { doctor, verifications: verifications ?? [], auditLogs: auditLogs ?? [] };
 }
 
-/** Get all patients. */
-export async function getAllPatients() {
+/** Get all patients. Pass includeDeleted=true to show soft-deleted accounts. */
+export async function getAllPatients(includeDeleted = false) {
   const { user: adminUser, error: adminError } = await requireAdmin();
   if (adminError || !adminUser) return { error: adminError || 'Unauthorized' };
 
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('profiles')
-    .select('id, full_name, email, health_id, created_at')
+    .select('id, full_name, email, health_id, created_at, deleted_at, deletion_scheduled_at')
     .eq('role', 'patient')
     .order('created_at', { ascending: false });
+
+  if (!includeDeleted) {
+    query = query.is('deleted_at', null);
+  }
+
+  const { data, error } = await query;
 
   if (error) return { error: error.message };
   return { patients: data ?? [] };

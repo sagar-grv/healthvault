@@ -43,27 +43,35 @@ async function callNvidia(messages: AIMessage[], model: string, maxTokens = 2048
   const apiKey = process.env.NVIDIA_API_KEY;
   if (!apiKey) throw new Error('NVIDIA_API_KEY not configured');
 
-  const response = await fetch(`${NVIDIA_BASE_URL}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      max_tokens: maxTokens,
-      temperature: 0.2,
-    }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
 
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`NVIDIA API error ${response.status}: ${err}`);
+  try {
+    const response = await fetch(`${NVIDIA_BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        max_tokens: maxTokens,
+        temperature: 0.2,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`NVIDIA API error ${response.status}: ${err}`);
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || '';
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || '';
 }
 
 /**
@@ -96,8 +104,15 @@ async function callGemini(
     contentParts.push({ inlineData: { data: imageBase64, mimeType: imageMimeType } });
   }
 
-  const result = await model.generateContent(contentParts);
-  return result.response.text();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+
+  try {
+    const result = await model.generateContent(contentParts, { signal: controller.signal });
+    return result.response.text();
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 /**
