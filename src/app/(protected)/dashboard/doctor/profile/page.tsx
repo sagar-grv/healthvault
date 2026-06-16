@@ -20,6 +20,10 @@ import Chip from '@mui/material/Chip';
 import LinearProgress from '@mui/material/LinearProgress';
 import Snackbar from '@mui/material/Snackbar';
 import Tooltip from '@mui/material/Tooltip';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
 import VerifiedIcon from '@mui/icons-material/Verified';
@@ -49,6 +53,8 @@ export default function DoctorProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [reSubmitting, setReSubmitting] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -584,6 +590,81 @@ export default function DoctorProfilePage() {
         >
           {saving ? <CircularProgress size={24} color="inherit" /> : 'Save Profile'}
         </Button>
+
+        {/* ── Danger Zone ──────────────────────────────────────────────── */}
+        <Card sx={{ borderRadius: 3, border: '1px solid', borderColor: 'error.light', mt: 3 }}>
+          <CardContent sx={{ p: 2.5 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5, color: 'error.main' }}>
+              Danger Zone
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Permanently delete your account and all associated data. This action cannot be undone.
+            </Typography>
+            <Button
+              variant="outlined"
+              color="error"
+              fullWidth
+              onClick={() => setDeleteConfirmOpen(true)}
+              sx={{ borderRadius: 2, py: 1 }}
+            >
+              Delete My Account
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Dialog
+          open={deleteConfirmOpen}
+          onClose={() => setDeleteConfirmOpen(false)}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle sx={{ color: 'error.main' }}>Delete your account?</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              This will permanently delete:
+            </Typography>
+            <Box component="ul" sx={{ pl: 2, mb: 1 }}>
+              <li>
+                <Typography variant="body2">Your doctor profile</Typography>
+              </li>
+              <li>
+                <Typography variant="body2">Certificate uploads</Typography>
+              </li>
+              <li>
+                <Typography variant="body2">Patient access history</Typography>
+              </li>
+              <li>
+                <Typography variant="body2">Verification records</Typography>
+              </li>
+            </Box>
+            <Alert severity="error" sx={{ mt: 1 }}>
+              This cannot be undone. You will be signed out immediately.
+            </Alert>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+            <Button
+              color="error"
+              variant="contained"
+              disabled={deleting}
+              onClick={async () => {
+                setDeleting(true);
+                const { deleteAccount } =
+                  await import('@/app/(protected)/dashboard/doctor/actions');
+                const result = await deleteAccount();
+                if (result.error) {
+                  setSnackbar({ open: true, message: result.error, severity: 'error' });
+                  setDeleting(false);
+                  setDeleteConfirmOpen(false);
+                } else {
+                  router.replace('/');
+                }
+              }}
+            >
+              {deleting ? <CircularProgress size={20} color="inherit" /> : 'Yes, Delete Account'}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
 
       <Snackbar

@@ -212,3 +212,35 @@ export async function getSharedReportDetails(shareId: string) {
     reports: reports || [],
   };
 }
+
+/** Delete the current doctor's account and all associated data. */
+export async function deleteAccount(): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) return { error: 'Not authenticated' };
+
+  // 1. Delete storage files (certificates)
+  const { data: files } = await supabase.storage.from('certificates').list(user.id);
+  if (files && files.length > 0) {
+    const paths = files.map((f) => `${user.id}/${f.name}`);
+    await supabase.storage.from('certificates').remove(paths);
+  }
+
+  // 2. Delete DB rows in order (child tables first)
+  await supabase.from('shared_reports').delete().eq('doctor_id', user.id);
+  await supabase.from('access_logs').delete().eq('doctor_id', user.id);
+  await supabase.from('search_attempts').delete().eq('doctor_id', user.id);
+  await supabase.from('doctor_verifications').delete().eq('doctor_id', user.id);
+  await supabase.from('admin_audit_log').delete().eq('target_id', user.id);
+  await supabase.from('doctor_profiles').delete().eq('id', user.id);
+  await supabase.from('profiles').delete().eq('id', user.id);
+
+  // 3. Sign out (auth user remains but profile is deleted — GDPR compliant)
+  await supabase.auth.signOut();
+
+  return {};
+}

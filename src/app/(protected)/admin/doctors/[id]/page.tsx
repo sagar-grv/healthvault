@@ -14,6 +14,8 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
@@ -69,6 +71,11 @@ export default function DoctorDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [rejectDialog, setRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error';
+  }>({ open: false, message: '', severity: 'success' });
 
   useEffect(() => {
     let cancelled = false;
@@ -98,7 +105,12 @@ export default function DoctorDetailPage() {
 
   const handleApprove = async () => {
     setActionLoading(true);
-    await approveDoctor(doctorId);
+    const result = await approveDoctor(doctorId);
+    if (result.error) {
+      setSnackbar({ open: true, message: result.error, severity: 'error' });
+    } else {
+      setSnackbar({ open: true, message: 'Doctor approved successfully', severity: 'success' });
+    }
     await reload();
     setActionLoading(false);
   };
@@ -106,7 +118,12 @@ export default function DoctorDetailPage() {
   const handleReject = async () => {
     if (!rejectReason.trim()) return;
     setActionLoading(true);
-    await rejectDoctor(doctorId, rejectReason);
+    const result = await rejectDoctor(doctorId, rejectReason);
+    if (result.error) {
+      setSnackbar({ open: true, message: result.error, severity: 'error' });
+    } else {
+      setSnackbar({ open: true, message: 'Doctor rejected', severity: 'success' });
+    }
     setRejectDialog(false);
     setRejectReason('');
     await reload();
@@ -394,6 +411,20 @@ export default function DoctorDetailPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

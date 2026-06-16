@@ -13,6 +13,8 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
 import CircularProgress from '@mui/material/CircularProgress';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { getPendingVerifications, approveDoctor, rejectDoctor } from '../actions';
@@ -39,6 +41,11 @@ export default function VerificationsPage() {
     doctorId: null,
   });
   const [rejectReason, setRejectReason] = useState('');
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error';
+  }>({ open: false, message: '', severity: 'success' });
 
   useEffect(() => {
     let cancelled = false;
@@ -64,7 +71,12 @@ export default function VerificationsPage() {
 
   const handleApprove = async (doctorId: string) => {
     setActionLoading(doctorId);
-    await approveDoctor(doctorId);
+    const result = await approveDoctor(doctorId);
+    if (result.error) {
+      setSnackbar({ open: true, message: result.error, severity: 'error' });
+    } else {
+      setSnackbar({ open: true, message: 'Doctor approved successfully', severity: 'success' });
+    }
     await reload();
     setActionLoading(null);
   };
@@ -72,7 +84,12 @@ export default function VerificationsPage() {
   const handleReject = async () => {
     if (!rejectDialog.doctorId || !rejectReason.trim()) return;
     setActionLoading(rejectDialog.doctorId);
-    await rejectDoctor(rejectDialog.doctorId, rejectReason);
+    const result = await rejectDoctor(rejectDialog.doctorId, rejectReason);
+    if (result.error) {
+      setSnackbar({ open: true, message: result.error, severity: 'error' });
+    } else {
+      setSnackbar({ open: true, message: 'Doctor rejected', severity: 'success' });
+    }
     setRejectDialog({ open: false, doctorId: null });
     setRejectReason('');
     await reload();
@@ -250,6 +267,20 @@ export default function VerificationsPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
