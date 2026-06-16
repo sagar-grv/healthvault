@@ -657,7 +657,7 @@ export default function DoctorProfilePage() {
                   setDeleting(false);
                   setDeleteConfirmOpen(false);
                 } else {
-                  router.replace('/');
+                  router.replace('/account-deleted');
                 }
               }}
             >

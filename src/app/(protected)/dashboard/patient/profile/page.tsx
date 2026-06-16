@@ -600,7 +600,7 @@ export default function PatientProfilePage() {
                   setDeleting(false);
                   setDeleteConfirmOpen(false);
                 } else {
-                  router.replace('/');
+                  router.replace('/account-deleted');
                 }
               }}
             >

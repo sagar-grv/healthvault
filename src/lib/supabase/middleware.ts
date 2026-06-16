@@ -92,11 +92,41 @@ export async function updateSession(request: NextRequest) {
       // If profile query fails, let request through to avoid redirect loop
     }
 
-    // Reject soft-deleted accounts
+    // Handle soft-deleted accounts
     if (profile?.deleted_at && !path.startsWith('/account-deleted')) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/account-deleted';
-      return propagateCookies(supabaseResponse, NextResponse.redirect(url));
+      // Check if within 72h cancellation window
+      let deletionScheduledAt: string | null = null;
+      try {
+        const { data: deleteInfo } = await supabase
+          .from('profiles')
+          .select('deletion_scheduled_at')
+          .eq('id', user.id)
+          .single();
+        deletionScheduledAt = deleteInfo?.deletion_scheduled_at ?? null;
+      } catch {
+        // If query fails, redirect to account-deleted as safety fallback
+      }
+
+      const scheduledAt = deletionScheduledAt ? new Date(deletionScheduledAt) : null;
+      const now = new Date();
+
+      if (scheduledAt && scheduledAt > now) {
+        // Within 72h window → auto-cancel deletion on re-login
+        try {
+          await supabase
+            .from('profiles')
+            .update({ deleted_at: null, deletion_scheduled_at: null })
+            .eq('id', user.id);
+        } catch {
+          // Best effort — continue to dashboard
+        }
+        // Continue to dashboard — deletion cancelled
+      } else {
+        // Past 72h or no schedule → show account-deleted page
+        const url = request.nextUrl.clone();
+        url.pathname = '/account-deleted';
+        return propagateCookies(supabaseResponse, NextResponse.redirect(url));
+      }
     }
 
     // Terms check for protected routes
