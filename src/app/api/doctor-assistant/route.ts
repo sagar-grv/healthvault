@@ -85,77 +85,86 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Build patient context from DB (cached analyses only) ─────────────────
+    // ── Build patient context from DB (batch queries — was N+1 sequential) ──────
     const patientContextParts: string[] = [];
     const healthIds = recentPatientHealthIds.slice(0, MAX_PATIENTS);
 
-    for (const healthId of healthIds) {
-      try {
-        // 1. Look up patient profile by health_id
-        const { data: patient } = await supabase
-          .from('profiles')
-          .select('id, full_name, health_id')
-          .eq('health_id', healthId)
-          .eq('role', 'patient')
-          .single();
+    if (healthIds.length > 0) {
+      // Batch 1: Fetch all patient profiles at once
+      const { data: patients } = await supabase
+        .from('profiles')
+        .select('id, full_name, health_id')
+        .in('health_id', healthIds)
+        .eq('role', 'patient');
 
-        if (!patient) continue;
+      if (patients && patients.length > 0) {
+        const patientIds = patients.map((p) => p.id);
 
-        // 2. Fetch shareable reports (most recent 3)
-        const { data: reports } = await supabase
+        // Batch 2: Fetch all shareable reports for these patients at once
+        const { data: allReports } = await supabase
           .from('reports')
-          .select('id, title, report_type, report_date')
-          .eq('patient_id', patient.id)
+          .select('id, patient_id, title, report_type, report_date')
+          .in('patient_id', patientIds)
           .eq('is_shareable', true)
-          .order('report_date', { ascending: false })
-          .limit(MAX_REPORTS_PER_PATIENT);
+          .order('report_date', { ascending: false });
 
-        if (!reports || reports.length === 0) {
-          patientContextParts.push(
-            `Patient: ${patient.full_name} (${healthId})\n  No shared reports available.`
-          );
-          continue;
-        }
-
-        // 3. Fetch cached analyses for those reports
-        const reportIds = reports.map((r) => r.id);
-        const { data: analyses } = await supabase
+        // Batch 3: Fetch all analyses for those reports at once
+        const reportIds = (allReports || []).map((r) => r.id);
+        const { data: allAnalyses } = await supabase
           .from('report_analyses')
           .select('report_id, summary, abnormal_values, medications_found, recommendation')
           .in('report_id', reportIds);
 
-        const analysisMap = new Map(analyses?.map((a) => [a.report_id, a]) ?? []);
+        // Group by patient
+        const reportsByPatient = new Map<string, typeof allReports>();
+        for (const report of allReports || []) {
+          const list = reportsByPatient.get(report.patient_id) || [];
+          list.push(report);
+          reportsByPatient.set(report.patient_id, list);
+        }
 
-        // 4. Format per-patient context block
-        const reportBlocks = reports
-          .map((r) => {
-            const analysis = analysisMap.get(r.id);
-            if (!analysis) {
-              return `  - ${r.report_type} (${r.report_date}): Not yet analyzed`;
-            }
-            const abnormals =
-              Array.isArray(analysis.abnormal_values) && analysis.abnormal_values.length > 0
-                ? analysis.abnormal_values
-                    .map(
-                      (v: { name: string; value: string; status: string }) =>
-                        `${v.name}: ${v.value} [${v.status}]`
-                    )
-                    .join(', ')
-                : 'None';
-            const meds =
-              Array.isArray(analysis.medications_found) && analysis.medications_found.length > 0
-                ? analysis.medications_found.join(', ')
-                : 'None';
-            return `  - ${r.report_type} (${r.report_date}):\n      Summary: ${analysis.summary}\n      Abnormal values: ${abnormals}\n      Medications: ${meds}`;
-          })
-          .join('\n');
+        const analysisMap = new Map(allAnalyses?.map((a) => [a.report_id, a]) ?? []);
 
-        patientContextParts.push(
-          `Patient: ${patient.full_name} (${healthId})\n  Shared reports: ${reports.length}\n${reportBlocks}`
-        );
-      } catch {
-        // Skip this patient silently — don't block the whole request
-        continue;
+        for (const patient of patients) {
+          const patientReports = (reportsByPatient.get(patient.id) || []).slice(
+            0,
+            MAX_REPORTS_PER_PATIENT
+          );
+
+          if (patientReports.length === 0) {
+            patientContextParts.push(
+              `Patient: ${patient.full_name} (${patient.health_id})\n  No shared reports available.`
+            );
+            continue;
+          }
+
+          const reportBlocks = patientReports
+            .map((r) => {
+              const analysis = analysisMap.get(r.id);
+              if (!analysis) {
+                return `  - ${r.report_type} (${r.report_date}): Not yet analyzed`;
+              }
+              const abnormals =
+                Array.isArray(analysis.abnormal_values) && analysis.abnormal_values.length > 0
+                  ? analysis.abnormal_values
+                      .map(
+                        (v: { name: string; value: string; status: string }) =>
+                          `${v.name}: ${v.value} [${v.status}]`
+                      )
+                      .join(', ')
+                  : 'None';
+              const meds =
+                Array.isArray(analysis.medications_found) && analysis.medications_found.length > 0
+                  ? analysis.medications_found.join(', ')
+                  : 'None';
+              return `  - ${r.report_type} (${r.report_date}):\n      Summary: ${analysis.summary}\n      Abnormal values: ${abnormals}\n      Medications: ${meds}`;
+            })
+            .join('\n');
+
+          patientContextParts.push(
+            `Patient: ${patient.full_name} (${patient.health_id})\n  Shared reports: ${patientReports.length}\n${reportBlocks}`
+          );
+        }
       }
     }
 

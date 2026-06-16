@@ -62,60 +62,76 @@ export async function updateSession(request: NextRequest) {
 
   // Authenticated user hitting a login/register page → send to dashboard
   if (isAuthRoute && user) {
+    // Auto-cancel any pending soft delete on re-login
+    try {
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('deleted_at, deletion_scheduled_at')
+        .eq('id', user.id)
+        .single();
+      if (prof?.deleted_at && prof?.deletion_scheduled_at) {
+        await supabase
+          .from('profiles')
+          .update({ deleted_at: null, deletion_scheduled_at: null })
+          .eq('id', user.id);
+      }
+    } catch {
+      // Best effort — don't block redirect
+    }
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);
   }
 
-  // Check terms acceptance for authenticated users on protected routes
-  if (user && isProtectedRoute) {
-    let termsAccepted = false;
+  // Single query: terms + role + deletion status (was 2 separate queries)
+  if (user && (isProtectedRoute || isAdminRoute)) {
+    let profile: {
+      terms_accepted_at: string | null;
+      role: string;
+      deleted_at: string | null;
+    } | null = null;
     try {
-      const { data: profile } = await supabase
+      const { data } = await supabase
         .from('profiles')
-        .select('terms_accepted_at')
+        .select('terms_accepted_at, role, deleted_at')
         .eq('id', user.id)
         .single();
-      termsAccepted = !!profile?.terms_accepted_at;
+      profile = data;
     } catch {
       // If profile query fails, let request through to avoid redirect loop
     }
 
-    // If user hasn't accepted terms and isn't on terms page, redirect to terms
-    if (!termsAccepted && !path.startsWith('/terms')) {
+    // Reject soft-deleted accounts
+    if (profile?.deleted_at && !path.startsWith('/account-deleted')) {
       const url = request.nextUrl.clone();
-      url.pathname = '/terms';
-      url.searchParams.set('redirect', path);
+      url.pathname = '/account-deleted';
       return NextResponse.redirect(url);
     }
 
-    // If user has accepted terms and is on terms page, redirect to destination
-    if (termsAccepted && path.startsWith('/terms')) {
-      const rawParam = request.nextUrl.searchParams.get('redirect') || '';
-      const redirectParam =
-        rawParam.startsWith('/') && !rawParam.startsWith('//') ? rawParam : '/dashboard';
-      const url = request.nextUrl.clone();
-      url.pathname = redirectParam;
-      url.searchParams.delete('redirect');
-      return NextResponse.redirect(url);
-    }
-  }
+    // Terms check for protected routes
+    if (isProtectedRoute && profile) {
+      const termsAccepted = !!profile.terms_accepted_at;
 
-  // Admin route protection — only users with role='admin' in profiles
-  if (user && isAdminRoute) {
-    let isAdmin = false;
-    try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-      isAdmin = profile?.role === 'admin';
-    } catch {
-      // If profile query fails, deny access
+      if (!termsAccepted && !path.startsWith('/terms')) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/terms';
+        url.searchParams.set('redirect', path);
+        return NextResponse.redirect(url);
+      }
+
+      if (termsAccepted && path.startsWith('/terms')) {
+        const rawParam = request.nextUrl.searchParams.get('redirect') || '';
+        const redirectParam =
+          rawParam.startsWith('/') && !rawParam.startsWith('//') ? rawParam : '/dashboard';
+        const url = request.nextUrl.clone();
+        url.pathname = redirectParam;
+        url.searchParams.delete('redirect');
+        return NextResponse.redirect(url);
+      }
     }
 
-    if (!isAdmin) {
+    // Admin route protection
+    if (isAdminRoute && profile?.role !== 'admin') {
       const url = request.nextUrl.clone();
       url.pathname = '/dashboard';
       return NextResponse.redirect(url);

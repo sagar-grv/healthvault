@@ -40,10 +40,12 @@ const SUGGESTED_QUESTIONS = [
   'Any critical findings across my patients?',
 ];
 
-// ── Simple markdown renderer ───────────────────────────────────────────────────
+// ── Safe markdown renderer (DOMPurify) ─────────────────────────────────────────
+
+import DOMPurify from 'dompurify';
 
 function MarkdownContent({ text }: { text: string }) {
-  const html = text
+  const raw = text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -52,7 +54,8 @@ function MarkdownContent({ text }: { text: string }) {
     .replace(/^- (.+)$/gm, '• $1')
     .replace(/\n/g, '<br />');
 
-  return <span dangerouslySetInnerHTML={{ __html: html }} />;
+  const clean = DOMPurify.sanitize(raw, { ALLOWED_TAGS: ['strong', 'em', 'br', 'span'] });
+  return <span dangerouslySetInnerHTML={{ __html: clean }} />;
 }
 
 // ── Typing indicator component ─────────────────────────────────────────────────

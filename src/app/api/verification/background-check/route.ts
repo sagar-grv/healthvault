@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { runVerificationChain } from '@/lib/verification/chain';
 
+// Rate limit: max 3 background checks per user per hour
+const bgCheckAttempts = new Map<string, { count: number; resetAt: number }>();
+const RATE_WINDOW_MS = 60 * 60 * 1000;
+const RATE_MAX = 3;
+
 export async function POST() {
   try {
     const supabase = await createClient();
@@ -12,6 +17,21 @@ export async function POST() {
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Rate limit check
+    const now = Date.now();
+    const entry = bgCheckAttempts.get(user.id);
+    if (entry && now <= entry.resetAt) {
+      entry.count++;
+      if (entry.count > RATE_MAX) {
+        return NextResponse.json(
+          { error: 'Too many verification attempts. Please try again later.' },
+          { status: 429 }
+        );
+      }
+    } else {
+      bgCheckAttempts.set(user.id, { count: 1, resetAt: now + RATE_WINDOW_MS });
     }
 
     // Get doctor profile
