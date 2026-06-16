@@ -58,6 +58,7 @@ export default function DoctorDashboardClient({
   const [searchError, setSearchError] = useState('');
   const [isPending, startTransition] = useTransition();
   const [showMyQR, setShowMyQR] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   // Use server action for search — eliminates 3 client→Supabase round-trips
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
@@ -157,7 +158,12 @@ export default function DoctorDashboardClient({
             >
               <PersonIcon sx={{ fontSize: 22 }} />
             </IconButton>
-            <IconButton onClick={handleLogout} size="small" aria-label="Logout" sx={{ ml: 0.5 }}>
+            <IconButton
+              onClick={() => setLogoutDialogOpen(true)}
+              size="small"
+              aria-label="Logout"
+              sx={{ ml: 0.5 }}
+            >
               <LogoutIcon sx={{ fontSize: 22 }} />
             </IconButton>
           </Toolbar>
@@ -220,10 +226,11 @@ export default function DoctorDashboardClient({
               sx={{
                 flex: 1,
                 textAlign: 'center',
-                bgcolor: doctorProfile?.is_verified
-                  ? 'rgba(5,150,105,0.08)'
-                  : 'rgba(245,158,11,0.08)',
-                border: `1px solid ${doctorProfile?.is_verified ? 'rgba(5,150,105,0.30)' : 'rgba(245,158,11,0.35)'}`,
+                bgcolor:
+                  doctorProfile?.verification_state === 'admin_verified'
+                    ? 'rgba(5,150,105,0.08)'
+                    : 'rgba(245,158,11,0.08)',
+                border: `1px solid ${doctorProfile?.verification_state === 'admin_verified' ? 'rgba(5,150,105,0.30)' : 'rgba(245,158,11,0.35)'}`,
                 boxShadow: 'none',
               }}
             >
@@ -231,14 +238,19 @@ export default function DoctorDashboardClient({
                 <Typography
                   variant="h4"
                   sx={{
-                    color: doctorProfile?.is_verified ? 'success.main' : 'warning.main',
+                    color:
+                      doctorProfile?.verification_state === 'admin_verified'
+                        ? 'success.main'
+                        : 'warning.main',
                     fontWeight: 800,
                   }}
                 >
-                  {doctorProfile?.is_verified ? '✓' : '—'}
+                  {doctorProfile?.verification_state === 'admin_verified' ? '✓' : '—'}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-                  {doctorProfile?.is_verified ? 'Verified' : 'Unverified'}
+                  {doctorProfile?.verification_state === 'admin_verified'
+                    ? 'Verified'
+                    : 'Unverified'}
                 </Typography>
               </CardContent>
             </Card>
@@ -381,6 +393,25 @@ export default function DoctorDashboardClient({
 
       {/* Floating AI Assistant */}
       <DoctorAIAssistant profile={profile} doctorProfile={doctorProfile} />
+
+      {/* Logout Confirmation Dialog */}
+      <Dialog
+        open={logoutDialogOpen}
+        onClose={() => setLogoutDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Log out of HealthVault?</DialogTitle>
+        <DialogContent>
+          <Typography>You can always log back in to continue managing your patients.</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLogoutDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleLogout} color="error" variant="contained">
+            Log Out
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* My QR Code Dialog */}
       <Dialog open={showMyQR} onClose={() => setShowMyQR(false)} maxWidth="xs" fullWidth>

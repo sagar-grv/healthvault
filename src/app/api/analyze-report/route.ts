@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if AI flagged the document as non-medical
-    if (rawText.includes('"not_medical_document"')) {
+    if (rawText.includes('not_medical_document')) {
       return NextResponse.json(
         { error: 'This document does not appear to be a medical record.' },
         { status: 422 }

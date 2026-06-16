@@ -187,59 +187,47 @@ RULES — follow these absolutely:
 PATIENT CONTEXT (shared records only — patients have consented to share these):
 ${patientContext}`;
 
-    // ── Prepare chat history for Gemini ──────────────────────────────────────
-    const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'AI assistant not configured' }, { status: 503 });
-    }
+    // ── Prepare messages for AI ──────────────────────────────────────────────
+    // Build messages array for provider-router
+    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+      { role: 'system', content: systemPrompt },
+    ];
 
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(apiKey);
-
-    // Trim history to last MAX_HISTORY_MESSAGES messages to keep context window manageable
+    // Add chat history
     const trimmedHistory = history.slice(-MAX_HISTORY_MESSAGES);
-
-    // Map our history format to Gemini's Content format
-    const geminiHistory = trimmedHistory.map((msg) => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.text }],
-    }));
-
-    let rawReply = '';
-    let lastErr: unknown = null;
-
-    // Model fallback: gemini-2.5-flash → gemini-2.0-flash-lite
-    const models = ['gemini-2.5-flash', 'gemini-2.0-flash-lite'];
-    for (const modelName of models) {
-      try {
-        const m = genAI.getGenerativeModel({
-          model: modelName,
-          systemInstruction: systemPrompt,
-        });
-        const c = m.startChat({ history: geminiHistory });
-        const result = await c.sendMessage(message.trim());
-        rawReply = result.response.text();
-        break;
-      } catch (e: unknown) {
-        lastErr = e;
-        const status = (e as { status?: number })?.status;
-        if (status === 404) continue;
-        if (status === 429 || status === 503) {
-          await new Promise((r) => setTimeout(r, 2000));
-          continue;
-        }
-        throw e;
-      }
+    for (const msg of trimmedHistory) {
+      messages.push({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.text,
+      });
     }
 
-    if (!rawReply) {
-      const status = (lastErr as { status?: number })?.status;
-      if (status === 429) {
+    // Add current message
+    messages.push({ role: 'user', content: message.trim() });
+
+    // Use provider-router for Gemini → NVIDIA fallback
+    const { callTextAI } = await import('@/lib/ai/provider-router');
+    let rawReply = '';
+
+    try {
+      const aiResult = await callTextAI(messages, 2048);
+      rawReply = aiResult.text;
+    } catch (e) {
+      const err = e as { message?: string };
+      if (
+        err.message?.includes('429') ||
+        err.message?.includes('quota') ||
+        err.message?.includes('rate')
+      ) {
         return NextResponse.json(
           { error: 'AI service is busy. Please try again in a moment.' },
           { status: 429 }
         );
       }
+      throw e;
+    }
+
+    if (!rawReply) {
       return NextResponse.json(
         { error: 'Could not get a response from AI. Please try again.' },
         { status: 500 }

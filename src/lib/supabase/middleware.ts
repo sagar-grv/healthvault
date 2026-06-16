@@ -32,8 +32,10 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isProtectedRoute = path.startsWith('/dashboard') || path.startsWith('/onboarding');
+  const isProtectedRoute =
+    path.startsWith('/dashboard') || path.startsWith('/onboarding') || path.startsWith('/admin');
   const isAuthRoute = path.startsWith('/login') || path.startsWith('/register');
+  const isAdminRoute = path.startsWith('/admin');
 
   // Auth error on a protected route → clear stale cookies and redirect to login.
   // Without this, a stale sb-* cookie causes an infinite reload loop.
@@ -95,6 +97,27 @@ export async function updateSession(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = redirectParam;
       url.searchParams.delete('redirect');
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // Admin route protection — only users with role='admin' in profiles
+  if (user && isAdminRoute) {
+    let isAdmin = false;
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      isAdmin = profile?.role === 'admin';
+    } catch {
+      // If profile query fails, deny access
+    }
+
+    if (!isAdmin) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/dashboard';
       return NextResponse.redirect(url);
     }
   }

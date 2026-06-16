@@ -28,6 +28,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import ThemeToggle from '@/components/ThemeToggle';
 import { MEDICAL_COUNCILS } from '@/constants';
 import { createClient } from '@/lib/supabase/client';
+import { submitForVerification } from '../actions';
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function DoctorProfilePage() {
@@ -43,10 +44,11 @@ export default function DoctorProfilePage() {
   const [clinicName, setClinicName] = useState('');
   const [clinicAddress, setClinicAddress] = useState('');
   const [city, setCity] = useState('');
-  const [isVerified, setIsVerified] = useState(false);
+  const [verificationState, setVerificationState] = useState('unverified');
   const [userId, setUserId] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [reSubmitting, setReSubmitting] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -81,7 +83,7 @@ export default function DoctorProfilePage() {
         setClinicName(doctorProfile.clinic_name || '');
         setClinicAddress(doctorProfile.clinic_address || '');
         setCity(doctorProfile.city || '');
-        setIsVerified(doctorProfile.is_verified || false);
+        setVerificationState(doctorProfile.verification_state || 'unverified');
       }
       setLoading(false);
     };
@@ -132,6 +134,27 @@ export default function DoctorProfilePage() {
       setSnackbar({ open: true, message: 'Something went wrong.', severity: 'error' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleResubmit = async () => {
+    setReSubmitting(true);
+    try {
+      const result = await submitForVerification();
+      if (result?.error) {
+        setSnackbar({ open: true, message: result.error, severity: 'error' });
+      } else {
+        setVerificationState('pending');
+        setSnackbar({
+          open: true,
+          message: 'Re-submitted for verification. Waiting for admin review.',
+          severity: 'success',
+        });
+      }
+    } catch {
+      setSnackbar({ open: true, message: 'Something went wrong.', severity: 'error' });
+    } finally {
+      setReSubmitting(false);
     }
   };
 
@@ -251,7 +274,7 @@ export default function DoctorProfilePage() {
 
             {/* Verification badge */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
-              {isVerified ? (
+              {verificationState === 'admin_verified' ? (
                 <Chip
                   icon={<VerifiedIcon sx={{ fontSize: 14, color: 'secondary.light !important' }} />}
                   label="Verified"
@@ -264,7 +287,7 @@ export default function DoctorProfilePage() {
                     '& .MuiChip-icon': { color: '#6EE7B7' },
                   }}
                 />
-              ) : (
+              ) : verificationState === 'pending' ? (
                 <Chip
                   icon={<PendingIcon sx={{ fontSize: 14 }} />}
                   label="Pending Verification"
@@ -274,6 +297,30 @@ export default function DoctorProfilePage() {
                     color: '#FEF3C7',
                     fontWeight: 600,
                     border: '1px solid rgba(251,191,36,0.4)',
+                  }}
+                />
+              ) : verificationState === 'rejected' ? (
+                <Chip
+                  icon={<PendingIcon sx={{ fontSize: 14 }} />}
+                  label="Verification Rejected"
+                  size="small"
+                  sx={{
+                    bgcolor: 'rgba(239,68,68,0.25)',
+                    color: '#FCA5A5',
+                    fontWeight: 600,
+                    border: '1px solid rgba(239,68,68,0.4)',
+                  }}
+                />
+              ) : (
+                <Chip
+                  icon={<PendingIcon sx={{ fontSize: 14 }} />}
+                  label="Unverified"
+                  size="small"
+                  sx={{
+                    bgcolor: 'rgba(255,255,255,0.12)',
+                    color: 'rgba(255,255,255,0.7)',
+                    fontWeight: 600,
+                    border: '1px solid rgba(255,255,255,0.2)',
                   }}
                 />
               )}
@@ -288,6 +335,28 @@ export default function DoctorProfilePage() {
                 }}
               />
             </Box>
+
+            {/* Re-submit for verification (shown when rejected) */}
+            {verificationState === 'rejected' && (
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleResubmit}
+                disabled={reSubmitting}
+                sx={{
+                  mt: 1.5,
+                  color: 'white',
+                  borderColor: 'rgba(255,255,255,0.4)',
+                  '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' },
+                }}
+              >
+                {reSubmitting ? (
+                  <CircularProgress size={16} color="inherit" />
+                ) : (
+                  'Re-submit for Verification'
+                )}
+              </Button>
+            )}
 
             {/* Profile completion progress */}
             <Box>

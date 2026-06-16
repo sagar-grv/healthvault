@@ -3,9 +3,72 @@ import type { ReportType } from '@/types';
 export interface AnalysisResult {
   summary: string;
   key_findings: string[];
-  abnormal_values: { name: string; value: string; normal_range: string; status: string }[];
+  abnormal_values: {
+    name: string;
+    value: string;
+    normal_range: string;
+    status: string;
+    clinical_significance?: string;
+    severity?: string;
+  }[];
   medications_found: string[];
   recommendation: string;
+  report_type_detected?: string;
+  vital_signs?: {
+    blood_pressure?: string;
+    heart_rate?: string;
+    temperature?: string;
+    other?: string;
+  };
+  risk_assessment?: {
+    overall_risk: string;
+    risk_factors: string[];
+    urgency: string;
+  };
+  follow_up_actions?: string[];
+  disclaimer?: string;
+}
+
+/**
+ * Full GeminiAnalysis type — the raw structured output from the updated prompt.
+ * parseGeminiAnalysis normalizes this into AnalysisResult for backward compat.
+ */
+export interface GeminiAnalysis {
+  summary: string;
+  report_type_detected?: string;
+  key_findings: Array<{
+    finding: string;
+    clinical_significance: string;
+    severity: 'normal' | 'mild' | 'moderate' | 'severe' | 'critical';
+  }>;
+  abnormal_values: Array<{
+    name: string;
+    value: string;
+    normal_range: string;
+    status: 'high' | 'low' | 'critical_high' | 'critical_low' | 'normal';
+    clinical_significance?: string;
+    severity?: 'normal' | 'mild' | 'moderate' | 'severe' | 'critical';
+  }>;
+  medications_found: Array<{
+    name: string;
+    dosage: string;
+    frequency: string;
+    purpose?: string;
+  }>;
+  vital_signs?: {
+    blood_pressure?: string;
+    heart_rate?: string;
+    temperature?: string;
+    other?: string;
+  };
+  risk_assessment?: {
+    overall_risk: 'low' | 'moderate' | 'high' | 'critical';
+    risk_factors: string[];
+    urgency: 'routine' | 'soon' | 'urgent' | 'emergency';
+  };
+  follow_up_actions?: string[];
+  recommendation?: string;
+  disclaimer?: string;
 }
 
 // ─── buildAnalysisPrompt ──────────────────────────────────────────────────────
@@ -74,34 +137,113 @@ export function parseGeminiAnalysis(raw: string): AnalysisResult | null {
     return null;
   }
 
-  // Normalize summary: must be a string
+  // ── Normalize summary ──
   const rawSummary = parsed.summary;
   const summary = rawSummary != null ? String(rawSummary) : 'No summary available.';
 
-  // Normalize arrays with safe defaults
-  const key_findings = Array.isArray(parsed.key_findings)
-    ? ((parsed.key_findings as unknown[]).filter((v) => typeof v === 'string') as string[])
-    : [];
+  // ── Normalize key_findings (handle both string[] and object[]) ──
+  let key_findings: string[];
+  if (Array.isArray(parsed.key_findings)) {
+    key_findings = (parsed.key_findings as unknown[])
+      .map((v) => {
+        if (typeof v === 'string') return v;
+        if (v && typeof v === 'object' && 'finding' in v) {
+          // New structured format: { finding, clinical_significance, severity }
+          const obj = v as Record<string, unknown>;
+          const finding = String(obj.finding ?? '');
+          const sig = obj.clinical_significance ? ` (${obj.clinical_significance})` : '';
+          return finding + sig;
+        }
+        return null;
+      })
+      .filter((v): v is string => v !== null && v.length > 0);
+  } else {
+    key_findings = [];
+  }
 
-  const abnormal_values = Array.isArray(parsed.abnormal_values)
-    ? (parsed.abnormal_values as Record<string, unknown>[]).map((v) => ({
-        name: String(v.name ?? ''),
-        value: String(v.value ?? ''),
-        normal_range: String(v.normal_range ?? ''),
-        // Normalize status to lowercase
-        status: String(v.status ?? 'unknown').toLowerCase(),
-      }))
-    : [];
+  // ── Normalize abnormal_values (handle old and new formats) ──
+  let abnormal_values: AnalysisResult['abnormal_values'];
+  if (Array.isArray(parsed.abnormal_values)) {
+    abnormal_values = (parsed.abnormal_values as Record<string, unknown>[]).map((v) => ({
+      name: String(v.name ?? ''),
+      value: String(v.value ?? ''),
+      normal_range: String(v.normal_range ?? ''),
+      status: String(v.status ?? 'unknown').toLowerCase(),
+      clinical_significance: v.clinical_significance ? String(v.clinical_significance) : undefined,
+      severity: v.severity ? String(v.severity) : undefined,
+    }));
+  } else {
+    abnormal_values = [];
+  }
 
-  const medications_found = Array.isArray(parsed.medications_found)
-    ? ((parsed.medications_found as unknown[]).filter((v) => typeof v === 'string') as string[])
-    : [];
+  // ── Normalize medications_found (handle both string[] and object[]) ──
+  let medications_found: string[];
+  if (Array.isArray(parsed.medications_found)) {
+    medications_found = (parsed.medications_found as unknown[])
+      .map((v) => {
+        if (typeof v === 'string') return v;
+        if (v && typeof v === 'object') {
+          // New structured format: { name, dosage, frequency, purpose }
+          const obj = v as Record<string, unknown>;
+          const parts: string[] = [];
+          if (obj.name) parts.push(String(obj.name));
+          if (obj.dosage) parts.push(String(obj.dosage));
+          if (obj.frequency) parts.push(String(obj.frequency));
+          return parts.length > 0 ? parts.join(' ') : null;
+        }
+        return null;
+      })
+      .filter((v): v is string => v !== null && v.length > 0);
+  } else {
+    medications_found = [];
+  }
 
-  // Recommendation: ensure it always mentions "doctor"
+  // ── Recommendation ──
   const rawRec = parsed.recommendation;
   const recommendation = rawRec
     ? String(rawRec)
     : 'Please consult your doctor for further guidance. This is not medical advice.';
 
-  return { summary, key_findings, abnormal_values, medications_found, recommendation };
+  // ── Optional new fields ──
+  const report_type_detected = parsed.report_type_detected
+    ? String(parsed.report_type_detected)
+    : undefined;
+
+  const vital_signs =
+    parsed.vital_signs && typeof parsed.vital_signs === 'object'
+      ? (parsed.vital_signs as Record<string, unknown> as AnalysisResult['vital_signs'])
+      : undefined;
+
+  const risk_assessment =
+    parsed.risk_assessment && typeof parsed.risk_assessment === 'object'
+      ? (() => {
+          const ra = parsed.risk_assessment as Record<string, unknown>;
+          return {
+            overall_risk: String(ra.overall_risk ?? 'unknown'),
+            risk_factors: Array.isArray(ra.risk_factors)
+              ? (ra.risk_factors as unknown[]).map(String)
+              : [],
+            urgency: String(ra.urgency ?? 'routine'),
+          };
+        })()
+      : undefined;
+
+  const follow_up_actions = Array.isArray(parsed.follow_up_actions)
+    ? (parsed.follow_up_actions as unknown[]).map(String).filter((s) => s.length > 0)
+    : undefined;
+
+  const disclaimer = parsed.disclaimer ? String(parsed.disclaimer) : undefined;
+
+  return {
+    summary,
+    key_findings,
+    abnormal_values,
+    medications_found,
+    recommendation,
+    report_type_detected,
+    vital_signs,
+    risk_assessment,
+    follow_up_actions,
+    disclaimer,
+  };
 }
