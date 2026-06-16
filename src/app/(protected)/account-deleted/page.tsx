@@ -12,14 +12,17 @@ import { createClient } from '@/lib/supabase/client';
 export default function AccountDeletedPage() {
   const [timeLeft, setTimeLeft] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const fetchTimeLeft = async () => {
+    const fetchData = async () => {
       try {
         const supabase = createClient();
         const {
           data: { user },
         } = await supabase.auth.getUser();
+        setIsAuthenticated(!!user);
+
         if (!user) {
           setLoading(false);
           return;
@@ -61,7 +64,7 @@ export default function AccountDeletedPage() {
       setLoading(false);
     };
 
-    fetchTimeLeft();
+    fetchData();
   }, []);
 
   return (
@@ -92,11 +95,20 @@ export default function AccountDeletedPage() {
             You can log in within the next 72 hours to cancel the deletion. After that, your account
             and all data will be permanently removed.
           </Typography>
-          <Link href="/login" passHref>
-            <Button variant="contained" color="secondary" sx={{ fontWeight: 700 }}>
-              Log In to Cancel Deletion
-            </Button>
-          </Link>
+
+          {isAuthenticated ? (
+            <Link href="/dashboard" passHref>
+              <Button variant="contained" color="secondary" sx={{ fontWeight: 700 }}>
+                Go to Dashboard to Cancel Deletion
+              </Button>
+            </Link>
+          ) : (
+            <Link href="/login" passHref>
+              <Button variant="contained" color="secondary" sx={{ fontWeight: 700 }}>
+                Log In to Cancel Deletion
+              </Button>
+            </Link>
+          )}
         </CardContent>
       </Card>
     </Box>
