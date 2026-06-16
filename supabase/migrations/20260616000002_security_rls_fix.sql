@@ -1,5 +1,5 @@
 -- Security RLS fix: Scope report_analyses access to explicit sharing relationships
--- Also adds Permissions-Policy note (handled in next.config.mjs)
+-- Also adds admin consent_logs read policy for HIPAA audit trail
 
 -- Drop the overly permissive policy that allowed ANY doctor to read ANY shareable analysis
 DROP POLICY IF EXISTS "Doctors read shared analyses" ON public.report_analyses;
@@ -19,7 +19,7 @@ CREATE POLICY "Doctors read shared analyses" ON public.report_analyses
           SELECT 1 FROM public.shared_reports sr
           WHERE sr.patient_id = r.patient_id
           AND sr.doctor_id = auth.uid()
-          AND r.id::text = ANY(SELECT jsonb_array_elements_text(sr.report_ids))
+          AND r.id = ANY(sr.report_ids)
         )
       )
     )
