@@ -1,6 +1,13 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+function propagateCookies(from: NextResponse, to: NextResponse) {
+  from.cookies.getAll().forEach(({ name, value }) => {
+    to.cookies.set(name, value);
+  });
+  return to;
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -57,30 +64,14 @@ export async function updateSession(request: NextRequest) {
   if (isProtectedRoute && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
-    return NextResponse.redirect(url);
+    return propagateCookies(supabaseResponse, NextResponse.redirect(url));
   }
 
   // Authenticated user hitting a login/register page → send to dashboard
   if (isAuthRoute && user) {
-    // Auto-cancel any pending soft delete on re-login
-    try {
-      const { data: prof } = await supabase
-        .from('profiles')
-        .select('deleted_at, deletion_scheduled_at')
-        .eq('id', user.id)
-        .single();
-      if (prof?.deleted_at && prof?.deletion_scheduled_at) {
-        await supabase
-          .from('profiles')
-          .update({ deleted_at: null, deletion_scheduled_at: null })
-          .eq('id', user.id);
-      }
-    } catch {
-      // Best effort — don't block redirect
-    }
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
-    return NextResponse.redirect(url);
+    return propagateCookies(supabaseResponse, NextResponse.redirect(url));
   }
 
   // Single query: terms + role + deletion status (was 2 separate queries)
@@ -105,7 +96,7 @@ export async function updateSession(request: NextRequest) {
     if (profile?.deleted_at && !path.startsWith('/account-deleted')) {
       const url = request.nextUrl.clone();
       url.pathname = '/account-deleted';
-      return NextResponse.redirect(url);
+      return propagateCookies(supabaseResponse, NextResponse.redirect(url));
     }
 
     // Terms check for protected routes
@@ -116,7 +107,7 @@ export async function updateSession(request: NextRequest) {
         const url = request.nextUrl.clone();
         url.pathname = '/terms';
         url.searchParams.set('redirect', path);
-        return NextResponse.redirect(url);
+        return propagateCookies(supabaseResponse, NextResponse.redirect(url));
       }
 
       if (termsAccepted && path.startsWith('/terms')) {
@@ -126,7 +117,7 @@ export async function updateSession(request: NextRequest) {
         const url = request.nextUrl.clone();
         url.pathname = redirectParam;
         url.searchParams.delete('redirect');
-        return NextResponse.redirect(url);
+        return propagateCookies(supabaseResponse, NextResponse.redirect(url));
       }
     }
 
@@ -134,7 +125,7 @@ export async function updateSession(request: NextRequest) {
     if (isAdminRoute && profile?.role !== 'admin') {
       const url = request.nextUrl.clone();
       url.pathname = '/dashboard';
-      return NextResponse.redirect(url);
+      return propagateCookies(supabaseResponse, NextResponse.redirect(url));
     }
   }
 
