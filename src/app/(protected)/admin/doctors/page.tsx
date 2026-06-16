@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -8,7 +8,9 @@ import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
+import Button from '@mui/material/Button';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { getAllDoctors } from '../actions';
 
 interface Doctor {
@@ -32,12 +34,24 @@ export default function DoctorsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const result = await getAllDoctors();
+    if ('doctors' in result) setDoctors(result.doctors as Doctor[]);
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+    async function load() {
       const result = await getAllDoctors();
-      if ('doctors' in result) setDoctors(result.doctors as Doctor[]);
-      setLoading(false);
-    })();
+      if (!cancelled && 'doctors' in result) setDoctors(result.doctors as Doctor[]);
+      if (!cancelled) setLoading(false);
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (loading) {
@@ -50,9 +64,14 @@ export default function DoctorsPage() {
 
   return (
     <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 960 }}>
-      <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-        All Doctors
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          All Doctors
+        </Typography>
+        <Button size="small" startIcon={<RefreshIcon />} onClick={fetchData} disabled={loading}>
+          Refresh
+        </Button>
+      </Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
         {doctors.length} registered doctor{doctors.length !== 1 ? 's' : ''}
       </Typography>
@@ -75,6 +94,15 @@ export default function DoctorsPage() {
                 <Typography variant="body2" color="text.secondary">
                   {d.registration_number} · {d.council_name}
                 </Typography>
+                {d.profiles?.health_id && (
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ fontFamily: 'monospace' }}
+                  >
+                    ID: {d.profiles.health_id}
+                  </Typography>
+                )}
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Chip
