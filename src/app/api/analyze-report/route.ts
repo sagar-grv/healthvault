@@ -214,6 +214,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Heuristic fallback: if AI analyzed a non-medical document but didn't return the error JSON,
+    // detect it by checking if the analysis has no medical content
+    const hasMedicalContent =
+      (analysis.abnormal_values && analysis.abnormal_values.length > 0) ||
+      (analysis.medications_found && analysis.medications_found.length > 0) ||
+      (analysis.key_findings && analysis.key_findings.length > 0) ||
+      (analysis.report_type_detected && analysis.report_type_detected !== 'other');
+
+    if (!hasMedicalContent) {
+      return NextResponse.json(
+        { error: 'This document does not appear to be a medical record.' },
+        { status: 422 }
+      );
+    }
+
     // Update audit log with model used
     await logAuditEntry(supabase, {
       user_id: user.id,

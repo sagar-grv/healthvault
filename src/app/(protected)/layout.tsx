@@ -1,9 +1,10 @@
-export default function ProtectedLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  // Auth check is handled by proxy.ts (middleware)
-  // No need to duplicate it here — proxy redirects unauthenticated users to /login
-  return <>{children}</>;
+import ExitConfirmation from '@/components/ExitConfirmation';
+
+export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <ExitConfirmation />
+      {children}
+    </>
+  );
 }
