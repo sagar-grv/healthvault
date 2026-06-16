@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
+import Button from '@mui/material/Button';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { getAllPatients } from '../actions';
 
 interface Patient {
@@ -20,12 +22,24 @@ export default function PatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const result = await getAllPatients();
+    if ('patients' in result) setPatients(result.patients as Patient[]);
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+    async function load() {
       const result = await getAllPatients();
-      if ('patients' in result) setPatients(result.patients as Patient[]);
-      setLoading(false);
-    })();
+      if (!cancelled && 'patients' in result) setPatients(result.patients as Patient[]);
+      if (!cancelled) setLoading(false);
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (loading) {
@@ -38,9 +52,14 @@ export default function PatientsPage() {
 
   return (
     <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 960 }}>
-      <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-        All Patients
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          All Patients
+        </Typography>
+        <Button size="small" startIcon={<RefreshIcon />} onClick={fetchData} disabled={loading}>
+          Refresh
+        </Button>
+      </Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
         {patients.length} registered patient{patients.length !== 1 ? 's' : ''}
       </Typography>

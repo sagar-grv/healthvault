@@ -147,6 +147,17 @@ export async function deleteAccount(): Promise<{ error?: string }> {
 
   if (authError || !user) return { error: 'Not authenticated' };
 
+  // Create a service-role client to delete the auth user
+  const { createClient: createServiceClient } = await import('@supabase/supabase-js');
+  const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!serviceUrl || !serviceKey) return { error: 'Server misconfigured' };
+
+  const serviceSupabase = createServiceClient(serviceUrl, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
   // 1. Delete storage files
   const { data: files } = await supabase.storage.from('reports').list(user.id);
   if (files && files.length > 0) {
@@ -163,8 +174,11 @@ export async function deleteAccount(): Promise<{ error?: string }> {
   await supabase.from('admin_audit_log').delete().eq('target_id', user.id);
   await supabase.from('profiles').delete().eq('id', user.id);
 
-  // 3. Sign out (auth user remains but profile is deleted — GDPR compliant)
-  await supabase.auth.signOut();
+  // 3. Delete the Supabase Auth user (prevents login with same credentials)
+  const { error: deleteAuthError } = await serviceSupabase.auth.admin.deleteUser(user.id);
+  if (deleteAuthError) {
+    return { error: `Failed to delete auth account: ${deleteAuthError.message}` };
+  }
 
   return {};
 }

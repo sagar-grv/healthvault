@@ -41,14 +41,14 @@ interface VerificationRecord {
   method: string;
   status: string;
   confidence_score: number;
-  verified_at: string;
+  created_at: string;
   error_message: string | null;
 }
 
 interface AuditRecord {
   id: string;
   action: string;
-  action_time: string;
+  created_at: string;
   previous_state: string | null;
   new_state: string | null;
   reason: string | null;
@@ -333,7 +333,7 @@ export default function DoctorDetailPage() {
                       {v.method.replace('_', ' ')}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {new Date(v.verified_at).toLocaleString()}
+                      {new Date(v.created_at).toLocaleString()}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -373,7 +373,7 @@ export default function DoctorDetailPage() {
                     {log.action.replace('_', ' ')}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {new Date(log.action_time).toLocaleString()}
+                    {new Date(log.created_at).toLocaleString()}
                     {log.previous_state && ` · ${log.previous_state} → ${log.new_state}`}
                     {log.reason && ` · Reason: ${log.reason}`}
                   </Typography>
