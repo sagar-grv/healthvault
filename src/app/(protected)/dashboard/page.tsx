@@ -85,6 +85,11 @@ export default async function DashboardPage() {
     redirect('/login?error=setup_failed');
   }
 
+  // Admin users skip onboarding and go straight to admin dashboard
+  if (profile.role === 'admin') {
+    redirect('/admin');
+  }
+
   // Role-based routing — only patient and doctor are supported
   if (!profile.onboarding_complete) {
     redirect(profile.role === 'patient' ? '/onboarding/patient' : '/onboarding/doctor');
