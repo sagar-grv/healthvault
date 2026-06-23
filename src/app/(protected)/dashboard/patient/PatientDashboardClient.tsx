@@ -346,7 +346,7 @@ export default function PatientDashboardClient({
       icon: <EmergencyIcon />,
       color: '#DC2626',
       bg: 'rgba(220,38,38,0.08)',
-      onClick: () => router.push('/dashboard/patient/profile'),
+      onClick: () => router.push('/dashboard/patient/emergency-card'),
       cta: 'Set up',
     },
     {
