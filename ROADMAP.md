@@ -1,64 +1,81 @@
 # HealthVault Roadmap
 
+## Product Direction
+
+HealthVault is becoming a trusted medical timeline and doctor-visit preparation product for families managing chronic care. The first beachhead is caregivers managing recurring records for elderly parents, diabetes, heart disease, kidney disease, pregnancy, and similar long-running care.
+
+Core promise: **prepare and share the right medical history before a doctor visit in 60 seconds.**
+
 ## Completed
 
-- [x] Supabase project setup (ctofuiuogawqcmyedyno)
-- [x] Database schema: profiles, doctor_profiles, reports, access_logs, search_attempts
-- [x] RLS policies on all tables
-- [x] Supabase MCP configured and working
-- [x] Firebase MCP configured and working
-- [x] Gemini API integration for medical report analysis
-- [x] Patient report upload flow
-- [x] Doctor patient search by Health ID
-- [x] Report viewing with AI analysis
-- [x] Access control (doctor can only view with permission)
-- [x] Mobile responsive design
-- [x] Doctor AI Assistant
-- [x] Local Supabase Docker dev environment
-- [x] Production deployment on Vercel
-- [x] GitHub repo connected with auto-deploy
+- [x] Supabase project setup and production deployment
+- [x] Base schema: profiles, doctor profiles, reports, access logs, search attempts
+- [x] RLS policies on core tables
+- [x] Patient report upload and camera capture flow
+- [x] Report viewing and AI-assisted analysis/explanation
+- [x] Doctor Health ID lookup
+- [x] Explicit doctor QR sharing via `shared_reports`
+- [x] Patient access log and revoke flow
+- [x] Doctor shared-patients view
+- [x] Emergency medical card with public minimal-data page
+- [x] Doctor verification and admin approval/rejection flow
+- [x] Soft delete with 72-hour cancellation window
+- [x] Sentry SDK installed
+- [x] GitHub Actions CI, CodeQL, Dependabot, Husky/lint-staged
 
-### CI/CD Pipeline (Industry Standard)
+## Current Productization Sprint
 
-- [x] Dependabot — weekly dependency updates
-- [x] GitHub Actions CI — lint → type-check → test → build
-- [x] CodeQL — automated security vulnerability scanning
-- [x] Playwright E2E — browser tests on Vercel preview deployments
-- [x] Pre-commit hooks — Husky + lint-staged (shift-left quality)
+- [ ] Replace generic health-locker positioning with family chronic-care visit preparation
+- [ ] Redesign patient dashboard around actions: visit prep, upload, timeline, shares, emergency, family, trust
+- [ ] Redesign doctor dashboard around shared patients, fast lookup, verification, and patient context
+- [ ] Expand admin dashboard into trust operations overview
+- [ ] Harden cron and public emergency routes
+- [ ] Add missing E2E coverage or remove stale Playwright claims
+- [ ] Add persistent rate limiting for public and verification-sensitive routes
 
-### AI Agents (Replaces 6-person team)
+## Next Product Sprints
 
-- [x] Planner Agent — product manager + eng lead (`.opencode/agents/planner.md`)
-- [x] Security Reviewer Agent — security engineer (`.opencode/agents/security-reviewer.md`)
-- [x] Monitor Agent — SRE + incident commander (`.opencode/agents/monitor.md`)
+### Sprint 2: Patient Product Loop
 
-### Infrastructure & Security
+- [ ] Medical timeline grouped by report date and type
+- [ ] Doctor visit pack / doctor summary
+- [ ] Trust center for active shares, access logs, revoke, export/delete
+- [ ] Emergency card polish
+- [ ] Family profiles v1
 
-- [x] Sentry `@sentry/nextjs` SDK installed + configured (env-var DSN)
-- [x] Branch protection — 1 review + CI + CodeQL + admin enforcement
-- [x] GitHub Secrets — Supabase URL + anon key + Vercel project ID
-- [x] CodeQL path filter widened (root `.ts` files)
-- [x] Playwright E2E — Vercel preview URL via secret
-- [x] Dependabot safe PRs merged (ts-jest, supabase-js, react, setup-node)
-- [x] `src/.env.local.example` docs for all env vars
+### Sprint 3: Doctor Product Loop
 
-## In Progress
+- [ ] One-page doctor-facing patient context
+- [ ] Recent patient contexts
+- [ ] Abnormal trend preview
+- [ ] AI assistant as secondary, context-aware support
 
-- [ ] Firebase Auth integration (Google Sign-In + Email)
+### Sprint 4: Admin Trust Operations
 
-## Planned
+- [ ] Doctor verification queue polish
+- [ ] User search by email, Health ID, role, status
+- [ ] Active shares viewer
+- [ ] Access logs viewer
+- [ ] AI usage and flagged audit viewer
+- [ ] Deleted accounts queue
+- [ ] System health page
+- [ ] Admin audit log viewer
 
-- [ ] **Sentry Account**: Create account at sentry.io → add `SENTRY_DSN` to Vercel env vars → monitoring goes live
-- [ ] QR Scanner (re-enable camera detection)
-- [ ] Family Profiles (manage reports for family members)
+## Deferred
+
+- [ ] Firebase Auth migration
+- [ ] Native Android/iOS apps
+- [ ] Offline on-device AI
+- [ ] Push notifications
+- [ ] Full ABDM integration
+- [ ] Broad analytics dashboard
 
 ## Backlog
 
-- [ ] Dependabot high-risk PRs: eslint v10, typescript v6, @types/node v25, codeql v4, checkout v6
-- [ ] Emergency QR Card (public shareable page)
-- [ ] Time-limited sharing links
-- [ ] Push notifications
-- [ ] Hindi i18n
-- [ ] Analytics dashboard
-- [ ] Export reports as PDF
-- [ ] Sentry SDK deprecation cleanup: `disableLogger` → `treeshake.removeDebugLogging`, `automaticVercelMonitors` → `webpack.*`
+- [ ] Time-limited sharing backed by database expiry
+- [ ] Hindi and Indian-language UX completion
+- [ ] Export doctor summary as PDF
+- [ ] QR scanner camera detection polish
+- [ ] Sentry account and production `SENTRY_DSN`
+- [ ] Sentry SDK deprecation cleanup
+- [ ] Dependabot high-risk major updates

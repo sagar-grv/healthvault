@@ -288,7 +288,7 @@ export default function DoctorDashboardClient({
           >
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h5" sx={{ mb: 0.5, fontWeight: 700 }}>
-                Look up a patient
+                Search by Health ID
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
                 Ask the patient for their Health ID (format: HV-XXXX-XXXX)
@@ -296,6 +296,7 @@ export default function DoctorDashboardClient({
 
               <Box component="form" onSubmit={handleSearch}>
                 <TextField
+                  id="health-id-search"
                   fullWidth
                   placeholder="HV-XXXX-XXXX"
                   value={searchInput}
@@ -360,6 +361,25 @@ export default function DoctorDashboardClient({
                 Ask your patient for their HealthVault Health ID. Type it above to see their shared
                 medical history — prescriptions, lab reports, and scans from any clinic.
               </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
+                {[
+                  'Shared with me',
+                  'Recent patient contexts',
+                  'Verification status',
+                  'AI assistant',
+                ].map((label) => (
+                  <Chip
+                    key={label}
+                    label={label}
+                    size="small"
+                    sx={{
+                      bgcolor: 'rgba(5,150,105,0.10)',
+                      color: 'success.dark',
+                      fontWeight: 700,
+                    }}
+                  />
+                ))}
+              </Box>
             </CardContent>
           </Card>
         </Box>

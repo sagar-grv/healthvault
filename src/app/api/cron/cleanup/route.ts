@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { isCronRequestAuthorized } from '@/lib/security/public-access';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -8,8 +9,8 @@ const RETENTION_DAYS = 90;
 const SOFT_DELETE_GRACE_HOURS = 72;
 
 export async function GET(request: NextRequest) {
-  // Only allow Vercel Cron invocations
-  if (request.headers.get('x-vercel-cron') !== '1') {
+  // Only allow Vercel Cron invocations. If CRON_SECRET is configured, require it too.
+  if (!isCronRequestAuthorized(request.headers, process.env.CRON_SECRET)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

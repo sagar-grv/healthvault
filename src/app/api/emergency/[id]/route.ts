@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { validateEmergencyCardId } from '@/lib/security/public-access';
 
 export const runtime = 'edge';
 
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   const { id } = await params;
 
-  if (!id || id.length < 10) {
+  if (!validateEmergencyCardId(id)) {
     return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
   }
 
