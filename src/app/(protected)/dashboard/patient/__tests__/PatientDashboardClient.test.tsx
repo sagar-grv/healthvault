@@ -40,6 +40,9 @@ describe('PatientDashboardClient translations', () => {
     expect(screen.getByText('Share with Doctor')).toBeInTheDocument();
     // Section heading changed from t('myReports') to "Recent Reports"
     expect(screen.getByText('Recent Reports')).toBeInTheDocument();
+    expect(screen.getByText('Prepare for doctor visit')).toBeInTheDocument();
+    expect(screen.getAllByText('Medical timeline').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Trust & privacy')).toBeInTheDocument();
     // Mock data fallback populates reports, so empty state (dashboard.upload) is not shown
   });
 });

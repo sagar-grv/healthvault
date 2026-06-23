@@ -15,6 +15,11 @@ export async function getAdminStats() {
     { count: totalPatients },
     { count: pendingVerifications },
     { count: totalReports },
+    { count: activeShares },
+    { count: recentAccessLogs },
+    { count: flaggedAiEvents },
+    { count: deletedAccounts },
+    { count: adminAuditEvents },
   ] = await Promise.all([
     supabase.from('doctor_profiles').select('*', { count: 'exact', head: true }),
     supabase
@@ -27,6 +32,14 @@ export async function getAdminStats() {
       .select('*', { count: 'exact', head: true })
       .eq('verification_state', 'pending'),
     supabase.from('reports').select('*', { count: 'exact', head: true }),
+    supabase.from('shared_reports').select('*', { count: 'exact', head: true }),
+    supabase.from('access_logs').select('*', { count: 'exact', head: true }),
+    supabase.from('ai_audit_log').select('*', { count: 'exact', head: true }).eq('flagged', true),
+    supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .not('deleted_at', 'is', null),
+    supabase.from('admin_audit_log').select('*', { count: 'exact', head: true }),
   ]);
 
   return {
@@ -34,6 +47,11 @@ export async function getAdminStats() {
     totalPatients: totalPatients ?? 0,
     pendingVerifications: pendingVerifications ?? 0,
     totalReports: totalReports ?? 0,
+    activeShares: activeShares ?? 0,
+    recentAccessLogs: recentAccessLogs ?? 0,
+    flaggedAiEvents: flaggedAiEvents ?? 0,
+    deletedAccounts: deletedAccounts ?? 0,
+    adminAuditEvents: adminAuditEvents ?? 0,
   };
 }
 

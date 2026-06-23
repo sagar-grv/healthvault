@@ -34,6 +34,13 @@ import LanguageIcon from '@mui/icons-material/Language';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServicesOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
+import EventNoteIcon from '@mui/icons-material/EventNoteOutlined';
+import TimelineIcon from '@mui/icons-material/TimelineOutlined';
+import ShieldIcon from '@mui/icons-material/ShieldOutlined';
+import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroomOutlined';
+import EmergencyIcon from '@mui/icons-material/EmergencyOutlined';
+import UploadFileIcon from '@mui/icons-material/UploadFileOutlined';
+import HistoryIcon from '@mui/icons-material/HistoryOutlined';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, Report } from '@/types';
@@ -287,6 +294,80 @@ export default function PatientDashboardClient({
   );
 
   const shareableCount = reports.filter((r) => r.is_shareable).length;
+  const timelineGroups = reports.reduce<Record<string, Report[]>>((groups, report) => {
+    const key = new Date(report.report_date).toLocaleDateString('en-IN', {
+      month: 'long',
+      year: 'numeric',
+    });
+    groups[key] = [...(groups[key] ?? []), report];
+    return groups;
+  }, {});
+
+  const actionCards = [
+    {
+      title: 'Prepare for doctor visit',
+      desc: 'Create a doctor-ready summary from the reports that matter today.',
+      icon: <EventNoteIcon />,
+      color: '#1D4ED8',
+      bg: 'rgba(37,99,235,0.08)',
+      onClick: () => router.push('/dashboard/patient/visit-pack'),
+      cta: 'Start',
+    },
+    {
+      title: 'Upload report',
+      desc: 'Scan or add a file to keep your family medical history current.',
+      icon: <UploadFileIcon />,
+      color: '#047857',
+      bg: 'rgba(5,150,105,0.09)',
+      onClick: () => setAddSheetOpen(true),
+      cta: 'Add',
+    },
+    {
+      title: 'Medical timeline',
+      desc: `${reports.length} report${reports.length !== 1 ? 's' : ''} organized by date.`,
+      icon: <TimelineIcon />,
+      color: '#7C3AED',
+      bg: 'rgba(124,58,237,0.08)',
+      onClick: () => router.push('/dashboard/patient/reports'),
+      cta: 'View',
+    },
+    {
+      title: 'Active shares',
+      desc: `${shareableCount} report${shareableCount !== 1 ? 's' : ''} marked shareable.`,
+      icon: <HistoryIcon />,
+      color: '#0891B2',
+      bg: 'rgba(8,145,178,0.08)',
+      onClick: () => router.push('/dashboard/patient/trust-center'),
+      cta: 'Manage',
+    },
+    {
+      title: 'Emergency card',
+      desc: 'Blood group, allergies, conditions, and contact for emergencies.',
+      icon: <EmergencyIcon />,
+      color: '#DC2626',
+      bg: 'rgba(220,38,38,0.08)',
+      onClick: () => router.push('/dashboard/patient/emergency-card'),
+      cta: 'Set up',
+    },
+    {
+      title: 'Family members',
+      desc: 'Prepare HealthVault for parents, spouse, and children.',
+      icon: <FamilyRestroomIcon />,
+      color: '#D97706',
+      bg: 'rgba(217,119,6,0.08)',
+      onClick: () => router.push('/dashboard/patient/family'),
+      cta: 'Next',
+    },
+    {
+      title: 'Trust & privacy',
+      desc: 'See access logs, revoke sharing, export, or delete your account.',
+      icon: <ShieldIcon />,
+      color: '#0F766E',
+      bg: 'rgba(15,118,110,0.08)',
+      onClick: () => router.push('/dashboard/patient/trust-center'),
+      cta: 'Review',
+    },
+  ];
 
   return (
     <Box sx={{ pb: 10, minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -460,6 +541,166 @@ export default function PatientDashboardClient({
             </Box>
           </CardContent>
         </Card>
+
+        {/* Productized action surface */}
+        <Box sx={{ mb: 3 }} className="animate-fade-in-up">
+          <Typography variant="h5" sx={{ mb: 0.75 }}>
+            What do you need today?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Prepare for a visit, update records, or check who can see your health history.
+          </Typography>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+              gap: 1.25,
+            }}
+          >
+            {actionCards.map((item) => (
+              <Card
+                key={item.title}
+                onClick={item.onClick}
+                sx={{
+                  cursor: 'pointer',
+                  boxShadow: 'none',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  '&:hover': { borderColor: item.color, bgcolor: item.bg },
+                }}
+              >
+                <CardContent sx={{ p: 2, display: 'flex', gap: 1.5, '&:last-child': { pb: 2 } }}>
+                  <Box
+                    sx={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 2,
+                      bgcolor: item.bg,
+                      color: item.color,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {item.icon}
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.25 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                        {item.title}
+                      </Typography>
+                      <Chip
+                        label={item.cta}
+                        size="small"
+                        sx={{
+                          height: 18,
+                          fontSize: '0.62rem',
+                          bgcolor: item.bg,
+                          color: item.color,
+                          fontWeight: 700,
+                        }}
+                      />
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.45 }}>
+                      {item.desc}
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            ))}
+          </Box>
+        </Box>
+
+        {/* Medical Timeline */}
+        <Box sx={{ mb: 3 }} className="animate-fade-in-up">
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box>
+              <Typography variant="h5">Medical timeline</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Organized by report date for quick doctor visits.
+              </Typography>
+            </Box>
+            <Button size="small" onClick={() => router.push('/dashboard/patient/reports')}>
+              View all
+            </Button>
+          </Box>
+
+          {reports.length === 0 ? (
+            <Card
+              sx={{
+                mt: 1.5,
+                border: '1px dashed',
+                borderColor: 'divider',
+                boxShadow: 'none',
+                bgcolor: 'transparent',
+              }}
+            >
+              <CardContent sx={{ p: 2 }}>
+                <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                  Your timeline starts with the first report.
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Upload prescriptions, lab reports, scans, or discharge summaries.
+                </Typography>
+              </CardContent>
+            </Card>
+          ) : (
+            <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {Object.entries(timelineGroups)
+                .slice(0, 3)
+                .map(([month, monthReports]) => (
+                  <Card
+                    key={month}
+                    sx={{ boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}
+                  >
+                    <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                      <Typography variant="body2" sx={{ fontWeight: 800, mb: 1 }}>
+                        {month}
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                        {monthReports.slice(0, 3).map((report) => {
+                          const typeColor =
+                            REPORT_TYPE_COLORS[report.report_type] || REPORT_TYPE_COLORS.other;
+                          return (
+                            <Box
+                              key={report.id}
+                              onClick={() => setViewingReport(report)}
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: '50%',
+                                  bgcolor: typeColor.color,
+                                  flexShrink: 0,
+                                }}
+                              />
+                              <Typography variant="caption" sx={{ flexGrow: 1 }} noWrap>
+                                {report.title}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {new Date(report.report_date).toLocaleDateString('en-IN', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                })}
+                              </Typography>
+                            </Box>
+                          );
+                        })}
+                      </Box>
+                    </CardContent>
+                  </Card>
+                ))}
+            </Box>
+          )}
+        </Box>
 
         {/* Recent Reports Section */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
