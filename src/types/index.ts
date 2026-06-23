@@ -143,3 +143,14 @@ export interface VisitPack {
   doctorId?: string;
   createdAt: string;
 }
+
+export interface FamilyMember {
+  id: string;
+  guardian_id: string;
+  member_name: string;
+  relationship: 'parent' | 'child' | 'spouse' | 'sibling' | 'other';
+  date_of_birth: string | null;
+  blood_group: string | null;
+  created_at: string;
+  updated_at: string;
+}

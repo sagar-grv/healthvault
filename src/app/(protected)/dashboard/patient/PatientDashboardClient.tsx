@@ -355,7 +355,7 @@ export default function PatientDashboardClient({
       icon: <FamilyRestroomIcon />,
       color: '#D97706',
       bg: 'rgba(217,119,6,0.08)',
-      onClick: () => router.push('/dashboard/patient/profile'),
+      onClick: () => router.push('/dashboard/patient/family'),
       cta: 'Next',
     },
     {
