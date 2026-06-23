@@ -136,3 +136,10 @@ export interface SharedReport {
   patient?: Profile;
   doctor?: Profile;
 }
+
+export interface VisitPack {
+  visitReason: string;
+  reportIds: string[];
+  doctorId?: string;
+  createdAt: string;
+}

@@ -310,7 +310,7 @@ export default function PatientDashboardClient({
       icon: <EventNoteIcon />,
       color: '#1D4ED8',
       bg: 'rgba(37,99,235,0.08)',
-      onClick: () => setShareSheetOpen(true),
+      onClick: () => router.push('/dashboard/patient/visit-pack'),
       cta: 'Start',
     },
     {

@@ -112,6 +112,44 @@ export async function shareReportsWithDoctor(doctorUserId: string, reportIds: st
   };
 }
 
+export async function createVisitPack(
+  doctorUserId: string,
+  reportIds: string[],
+  visitReason: string
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) return { error: 'Not authenticated' };
+  if (!reportIds.length) return { error: 'Select at least one report' };
+
+  const { error } = await supabase.from('shared_reports').upsert(
+    {
+      patient_id: user.id,
+      doctor_id: doctorUserId,
+      report_ids: reportIds,
+    },
+    { onConflict: 'patient_id,doctor_id' }
+  );
+
+  if (error) return { error: error.message };
+
+  const reasonPreview = visitReason.length > 80 ? visitReason.slice(0, 80) + '...' : visitReason;
+  const { error: logError } = await supabase.from('access_logs').insert({
+    patient_id: user.id,
+    doctor_id: doctorUserId,
+    doctor_name: `Visit Pack: ${reasonPreview}`,
+    reports_viewed: reportIds,
+  });
+
+  if (logError) console.error('Failed to log visit pack:', logError);
+
+  revalidatePath('/dashboard/patient');
+  return { success: true };
+}
+
 export async function revokeShare(shareId: string) {
   const supabase = await createClient();
   const {
