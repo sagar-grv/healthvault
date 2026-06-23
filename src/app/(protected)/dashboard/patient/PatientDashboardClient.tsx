@@ -337,7 +337,7 @@ export default function PatientDashboardClient({
       icon: <HistoryIcon />,
       color: '#0891B2',
       bg: 'rgba(8,145,178,0.08)',
-      onClick: () => router.push('/dashboard/patient/access-log'),
+      onClick: () => router.push('/dashboard/patient/trust-center'),
       cta: 'Manage',
     },
     {
@@ -364,7 +364,7 @@ export default function PatientDashboardClient({
       icon: <ShieldIcon />,
       color: '#0F766E',
       bg: 'rgba(15,118,110,0.08)',
-      onClick: () => router.push('/dashboard/patient/access-log'),
+      onClick: () => router.push('/dashboard/patient/trust-center'),
       cta: 'Review',
     },
   ];

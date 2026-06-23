@@ -171,7 +171,7 @@ export async function revokeShare(shareId: string) {
     return { error: 'Failed to revoke share' };
   }
 
-  revalidatePath('/dashboard/patient/access-log');
+  revalidatePath('/dashboard/patient/trust-center');
   return { success: true };
 }
 
