@@ -160,6 +160,21 @@ export default function QRScannerDialog({
     }
   }, [stopScanner, customParser, onScan]);
 
+  // Auto-reload when user returns from Settings after camera was blocked
+  // iOS Safari caches NotAllowedError per page load — only page reload clears it
+  useEffect(() => {
+    if (!showSettings) return;
+    let reloading = false;
+    const handler = () => {
+      if (document.visibilityState === 'visible' && !reloading) {
+        reloading = true;
+        window.location.reload();
+      }
+    };
+    document.addEventListener('visibilitychange', handler);
+    return () => document.removeEventListener('visibilitychange', handler);
+  }, [showSettings]);
+
   useEffect(() => {
     if (!open) {
       stopScanner();
@@ -530,18 +545,19 @@ export default function QRScannerDialog({
               width: '100%',
             }}
           >
-            {getBrowserSettingsInstructions('camera').settingsUrl && (
-              <Button
-                variant="contained"
-                startIcon={<OpenInNewIcon />}
-                onClick={() =>
-                  window.open(getBrowserSettingsInstructions('camera').settingsUrl, '_blank')
-                }
-                sx={{ bgcolor: 'secondary.light', '&:hover': { bgcolor: 'secondary.main' } }}
-              >
-                Open Settings
-              </Button>
-            )}
+            <Button
+              variant="contained"
+              startIcon={<OpenInNewIcon />}
+              onClick={() => {
+                const url = getBrowserSettingsInstructions('camera').settingsUrl;
+                if (url) window.open(url, '_blank');
+              }}
+              sx={{ bgcolor: 'secondary.light', '&:hover': { bgcolor: 'secondary.main' } }}
+            >
+              {getBrowserSettingsInstructions('camera').settingsUrl
+                ? 'Open Settings'
+                : 'Open Settings App'}
+            </Button>
             <Button
               variant="outlined"
               onClick={() => window.location.reload()}
