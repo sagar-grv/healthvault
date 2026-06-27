@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, startTransition } from 'react';
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
 import Typography from '@mui/material/Typography';
@@ -13,7 +13,10 @@ import FlashlightOnIcon from '@mui/icons-material/FlashlightOn';
 import FlashlightOffIcon from '@mui/icons-material/FlashlightOff';
 import CameraswitchIcon from '@mui/icons-material/Cameraswitch';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
+import SettingsIcon from '@mui/icons-material/Settings';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { parseQRContent } from '@/lib/utils/qr-parser';
+import { getBrowserSettingsInstructions, detectBrowser } from '@/lib/hooks/usePermission';
 
 interface QRScannerDialogProps {
   open: boolean;
@@ -44,6 +47,8 @@ export default function QRScannerDialog({
   const [cameraCount, setCameraCount] = useState(0);
   const [cameraIndex, setCameraIndex] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const stopScanner = useCallback(async () => {
     if (scannerRef.current) {
@@ -61,152 +66,172 @@ export default function QRScannerDialog({
     }
   }, []);
 
+  const startScanner = useCallback(async () => {
+    setScanState('starting');
+    setError('');
+
+    // Two rAF cycles ensure the DOM element has real dimensions before html5-qrcode measures it
+    await new Promise((r) => requestAnimationFrame(r));
+    await new Promise((r) => requestAnimationFrame(r));
+
+    try {
+      const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
+
+      // Enumerate cameras
+      let cameras: { id: string; label: string }[] = [];
+      try {
+        cameras = await Html5Qrcode.getCameras();
+      } catch {
+        /* permission not yet granted */
+      }
+      setCameraCount(cameras.length);
+
+      const scanner = new Html5Qrcode('qr-reader-container', {
+        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        verbose: false,
+      });
+      scannerRef.current = scanner;
+
+      const upiConfig = {
+        fps: 30,
+        disableFlip: false,
+        aspectRatio: window.innerHeight / window.innerWidth,
+      };
+
+      const onDecode = (decoded: string) => {
+        const parsed = customParser ? customParser(decoded) : parseQRContent(decoded);
+        if (parsed) {
+          if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+          setScanState('success');
+          stopScanner();
+          onScan(parsed);
+        }
+      };
+
+      let started = false;
+
+      if (!started) {
+        try {
+          await scanner.start({ facingMode: 'environment' }, upiConfig, onDecode, () => {});
+          started = true;
+        } catch {
+          /* unavailable */
+        }
+      }
+      if (!started) {
+        try {
+          await scanner.start({ facingMode: 'user' }, upiConfig, onDecode, () => {});
+          started = true;
+        } catch {
+          /* unavailable */
+        }
+      }
+      if (!started && cameras.length > 0) {
+        await scanner.start(cameras[0].id, upiConfig, onDecode, () => {});
+        started = true;
+      }
+      if (!started) {
+        const freshCams = await Html5Qrcode.getCameras();
+        if (!freshCams.length)
+          throw Object.assign(new Error('No camera'), { name: 'NotFoundError' });
+        setCameraCount(freshCams.length);
+        await scanner.start(freshCams[0].id, upiConfig, onDecode, () => {});
+      }
+
+      setScanState('scanning');
+      setHasStarted(true);
+    } catch (err: unknown) {
+      const e = err as { name?: string; message?: string };
+      const name = e?.name ?? '';
+      const msg = (e?.message ?? '').toLowerCase();
+      if (name === 'NotAllowedError' || msg.includes('permission') || msg.includes('denied')) {
+        setShowSettings(true);
+        setScanState('idle');
+      } else if (name === 'NotFoundError' || msg.includes('no camera')) {
+        setError('No camera found on this device.');
+        setScanState('error');
+      } else if (msg.includes('already in use') || msg.includes('notreadableerror')) {
+        setError('Camera is in use by another app. Close it and tap Retry.');
+        setScanState('error');
+      } else {
+        setError('Could not start camera. Enter the Health ID manually instead.');
+        setScanState('error');
+      }
+    }
+  }, [stopScanner, customParser, onScan]);
+
   useEffect(() => {
     if (!open) {
       stopScanner();
       return;
     }
-
-    let mounted = true;
-
-    const startScanner = async () => {
-      setScanState('starting');
+    startTransition(() => {
+      setScanState('idle');
       setError('');
+      setHasStarted(false);
+      setTorchOn(false);
+      setCameraCount(0);
+      setCameraIndex(0);
+    });
+  }, [open, stopScanner]);
 
-      // Two rAF cycles ensure the DOM element has real dimensions before html5-qrcode measures it
-      await new Promise((r) => requestAnimationFrame(r));
-      await new Promise((r) => requestAnimationFrame(r));
-
-      try {
-        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
-        if (!mounted) return;
-
-        // Enumerate cameras
-        let cameras: { id: string; label: string }[] = [];
-        try {
-          cameras = await Html5Qrcode.getCameras();
-        } catch {
-          /* permission not yet granted */
+  const handleContinue = useCallback(async () => {
+    // iOS Safari: getUserMedia Promise MUST be created synchronously within the
+    // click handler (gesture context). Any await before it destroys the gesture
+    // context and causes NotAllowedError even when permission is granted.
+    //
+    // Strategy: pre-establish camera permission by calling getUserMedia directly
+    // in the gesture context. Once permission is granted on iOS Safari, subsequent
+    // getUserMedia calls (including from html5-qrcode) work regardless of gesture
+    // context. The permissions pre-check is non-blocking via .then().
+    try {
+      navigator.permissions.query({ name: 'camera' as PermissionName }).then((perm) => {
+        if (perm.state === 'denied') {
+          setShowSettings(true);
         }
-        if (!mounted) return;
-        setCameraCount(cameras.length);
+      });
+    } catch {
+      /* permissions query not supported — proceed */
+    }
 
-        const scanner = new Html5Qrcode('qr-reader-container', {
-          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE], // QR only = faster
-          verbose: false,
-        });
-        scannerRef.current = scanner;
-
-        // UPI-style config:
-        // - fps: 30 (scans 3x more frames per second vs default 10)
-        // - NO qrbox constraint = scans entire camera frame (not just a center square)
-        // - disableFlip: false = handles mirrored/front-camera QRs
-        // - aspectRatio: 1 = square camera view fills screen edge-to-edge
-        const upiConfig = {
-          fps: 30,
-          disableFlip: false,
-          aspectRatio: window.innerHeight / window.innerWidth,
-        };
-
-        const onDecode = (decoded: string) => {
-          const parsed = customParser ? customParser(decoded) : parseQRContent(decoded);
-          if (parsed) {
-            if (navigator.vibrate) navigator.vibrate([50, 30, 50]); // double-pulse like UPI
-            setScanState('success');
-            stopScanner();
-            if (mounted) onScan(parsed);
-          }
-        };
-
-        /**
-         * Sequential camera fallback chain.
-         * Each strategy is guarded by `!started` so earlier strategies
-         * take priority. `started` prevents double-initialization and
-         * short-circuits remaining strategies once one succeeds.
-         */
-        let started = false;
-
-        // Strategy 1: rear camera by facingMode (best for phones)
-        if (!started) {
-          try {
-            await scanner.start({ facingMode: 'environment' }, upiConfig, onDecode, () => {});
-            started = true;
-          } catch {
-            /* unavailable */
-          }
-        }
-
-        // Strategy 2: front camera by facingMode (fallback for laptops)
-        if (!started) {
-          try {
-            await scanner.start({ facingMode: 'user' }, upiConfig, onDecode, () => {});
-            started = true;
-          } catch {
-            /* unavailable */
-          }
-        }
-
-        // Strategy 3: first camera by device ID (most reliable on desktop)
-        if (!started && cameras.length > 0) {
-          await scanner.start(cameras[0].id, upiConfig, onDecode, () => {});
-          started = true;
-        }
-
-        // Strategy 4: fresh camera list after permission prompt (last resort)
-        if (!started) {
-          const freshCams = await Html5Qrcode.getCameras();
-          if (!freshCams.length)
-            throw Object.assign(new Error('No camera'), { name: 'NotFoundError' });
-          setCameraCount(freshCams.length);
-          await scanner.start(freshCams[0].id, upiConfig, onDecode, () => {});
-          // Note: no started = true here — this is the final strategy, value unused after
-        }
-
-        if (mounted) setScanState('scanning');
-      } catch (err: unknown) {
-        if (!mounted) return;
-        const e = err as { name?: string; message?: string };
-        const name = e?.name ?? '';
-        const msg = (e?.message ?? '').toLowerCase();
-        if (name === 'NotAllowedError' || msg.includes('permission') || msg.includes('denied')) {
-          setError(
-            'Camera permission denied. Allow camera access in your browser settings and tap Retry.'
-          );
-        } else if (name === 'NotFoundError' || msg.includes('no camera')) {
-          setError('No camera found on this device.');
-        } else if (msg.includes('already in use') || msg.includes('notreadableerror')) {
-          setError('Camera is in use by another app. Close it and tap Retry.');
-        } else {
-          setError('Could not start camera. Enter the Health ID manually instead.');
-        }
-        setScanState('error');
+    // Pre-establish camera permission — creates the getUserMedia Promise inside gesture context
+    try {
+      const tempStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+        audio: false,
+      });
+      // Permission granted — stop the temp stream immediately
+      tempStream.getTracks().forEach((t) => t.stop());
+    } catch (err) {
+      const e = err as { name?: string };
+      if (e.name === 'NotAllowedError') {
+        setShowSettings(true);
+        return;
       }
-    };
+      // Other errors (no camera, in use, etc.) — let startScanner handle them
+    }
 
+    setShowSettings(false);
     startScanner();
-    return () => {
-      mounted = false;
-      stopScanner();
-    };
-  }, [open, onScan, stopScanner, customParser]);
+  }, [startScanner]);
 
   const handleClose = useCallback(() => {
     stopScanner();
     setScanState('idle');
     setError('');
     setTorchOn(false);
+    setShowSettings(false);
     onClose();
   }, [stopScanner, onClose]);
 
   const handleRetry = useCallback(async () => {
-    // Stop any existing scanner, clear state, close dialog.
-    // The parent will re-open on next button tap, which triggers a fresh effect run.
     await stopScanner();
     setScanState('idle');
     setError('');
     setTorchOn(false);
-    onClose();
-  }, [stopScanner, onClose]);
+    setShowSettings(false);
+    handleContinue();
+  }, [stopScanner, handleContinue]);
 
   const handleToggleTorch = async () => {
     if (!scannerRef.current) return;
@@ -400,6 +425,138 @@ export default function QRScannerDialog({
           <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
             Starting camera…
           </Typography>
+        </Box>
+      )}
+
+      {/* Permission prompt */}
+      {!hasStarted && scanState === 'idle' && !showSettings && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 25,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            px: 4,
+          }}
+        >
+          <Box component="span" sx={{ fontSize: 64, mb: 3, lineHeight: 1 }}>
+            📷
+          </Box>
+          <Typography variant="h5" color="white" sx={{ fontWeight: 700, mb: 1 }}>
+            Camera Access Needed
+          </Typography>
+          <Typography
+            color="rgba(255,255,255,0.7)"
+            sx={{ textAlign: 'center', maxWidth: 320, mb: 3, lineHeight: 1.6 }}
+          >
+            HealthVault uses your camera to scan Health ID QR codes. Your camera feed is processed
+            locally and never leaves your device.
+          </Typography>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1.5,
+              width: '100%',
+              maxWidth: 280,
+            }}
+          >
+            <Button
+              variant="contained"
+              size="large"
+              onClick={handleContinue}
+              sx={{ bgcolor: 'secondary.light', '&:hover': { bgcolor: 'secondary.main' } }}
+            >
+              Continue
+            </Button>
+            <Button variant="text" onClick={handleClose} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+              Cancel
+            </Button>
+          </Box>
+        </Box>
+      )}
+
+      {/* Settings instructions */}
+      {showSettings && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 25,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            px: 4,
+          }}
+        >
+          <SettingsIcon sx={{ fontSize: 48, color: 'white', mb: 2 }} />
+          <Typography variant="h6" color="white" sx={{ fontWeight: 700, mb: 1 }}>
+            Camera Access Blocked
+          </Typography>
+          <Typography
+            color="rgba(255,255,255,0.6)"
+            sx={{ textAlign: 'center', mb: 2, fontSize: '0.85rem' }}
+          >
+            {detectBrowser() === 'ios_safari'
+              ? 'iOS Safari'
+              : detectBrowser() === 'chrome_android'
+                ? 'Chrome (Android)'
+                : 'Your browser'}{' '}
+            has blocked camera access.
+          </Typography>
+          <Box
+            component="ol"
+            sx={{
+              color: 'rgba(255,255,255,0.85)',
+              textAlign: 'left',
+              maxWidth: 340,
+              mb: 3,
+              fontSize: '0.85rem',
+              lineHeight: 1.8,
+              pl: 2.5,
+              '& li': { mb: 0.5 },
+            }}
+          >
+            {getBrowserSettingsInstructions('camera').steps.map((s, i) => (
+              <Box key={i} component="li" dangerouslySetInnerHTML={{ __html: s }} />
+            ))}
+          </Box>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1.5,
+              maxWidth: 280,
+              width: '100%',
+            }}
+          >
+            {getBrowserSettingsInstructions('camera').settingsUrl && (
+              <Button
+                variant="contained"
+                startIcon={<OpenInNewIcon />}
+                onClick={() =>
+                  window.open(getBrowserSettingsInstructions('camera').settingsUrl, '_blank')
+                }
+                sx={{ bgcolor: 'secondary.light', '&:hover': { bgcolor: 'secondary.main' } }}
+              >
+                Open Settings
+              </Button>
+            )}
+            <Button
+              variant="outlined"
+              onClick={handleContinue}
+              sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}
+            >
+              Retry
+            </Button>
+            <Button variant="text" onClick={handleClose} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+              Go Back
+            </Button>
+          </Box>
         </Box>
       )}
 
