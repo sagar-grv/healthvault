@@ -8,8 +8,14 @@ const RETENTION_DAYS = 90;
 const SOFT_DELETE_GRACE_HOURS = 72;
 
 export async function GET(request: NextRequest) {
-  // Only allow Vercel Cron invocations
+  // Verify Vercel Cron header + shared secret
   if (request.headers.get('x-vercel-cron') !== '1') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  if (
+    process.env.CRON_SECRET &&
+    request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`
+  ) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

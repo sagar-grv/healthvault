@@ -29,16 +29,26 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [resetSending, setResetSending] = useState(false);
+  const [needVerification, setNeedVerification] = useState(false);
+  const [verificationSending, setVerificationSending] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    setNeedVerification(false);
+    setVerificationSent(false);
     try {
       const supabase = createClient();
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
       if (authError) {
-        setError(authError.message);
+        const isUnconfirmed = authError.message.toLowerCase().includes('email not confirmed');
+        if (isUnconfirmed) {
+          setNeedVerification(true);
+        } else {
+          setError(authError.message);
+        }
         setLoading(false);
         return;
       }
@@ -46,6 +56,28 @@ function LoginForm() {
     } catch {
       setError('Something went wrong. Please try again.');
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setVerificationSending(true);
+    setError('');
+    setVerificationSent(false);
+    try {
+      const supabase = createClient();
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+      });
+      if (resendError) {
+        setError(resendError.message);
+      } else {
+        setVerificationSent(true);
+      }
+    } catch {
+      setError('Something went wrong. Try again.');
+    } finally {
+      setVerificationSending(false);
     }
   };
 
@@ -150,6 +182,27 @@ function LoginForm() {
           {error && (
             <Alert severity="error" sx={{ mb: 3 }}>
               {error}
+            </Alert>
+          )}
+
+          {needVerification && (
+            <Alert
+              severity="info"
+              sx={{ mb: 3 }}
+              action={
+                <Button
+                  size="small"
+                  disabled={verificationSending || verificationSent}
+                  onClick={handleResendVerification}
+                  sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
+                >
+                  {verificationSent ? 'Sent!' : verificationSending ? 'Sending...' : 'Resend'}
+                </Button>
+              }
+            >
+              {verificationSent
+                ? 'Verification email sent! Check your inbox.'
+                : 'Please verify your email before signing in.'}
             </Alert>
           )}
 

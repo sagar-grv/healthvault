@@ -76,6 +76,12 @@ export default function PatientProfilePage() {
   const [showEmergencySetup, setShowEmergencySetup] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -532,6 +538,26 @@ export default function PatientProfilePage() {
           </CardContent>
         </Card>
 
+        {/* ── Password ─────────────────────────────────────────────────── */}
+        <Card sx={{ borderRadius: 3, mt: 2 }}>
+          <CardContent sx={{ p: 2.5 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
+              Password
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Update your account password.
+            </Typography>
+            <Button
+              variant="outlined"
+              fullWidth
+              onClick={() => setPasswordDialogOpen(true)}
+              sx={{ borderRadius: 2, py: 1 }}
+            >
+              Change Password
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* ── Danger Zone ──────────────────────────────────────────────── */}
         <Card sx={{ borderRadius: 3, border: '1px solid', borderColor: 'error.light', mt: 2 }}>
           <CardContent sx={{ p: 2.5 }}>
@@ -609,6 +635,118 @@ export default function PatientProfilePage() {
           </DialogActions>
         </Dialog>
       </Box>
+
+      {/* Password Change Dialog */}
+      <Dialog
+        open={passwordDialogOpen}
+        onClose={() => {
+          setPasswordDialogOpen(false);
+          setPasswordError('');
+          setCurrentPassword('');
+          setNewPassword('');
+          setConfirmNewPassword('');
+        }}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Change Password</DialogTitle>
+        <DialogContent>
+          {passwordError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {passwordError}
+            </Alert>
+          )}
+          <TextField
+            fullWidth
+            label="Current password"
+            type="password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            autoComplete="current-password"
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            label="New password"
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            autoComplete="new-password"
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            label="Confirm new password"
+            type="password"
+            value={confirmNewPassword}
+            onChange={(e) => setConfirmNewPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setPasswordDialogOpen(false);
+              setPasswordError('');
+              setCurrentPassword('');
+              setNewPassword('');
+              setConfirmNewPassword('');
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            disabled={changingPassword}
+            onClick={async () => {
+              setPasswordError('');
+              if (newPassword.length < 6) {
+                setPasswordError('New password must be at least 6 characters.');
+                return;
+              }
+              if (newPassword !== confirmNewPassword) {
+                setPasswordError('Passwords do not match.');
+                return;
+              }
+              setChangingPassword(true);
+              try {
+                const supabase = createClient();
+                const { error: signInError } = await supabase.auth.signInWithPassword({
+                  email,
+                  password: currentPassword,
+                });
+                if (signInError) {
+                  setPasswordError('Current password is incorrect.');
+                  setChangingPassword(false);
+                  return;
+                }
+                const { error: updateError } = await supabase.auth.updateUser({
+                  password: newPassword,
+                });
+                if (updateError) {
+                  setPasswordError(updateError.message);
+                } else {
+                  setPasswordDialogOpen(false);
+                  setCurrentPassword('');
+                  setNewPassword('');
+                  setConfirmNewPassword('');
+                  setSnackbar({
+                    open: true,
+                    message: 'Password updated successfully.',
+                    severity: 'success',
+                  });
+                }
+              } catch {
+                setPasswordError('Something went wrong. Please try again.');
+              } finally {
+                setChangingPassword(false);
+              }
+            }}
+          >
+            {changingPassword ? <CircularProgress size={20} color="inherit" /> : 'Update Password'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Emergency Card Setup Dialog */}
       <EmergencyCardSetup

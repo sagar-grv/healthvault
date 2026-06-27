@@ -161,7 +161,7 @@ export default function EmergencyCardSetup({ open, onClose }: EmergencyCardSetup
     const base =
       typeof window !== 'undefined'
         ? window.location.origin
-        : 'https://healthvault-dusky.vercel.app';
+        : process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
     return `${base}/emergency/${savedProfile.random_id}`;
   };
 

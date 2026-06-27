@@ -95,7 +95,8 @@ describe('generateHealthId', () => {
 });
 
 // ─── parseQRContent ───────────────────────────────────────────────────────────
-// These tests will FAIL until we implement parseQRContent
+
+const EMERGENCY_BASE = 'http://localhost:3000';
 
 describe('parseQRContent', () => {
   test('returns the Health ID when QR contains a plain Health ID', () => {
@@ -103,7 +104,7 @@ describe('parseQRContent', () => {
   });
 
   test('extracts Health ID when QR contains a URL with the ID', () => {
-    expect(parseQRContent('https://healthvault-dusky.vercel.app/emergency/HV-ABCD-2345')).toBe('HV-ABCD-2345');
+    expect(parseQRContent(`${EMERGENCY_BASE}/emergency/HV-ABCD-2345`)).toBe('HV-ABCD-2345');
   });
 
   test('normalizes a Health ID without dashes found in a QR', () => {
