@@ -342,6 +342,10 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     onClose();
   }, [croppedUrl, rawImageUrl, onClose]);
 
+  const reloadPage = useCallback(() => {
+    window.location.reload();
+  }, []);
+
   if (error) {
     return (
       <Box
@@ -349,7 +353,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
           position: 'fixed',
           inset: 0,
           zIndex: 1300,
-          bgcolor: 'black',
+          bgcolor: 'background.default',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -357,17 +361,17 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
           p: 3,
         }}
       >
-        <Typography color="white" sx={{ textAlign: 'center', mb: 3 }}>
+        <Typography color="text.primary" sx={{ textAlign: 'center', mb: 3 }}>
           {error}
         </Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button variant="contained" onClick={handleContinue}>
-            Retry
+          <Button variant="contained" onClick={reloadPage}>
+            Reload & Retry
           </Button>
           <Button
             variant="outlined"
             onClick={handleClose}
-            sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}
+            sx={{ color: 'text.primary', borderColor: 'divider' }}
           >
             Go Back
           </Button>
@@ -385,7 +389,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
           position: 'fixed',
           inset: 0,
           zIndex: 1300,
-          bgcolor: 'black',
+          bgcolor: 'background.default',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -393,14 +397,11 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
           p: 4,
         }}
       >
-        <SettingsIcon sx={{ fontSize: 48, color: 'white', mb: 2 }} />
-        <Typography variant="h6" color="white" sx={{ fontWeight: 700, mb: 2 }}>
+        <SettingsIcon sx={{ fontSize: 48, color: 'text.primary', mb: 2 }} />
+        <Typography variant="h6" color="text.primary" sx={{ fontWeight: 700, mb: 2 }}>
           Camera Access Blocked
         </Typography>
-        <Typography
-          color="rgba(255,255,255,0.6)"
-          sx={{ textAlign: 'center', mb: 1, fontSize: '0.85rem' }}
-        >
+        <Typography color="text.secondary" sx={{ textAlign: 'center', mb: 1, fontSize: '0.85rem' }}>
           {browser === 'ios_safari'
             ? 'iOS Safari'
             : browser === 'chrome_android'
@@ -411,7 +412,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         <Box
           component="ol"
           sx={{
-            color: 'rgba(255,255,255,0.85)',
+            color: 'text.primary',
             textAlign: 'left',
             maxWidth: 340,
             mb: 3,
@@ -439,12 +440,12 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
           )}
           <Button
             variant="outlined"
-            onClick={handleContinue}
-            sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}
+            onClick={reloadPage}
+            sx={{ color: 'text.primary', borderColor: 'divider' }}
           >
-            Retry
+            Reload & Retry
           </Button>
-          <Button variant="text" onClick={handleClose} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+          <Button variant="text" onClick={handleClose} sx={{ color: 'text.secondary' }}>
             Go Back
           </Button>
         </Box>
@@ -459,7 +460,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
           position: 'fixed',
           inset: 0,
           zIndex: 1300,
-          bgcolor: 'black',
+          bgcolor: 'background.default',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -467,12 +468,12 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
           p: 4,
         }}
       >
-        <CameraAltIcon sx={{ fontSize: 64, color: 'white', mb: 3 }} />
-        <Typography variant="h5" color="white" sx={{ fontWeight: 700, mb: 1 }}>
+        <CameraAltIcon sx={{ fontSize: 64, color: 'primary.main', mb: 3 }} />
+        <Typography variant="h5" color="text.primary" sx={{ fontWeight: 700, mb: 1 }}>
           Camera Access Needed
         </Typography>
         <Typography
-          color="rgba(255,255,255,0.7)"
+          color="text.secondary"
           sx={{ textAlign: 'center', maxWidth: 320, mb: 3, lineHeight: 1.6 }}
         >
           HealthVault uses your camera to scan medical reports. Your photos stay on your device and
@@ -484,7 +485,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
           <Button variant="contained" size="large" onClick={handleContinue}>
             Continue
           </Button>
-          <Button variant="text" onClick={handleClose} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+          <Button variant="text" onClick={handleClose} sx={{ color: 'text.secondary' }}>
             Cancel
           </Button>
         </Box>
