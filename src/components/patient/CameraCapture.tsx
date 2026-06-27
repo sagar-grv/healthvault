@@ -327,10 +327,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     onClose();
   }, [croppedUrl, rawImageUrl, onClose]);
 
-  const reloadPage = useCallback(() => {
-    window.location.reload();
-  }, []);
-
   if (error) {
     return (
       <Box
@@ -350,8 +346,8 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
           {error}
         </Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button variant="contained" onClick={reloadPage}>
-            Reload & Retry
+          <Button variant="contained" onClick={() => startCamera(facingMode)}>
+            Try Again
           </Button>
           <Button
             variant="outlined"
