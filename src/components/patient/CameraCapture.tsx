@@ -15,6 +15,8 @@ import AddIcon from '@mui/icons-material/Add';
 import CheckIcon from '@mui/icons-material/Check';
 import ReplayIcon from '@mui/icons-material/Replay';
 import CropIcon from '@mui/icons-material/Crop';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import SettingsIcon from '@mui/icons-material/Settings';
 import {
   detectDocumentCorners,
   perspectiveCrop,
@@ -22,6 +24,7 @@ import {
   type DocumentCorners,
   type Point,
 } from '@/lib/utils/document-scanner';
+import { getBrowserSettingsInstructions, detectBrowser } from '@/lib/hooks/usePermission';
 
 interface CameraCaptureProps {
   onCapture: (images: Blob[], title?: string) => void;
@@ -47,50 +50,66 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
   const [error, setError] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [capturedTitle, setCapturedTitle] = useState('');
+  const [hasStarted, setHasStarted] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
-  // Start camera
+  const startCamera = useCallback(async (facing: 'environment' | 'user') => {
+    const videoEl = videoRef.current;
+    setError(null);
+    setCameraReady(false);
+    setShowSettings(false);
+
+    try {
+      if (videoEl?.srcObject) {
+        (videoEl.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
+      }
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 2560 } },
+        audio: false,
+      });
+      if (videoEl) {
+        videoEl.srcObject = mediaStream;
+        videoEl.onloadedmetadata = () => setCameraReady(true);
+      }
+      setHasStarted(true);
+    } catch (err) {
+      const e = err as Error;
+      if (e.name === 'NotAllowedError') {
+        setShowSettings(true);
+      } else if (e.name === 'NotFoundError') {
+        setError('No camera found on this device.');
+      } else {
+        setError('Could not access camera. Try again.');
+      }
+    }
+  }, []);
+
+  const handleContinue = useCallback(() => {
+    // iOS Safari requires getUserMedia Promise to be created synchronously within
+    // the click handler (gesture context). Any await before getUserMedia destroys
+    // the gesture context and causes NotAllowedError even when permission is granted.
+    // The permissions pre-check is done non-blocking via .then(), never await.
+    try {
+      navigator.permissions.query({ name: 'camera' as PermissionName }).then((perm) => {
+        if (perm.state === 'denied') {
+          setShowSettings(true);
+        }
+      });
+    } catch {
+      /* permissions query not supported — proceed */
+    }
+    startCamera(facingMode);
+  }, [facingMode, startCamera]);
+
+  // Cleanup only — camera start is triggered by user gesture
   useEffect(() => {
     const videoEl = videoRef.current;
-    let mounted = true;
-
-    const startCamera = async () => {
-      try {
-        if (videoEl?.srcObject) {
-          (videoEl.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
-        }
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode, width: { ideal: 1920 }, height: { ideal: 2560 } },
-          audio: false,
-        });
-        if (!mounted) {
-          mediaStream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        if (videoEl) {
-          videoEl.srcObject = mediaStream;
-          videoEl.onloadedmetadata = () => {
-            if (mounted) setCameraReady(true);
-          };
-        }
-        setError(null);
-      } catch (err) {
-        if (!mounted) return;
-        const e = err as Error;
-        if (e.name === 'NotAllowedError')
-          setError('Camera access denied. Please allow camera permission.');
-        else if (e.name === 'NotFoundError') setError('No camera found on this device.');
-        else setError('Could not access camera. Try again.');
-      }
-    };
-
-    startCamera();
     return () => {
-      mounted = false;
       if (videoEl?.srcObject) {
         (videoEl.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
       }
     };
-  }, [facingMode]);
+  }, []);
 
   // Draw corner overlay on the crop stage
   useEffect(() => {
@@ -341,9 +360,134 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         <Typography color="white" sx={{ textAlign: 'center', mb: 3 }}>
           {error}
         </Typography>
-        <Button variant="contained" onClick={handleClose}>
-          Go Back
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button variant="contained" onClick={handleContinue}>
+            Retry
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={handleClose}
+            sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}
+          >
+            Go Back
+          </Button>
+        </Box>
+      </Box>
+    );
+  }
+
+  if (showSettings) {
+    const { steps, settingsUrl } = getBrowserSettingsInstructions('camera');
+    const browser = detectBrowser();
+    return (
+      <Box
+        sx={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 1300,
+          bgcolor: 'black',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: 4,
+        }}
+      >
+        <SettingsIcon sx={{ fontSize: 48, color: 'white', mb: 2 }} />
+        <Typography variant="h6" color="white" sx={{ fontWeight: 700, mb: 2 }}>
+          Camera Access Blocked
+        </Typography>
+        <Typography
+          color="rgba(255,255,255,0.6)"
+          sx={{ textAlign: 'center', mb: 1, fontSize: '0.85rem' }}
+        >
+          {browser === 'ios_safari'
+            ? 'iOS Safari'
+            : browser === 'chrome_android'
+              ? 'Chrome (Android)'
+              : 'Your browser'}{' '}
+          has blocked camera access.
+        </Typography>
+        <Box
+          component="ol"
+          sx={{
+            color: 'rgba(255,255,255,0.85)',
+            textAlign: 'left',
+            maxWidth: 340,
+            mb: 3,
+            fontSize: '0.85rem',
+            lineHeight: 1.8,
+            pl: 2.5,
+            '& li': { mb: 0.5 },
+          }}
+        >
+          {steps.map((s, i) => (
+            <Box key={i} component="li" dangerouslySetInnerHTML={{ __html: s }} />
+          ))}
+        </Box>
+        <Box
+          sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxWidth: 280, width: '100%' }}
+        >
+          {settingsUrl && (
+            <Button
+              variant="contained"
+              startIcon={<OpenInNewIcon />}
+              onClick={() => window.open(settingsUrl, '_blank')}
+            >
+              Open Settings
+            </Button>
+          )}
+          <Button
+            variant="outlined"
+            onClick={handleContinue}
+            sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}
+          >
+            Retry
+          </Button>
+          <Button variant="text" onClick={handleClose} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+            Go Back
+          </Button>
+        </Box>
+      </Box>
+    );
+  }
+
+  if (!hasStarted) {
+    return (
+      <Box
+        sx={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 1300,
+          bgcolor: 'black',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: 4,
+        }}
+      >
+        <CameraAltIcon sx={{ fontSize: 64, color: 'white', mb: 3 }} />
+        <Typography variant="h5" color="white" sx={{ fontWeight: 700, mb: 1 }}>
+          Camera Access Needed
+        </Typography>
+        <Typography
+          color="rgba(255,255,255,0.7)"
+          sx={{ textAlign: 'center', maxWidth: 320, mb: 3, lineHeight: 1.6 }}
+        >
+          HealthVault uses your camera to scan medical reports. Your photos stay on your device and
+          are never uploaded without your permission.
+        </Typography>
+        <Box
+          sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, width: '100%', maxWidth: 280 }}
+        >
+          <Button variant="contained" size="large" onClick={handleContinue}>
+            Continue
+          </Button>
+          <Button variant="text" onClick={handleClose} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+            Cancel
+          </Button>
+        </Box>
       </Box>
     );
   }
@@ -387,7 +531,13 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         )}
         {stage === 'camera' && (
           <IconButton
-            onClick={() => setFacingMode((m) => (m === 'environment' ? 'user' : 'environment'))}
+            onClick={() =>
+              setFacingMode((m) => {
+                const next = m === 'environment' ? 'user' : 'environment';
+                startCamera(next);
+                return next;
+              })
+            }
             sx={{ color: 'white' }}
           >
             <FlipCameraAndroidIcon />
