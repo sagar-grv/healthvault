@@ -10,24 +10,24 @@ export async function getAdminStats() {
 
   const supabase = await createClient();
 
-  const [
-    { count: totalDoctors },
-    { count: totalPatients },
-    { count: pendingVerifications },
-    { count: totalReports },
-  ] = await Promise.all([
-    supabase.from('doctor_profiles').select('*', { count: 'exact', head: true }),
-    supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('role', 'patient')
-      .is('deleted_at', null),
-    supabase
-      .from('doctor_profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('verification_state', 'pending'),
-    supabase.from('reports').select('*', { count: 'exact', head: true }),
-  ]);
+  const [{ count: totalDoctors }, { count: totalPatients }, pendingData, { count: totalReports }] =
+    await Promise.all([
+      supabase.from('doctor_profiles').select('*', { count: 'exact', head: true }),
+      supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'patient')
+        .is('deleted_at', null),
+      supabase
+        .from('doctor_profiles')
+        .select('id, profiles!inner(deleted_at)')
+        .eq('verification_state', 'pending'),
+      supabase.from('reports').select('*', { count: 'exact', head: true }),
+    ]);
+
+  const pendingVerifications = (pendingData.data ?? []).filter(
+    (p) => !p.profiles?.[0]?.deleted_at
+  ).length;
 
   return {
     totalDoctors: totalDoctors ?? 0,
