@@ -313,6 +313,15 @@ export default function PermissionsOnboarding({ onComplete, onSkip }: Permission
             >
               You can change these anytime from your profile settings.
             </Typography>
+            {results.camera === 'denied' && (
+              <Typography
+                color="warning.main"
+                sx={{ fontSize: '0.75rem', mt: 1.5, textAlign: 'center', fontWeight: 600 }}
+              >
+                After enabling camera in Settings, the page will reload automatically for the change
+                to take effect.
+              </Typography>
+            )}
           </Box>
         ) : (
           <Typography color="text.secondary" sx={{ mb: 2, lineHeight: 1.7, fontSize: '0.9rem' }}>

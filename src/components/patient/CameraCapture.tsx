@@ -101,6 +101,21 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     startCamera(facingMode);
   }, [facingMode, startCamera]);
 
+  // Auto-reload when user returns from Settings after camera was blocked
+  // iOS Safari caches NotAllowedError per page load — only page reload clears it
+  useEffect(() => {
+    if (!showSettings) return;
+    let reloading = false;
+    const handler = () => {
+      if (document.visibilityState === 'visible' && !reloading) {
+        reloading = true;
+        window.location.reload();
+      }
+    };
+    document.addEventListener('visibilitychange', handler);
+    return () => document.removeEventListener('visibilitychange', handler);
+  }, [showSettings]);
+
   // Cleanup only — camera start is triggered by user gesture
   useEffect(() => {
     const videoEl = videoRef.current;
@@ -429,15 +444,15 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         <Box
           sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxWidth: 280, width: '100%' }}
         >
-          {settingsUrl && (
-            <Button
-              variant="contained"
-              startIcon={<OpenInNewIcon />}
-              onClick={() => window.open(settingsUrl, '_blank')}
-            >
-              Open Settings
-            </Button>
-          )}
+          <Button
+            variant="contained"
+            startIcon={<OpenInNewIcon />}
+            onClick={() => {
+              if (settingsUrl) window.open(settingsUrl, '_blank');
+            }}
+          >
+            {settingsUrl ? 'Open Settings' : 'Open Settings App'}
+          </Button>
           <Button
             variant="outlined"
             onClick={reloadPage}

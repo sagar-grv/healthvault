@@ -71,8 +71,9 @@ export function getBrowserSettingsInstructions(type: PermissionType): {
             'Scroll down and tap **Safari**',
             'Under **Settings for Websites**, tap **Camera**',
             'Select **Allow** (or **Ask**)',
-            'Return to HealthVault and tap Retry',
+            'Return to HealthVault — the page will reload automatically',
           ],
+          settingsUrl: 'App-Prefs:Safari',
         };
       case 'chrome_android':
         return {
@@ -132,6 +133,7 @@ export function getBrowserSettingsInstructions(type: PermissionType): {
             'Select **Allow** (or **Ask**)',
             'Return to HealthVault and tap Retry',
           ],
+          settingsUrl: 'App-Prefs:Safari',
         };
       case 'chrome_android':
         return {
