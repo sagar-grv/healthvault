@@ -147,7 +147,7 @@ export default function QRScannerDialog({
         setError('No camera found on this device.');
         setScanState('error');
       } else if (msg.includes('already in use') || msg.includes('notreadableerror')) {
-        setError('Camera is in use by another app. Close it and tap Retry.');
+        setError('Camera is in use by another app. Close it and tap Try Again.');
         setScanState('error');
       } else {
         setError(
@@ -182,10 +182,11 @@ export default function QRScannerDialog({
     onClose();
   }, [stopScanner, onClose]);
 
-  const handleRetry = useCallback(async () => {
-    // iOS Safari caches NotAllowedError per page load — must reload
-    window.location.reload();
-  }, []);
+  const handleRetry = useCallback(() => {
+    setScanState('idle');
+    setError('');
+    startScanner();
+  }, [startScanner]);
 
   const handleToggleTorch = async () => {
     if (!scannerRef.current) return;
@@ -406,7 +407,7 @@ export default function QRScannerDialog({
                 onClick={handleRetry}
                 sx={{ bgcolor: 'secondary.light', '&:hover': { bgcolor: 'secondary.main' } }}
               >
-                Retry
+                Try Again
               </Button>
               <Button
                 variant="outlined"
