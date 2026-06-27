@@ -33,6 +33,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServicesOutlined';
 import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import { createClient } from '@/lib/supabase/client';
+import { useTranslations } from 'next-intl';
 import { Profile, DoctorProfile } from '@/types';
 import { isValidHealthId, normalizeHealthId } from '@/lib/utils/health-id';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -54,6 +55,8 @@ export default function DoctorDashboardClient({
   doctorProfile,
 }: DoctorDashboardClientProps) {
   const router = useRouter();
+  const t = useTranslations('doctorDashboard');
+  const tc = useTranslations('common');
   const [searchInput, setSearchInput] = useState('');
   const [searchError, setSearchError] = useState('');
   const [isPending, startTransition] = useTransition();
@@ -66,7 +69,7 @@ export default function DoctorDashboardClient({
     setSearchError('');
     const normalized = normalizeHealthId(searchInput.trim());
     if (!isValidHealthId(normalized)) {
-      setSearchError('Invalid Health ID format. Expected: HV-XXXX-XXXX');
+      setSearchError(t('invalidHealthIdFormat'));
       return;
     }
     const formData = new FormData();
@@ -97,7 +100,7 @@ export default function DoctorDashboardClient({
         .substring(0, 2)
     : '?';
 
-  const firstName = profile.full_name ? profile.full_name.split(' ')[0] : 'Doctor';
+  const firstName = profile.full_name ? profile.full_name.split(' ')[0] : t('doctorLabel');
 
   return (
     <>
@@ -140,7 +143,7 @@ export default function DoctorDashboardClient({
             </Box>
             <Chip
               icon={<MedicalServicesIcon sx={{ fontSize: 13 }} />}
-              label="Doctor"
+              label={t('doctorLabel')}
               size="small"
               sx={{
                 mr: 1,
@@ -181,12 +184,12 @@ export default function DoctorDashboardClient({
                   color="inherit"
                   onClick={() => router.push('/dashboard/doctor/profile')}
                 >
-                  Complete
+                  {t('complete')}
                 </Button>
               }
               sx={{ mb: 2.5 }}
             >
-              Complete your profile to get verified
+              {t('completeProfilePrompt')}
             </Alert>
           )}
 
@@ -209,13 +212,13 @@ export default function DoctorDashboardClient({
             </Avatar>
             <Box>
               <Typography variant="h5" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
-                Dr. {firstName}
+                {t('greeting', { name: firstName })}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 {doctorProfile?.specialization ||
                   doctorProfile?.qualification ||
-                  'General Medicine'}
-                {doctorProfile?.clinic_name && ` · ${doctorProfile.clinic_name}`}
+                  t('generalMedicineFallback')}
+                {doctorProfile?.clinic_name && ' · ' + doctorProfile.clinic_name}
               </Typography>
             </Box>
           </Box>
@@ -249,8 +252,8 @@ export default function DoctorDashboardClient({
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
                   {doctorProfile?.verification_state === 'admin_verified'
-                    ? 'Verified'
-                    : 'Unverified'}
+                    ? t('verified')
+                    : t('unverified')}
                 </Typography>
               </CardContent>
             </Card>
@@ -271,7 +274,7 @@ export default function DoctorDashboardClient({
                   →
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-                  My Profile
+                  {t('myProfile')}
                 </Typography>
               </CardContent>
             </Card>
@@ -288,16 +291,16 @@ export default function DoctorDashboardClient({
           >
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h5" sx={{ mb: 0.5, fontWeight: 700 }}>
-                Look up a patient
+                {t('lookUpPatient')}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
-                Ask the patient for their Health ID (format: HV-XXXX-XXXX)
+                {t('searchHint')}
               </Typography>
 
               <Box component="form" onSubmit={handleSearch}>
                 <TextField
                   fullWidth
-                  placeholder="HV-XXXX-XXXX"
+                  placeholder={t('healthIdPlaceholder')}
                   value={searchInput}
                   onChange={(e) => {
                     setSearchInput(e.target.value.toUpperCase());
@@ -337,7 +340,7 @@ export default function DoctorDashboardClient({
                   endIcon={<ArrowForwardIcon />}
                   sx={{ py: 1.5, fontSize: '1rem', boxShadow: '0 4px 12px rgba(5,150,105,0.3)' }}
                 >
-                  {isPending ? 'Searching...' : 'View Patient Records'}
+                  {isPending ? t('searching') : t('viewPatientRecords')}
                 </Button>
               </Box>
             </CardContent>
@@ -354,11 +357,10 @@ export default function DoctorDashboardClient({
           >
             <CardContent sx={{ p: 2.5 }}>
               <Typography variant="body2" sx={{ fontWeight: 600, color: 'warning.dark', mb: 0.5 }}>
-                How it works
+                {t('howItWorks')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Ask your patient for their HealthVault Health ID. Type it above to see their shared
-                medical history — prescriptions, lab reports, and scans from any clinic.
+                {t('howItWorksBody')}
               </Typography>
             </CardContent>
           </Card>
@@ -366,7 +368,7 @@ export default function DoctorDashboardClient({
       </Box>
 
       {/* Floating QR FAB — above AI Assistant */}
-      <Tooltip title="My QR Code" placement="left">
+      <Tooltip title={t('myQrCode')} placement="left">
         <Fab
           onClick={() => setShowMyQR(true)}
           sx={{
@@ -401,14 +403,14 @@ export default function DoctorDashboardClient({
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>Log out of HealthVault?</DialogTitle>
+        <DialogTitle>{t('logoutTitle')}</DialogTitle>
         <DialogContent>
-          <Typography>You can always log back in to continue managing your patients.</Typography>
+          <Typography>{t('logoutBody')}</Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setLogoutDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setLogoutDialogOpen(false)}>{tc('cancel')}</Button>
           <Button onClick={handleLogout} color="error" variant="contained">
-            Log Out
+            {t('logOut')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -416,7 +418,7 @@ export default function DoctorDashboardClient({
       {/* My QR Code Dialog */}
       <Dialog open={showMyQR} onClose={() => setShowMyQR(false)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ textAlign: 'center' }}>
-          My QR Code
+          {t('myQrCode')}
           <IconButton
             onClick={() => setShowMyQR(false)}
             sx={{ position: 'absolute', right: 8, top: 8 }}
@@ -426,7 +428,7 @@ export default function DoctorDashboardClient({
         </DialogTitle>
         <DialogContent sx={{ textAlign: 'center' }}>
           <Typography variant="body2" color="text.secondary" gutterBottom>
-            Show this to a patient so they can share reports with you
+            {t('qrCodeHint')}
           </Typography>
           <Box
             sx={{
@@ -455,7 +457,7 @@ export default function DoctorDashboardClient({
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
           <Button variant="contained" onClick={() => setShowMyQR(false)} color="success">
-            Done
+            {tc('done')}
           </Button>
         </DialogActions>
       </Dialog>

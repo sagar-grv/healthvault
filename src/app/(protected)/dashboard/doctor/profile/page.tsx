@@ -32,11 +32,14 @@ import SaveIcon from '@mui/icons-material/Save';
 import ThemeToggle from '@/components/ThemeToggle';
 import { MEDICAL_COUNCILS } from '@/constants';
 import { createClient } from '@/lib/supabase/client';
+import { useTranslations } from 'next-intl';
 import { submitForVerification } from '../actions';
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function DoctorProfilePage() {
   const router = useRouter();
+  const t = useTranslations('doctorProfile');
+  const tc = useTranslations('common');
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -100,7 +103,7 @@ export default function DoctorProfilePage() {
     if (!registrationNumber || !councilName || !qualification) {
       setSnackbar({
         open: true,
-        message: 'Registration number, council and qualification are required.',
+        message: t('validationRequired'),
         severity: 'error',
       });
       return;
@@ -132,12 +135,12 @@ export default function DoctorProfilePage() {
         }),
       ]);
       if (profileRes.error || doctorRes.error) {
-        setSnackbar({ open: true, message: 'Failed to save changes.', severity: 'error' });
+        setSnackbar({ open: true, message: t('saveError'), severity: 'error' });
       } else {
-        setSnackbar({ open: true, message: 'Profile saved successfully.', severity: 'success' });
+        setSnackbar({ open: true, message: t('saveSuccess'), severity: 'success' });
       }
     } catch {
-      setSnackbar({ open: true, message: 'Something went wrong.', severity: 'error' });
+      setSnackbar({ open: true, message: tc('somethingWentWrong'), severity: 'error' });
     } finally {
       setSaving(false);
     }
@@ -153,12 +156,12 @@ export default function DoctorProfilePage() {
         setVerificationState('pending');
         setSnackbar({
           open: true,
-          message: 'Re-submitted for verification. Waiting for admin review.',
+          message: t('resubmittedForVerification'),
           severity: 'success',
         });
       }
     } catch {
-      setSnackbar({ open: true, message: 'Something went wrong.', severity: 'error' });
+      setSnackbar({ open: true, message: tc('somethingWentWrong'), severity: 'error' });
     } finally {
       setReSubmitting(false);
     }
@@ -204,10 +207,10 @@ export default function DoctorProfilePage() {
             <ArrowBackIcon />
           </IconButton>
           <Typography variant="h6" sx={{ ml: 1, fontWeight: 700, flexGrow: 1 }}>
-            My Profile
+            {t('pageTitle')}
           </Typography>
           <ThemeToggle />
-          <Tooltip title="Save profile">
+          <Tooltip title={t('saveProfile')}>
             <IconButton
               onClick={handleSave}
               disabled={saving}
@@ -259,7 +262,7 @@ export default function DoctorProfilePage() {
                   sx={{ color: 'white', fontWeight: 700, lineHeight: 1.2, mb: 0.25 }}
                   noWrap
                 >
-                  {fullName || 'Doctor Name'}
+                  {fullName || t('doctorNameFallback')}
                 </Typography>
                 <Typography
                   variant="body2"
@@ -267,7 +270,7 @@ export default function DoctorProfilePage() {
                   noWrap
                 >
                   {[qualification, specialization].filter(Boolean).join(' · ') ||
-                    'Medical Professional'}
+                    t('medicalProfessionalFallback')}
                 </Typography>
                 {clinicName && (
                   <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.55)' }} noWrap>
@@ -283,7 +286,7 @@ export default function DoctorProfilePage() {
               {verificationState === 'admin_verified' ? (
                 <Chip
                   icon={<VerifiedIcon sx={{ fontSize: 14, color: 'secondary.light !important' }} />}
-                  label="Verified"
+                  label={t('verified')}
                   size="small"
                   sx={{
                     bgcolor: 'rgba(255,255,255,0.18)',
@@ -296,7 +299,7 @@ export default function DoctorProfilePage() {
               ) : verificationState === 'pending' ? (
                 <Chip
                   icon={<PendingIcon sx={{ fontSize: 14 }} />}
-                  label="Pending Verification"
+                  label={t('pendingVerification')}
                   size="small"
                   sx={{
                     bgcolor: 'rgba(251,191,36,0.25)',
@@ -308,7 +311,7 @@ export default function DoctorProfilePage() {
               ) : verificationState === 'rejected' ? (
                 <Chip
                   icon={<PendingIcon sx={{ fontSize: 14 }} />}
-                  label="Verification Rejected"
+                  label={t('verificationRejected')}
                   size="small"
                   sx={{
                     bgcolor: 'rgba(239,68,68,0.25)',
@@ -320,7 +323,7 @@ export default function DoctorProfilePage() {
               ) : (
                 <Chip
                   icon={<PendingIcon sx={{ fontSize: 14 }} />}
-                  label="Unverified"
+                  label={t('unverified')}
                   size="small"
                   sx={{
                     bgcolor: 'rgba(255,255,255,0.12)',
@@ -331,7 +334,7 @@ export default function DoctorProfilePage() {
                 />
               )}
               <Chip
-                label="Doctor"
+                label={t('doctorLabel')}
                 size="small"
                 sx={{
                   bgcolor: 'rgba(255,255,255,0.12)',
@@ -359,7 +362,7 @@ export default function DoctorProfilePage() {
                 {reSubmitting ? (
                   <CircularProgress size={16} color="inherit" />
                 ) : (
-                  'Re-submit for Verification'
+                  t('resubmitForVerification')
                 )}
               </Button>
             )}
@@ -371,7 +374,7 @@ export default function DoctorProfilePage() {
                   variant="caption"
                   sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}
                 >
-                  Profile Completion
+                  {t('profileCompletion')}
                 </Typography>
                 <Typography
                   variant="caption"
@@ -398,12 +401,12 @@ export default function DoctorProfilePage() {
                   variant="caption"
                   sx={{ color: 'rgba(255,255,255,0.55)', mt: 0.5, display: 'block' }}
                 >
-                  Fill in{' '}
-                  {completionFields
-                    .filter((f) => !f.filled)
-                    .map((f) => f.label)
-                    .join(', ')}{' '}
-                  to get verified
+                  {t('fillInToVerify', {
+                    fields: completionFields
+                      .filter((f) => !f.filled)
+                      .map((f) => f.label)
+                      .join(', '),
+                  })}
                 </Typography>
               )}
             </Box>
@@ -414,29 +417,29 @@ export default function DoctorProfilePage() {
         <Card sx={{ mb: 2, borderRadius: 3 }}>
           <CardContent sx={{ p: 3 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
-              Personal Details
+              {t('personalDetails')}
             </Typography>
             <TextField
               fullWidth
-              label="Full Name"
+              label={t('fullName')}
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               sx={{ mb: 2 }}
             />
             <TextField
               fullWidth
-              label="Email"
+              label={t('email')}
               value={email}
               disabled
-              helperText="Email cannot be changed"
+              helperText={t('emailHelperText')}
               sx={{ mb: 2 }}
             />
             <TextField
               fullWidth
-              label="Phone (Optional)"
+              label={t('phoneOptional')}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="+91 XXXXX XXXXX"
+              placeholder={t('phonePlaceholder')}
             />
           </CardContent>
         </Card>
@@ -453,10 +456,10 @@ export default function DoctorProfilePage() {
           <CardContent sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                Medical Credentials
+                {t('medicalCredentials')}
               </Typography>
               <Chip
-                label="Required for verification"
+                label={t('requiredForVerification')}
                 size="small"
                 color="secondary"
                 variant="outlined"
@@ -465,17 +468,17 @@ export default function DoctorProfilePage() {
             </Box>
             <TextField
               fullWidth
-              label="Registration Number *"
+              label={t('registrationNumber')}
               value={registrationNumber}
               onChange={(e) => setRegistrationNumber(e.target.value)}
               required
-              placeholder="e.g., MH-12345"
+              placeholder={t('registrationNumberPlaceholder')}
               sx={{ mb: 2 }}
             />
             <TextField
               fullWidth
               select
-              label="Medical Council *"
+              label={t('medicalCouncil')}
               value={councilName}
               onChange={(e) => setCouncilName(e.target.value)}
               required
@@ -489,19 +492,19 @@ export default function DoctorProfilePage() {
             </TextField>
             <TextField
               fullWidth
-              label="Qualification *"
+              label={t('qualification')}
               value={qualification}
               onChange={(e) => setQualification(e.target.value)}
               required
-              placeholder="e.g., MBBS, MD (Medicine)"
+              placeholder={t('qualificationPlaceholder')}
               sx={{ mb: 2 }}
             />
             <TextField
               fullWidth
-              label="Specialization (Optional)"
+              label={t('specializationOptional')}
               value={specialization}
               onChange={(e) => setSpecialization(e.target.value)}
-              placeholder="e.g., General Medicine, Cardiology"
+              placeholder={t('specializationPlaceholder')}
             />
           </CardContent>
         </Card>
@@ -510,35 +513,35 @@ export default function DoctorProfilePage() {
         <Card sx={{ mb: 2, borderRadius: 3 }}>
           <CardContent sx={{ p: 3 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
-              Practice Details
+              {t('practiceDetails')}
               <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                optional
+                {t('optional')}
               </Typography>
             </Typography>
             <TextField
               fullWidth
-              label="Clinic / Hospital Name"
+              label={t('clinicName')}
               value={clinicName}
               onChange={(e) => setClinicName(e.target.value)}
-              placeholder="e.g., City Health Clinic"
+              placeholder={t('clinicNamePlaceholder')}
               sx={{ mb: 2 }}
             />
             <TextField
               fullWidth
-              label="Clinic Address"
+              label={t('clinicAddress')}
               value={clinicAddress}
               onChange={(e) => setClinicAddress(e.target.value)}
               multiline
               rows={2}
-              placeholder="Street, Area"
+              placeholder={t('clinicAddressPlaceholder')}
               sx={{ mb: 2 }}
             />
             <TextField
               fullWidth
-              label="City"
+              label={t('city')}
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              placeholder="e.g., Mumbai"
+              placeholder={t('cityPlaceholder')}
             />
           </CardContent>
         </Card>
@@ -547,10 +550,10 @@ export default function DoctorProfilePage() {
         <Card sx={{ mb: 3, borderRadius: 3 }}>
           <CardContent sx={{ p: 3, textAlign: 'center' }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
-              Your QR Code
+              {t('yourQrCode')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Patients can scan this QR to share their medical reports with you.
+              {t('qrCodeDescription')}
             </Typography>
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
               <Box
@@ -573,7 +576,7 @@ export default function DoctorProfilePage() {
               </Box>
             </Box>
             <Typography variant="caption" color="text.secondary">
-              Format: hv-doctor:{'{'}userId{'}'}
+              {t('qrCodeFormat')}
             </Typography>
           </CardContent>
         </Card>
@@ -588,17 +591,17 @@ export default function DoctorProfilePage() {
           color="secondary"
           sx={{ py: 1.75, borderRadius: 2, boxShadow: '0 4px 14px rgba(5,150,105,0.30)' }}
         >
-          {saving ? <CircularProgress size={24} color="inherit" /> : 'Save Profile'}
+          {saving ? <CircularProgress size={24} color="inherit" /> : t('saveProfile')}
         </Button>
 
         {/* ── Danger Zone ──────────────────────────────────────────────── */}
         <Card sx={{ borderRadius: 3, border: '1px solid', borderColor: 'error.light', mt: 3 }}>
           <CardContent sx={{ p: 2.5 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5, color: 'error.main' }}>
-              Danger Zone
+              {t('dangerZone')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Permanently delete your account and all associated data. This action cannot be undone.
+              {t('dangerZoneDescription')}
             </Typography>
             <Button
               variant="outlined"
@@ -607,7 +610,7 @@ export default function DoctorProfilePage() {
               onClick={() => setDeleteConfirmOpen(true)}
               sx={{ borderRadius: 2, py: 1 }}
             >
-              Delete My Account
+              {t('deleteMyAccount')}
             </Button>
           </CardContent>
         </Card>
@@ -618,31 +621,31 @@ export default function DoctorProfilePage() {
           maxWidth="xs"
           fullWidth
         >
-          <DialogTitle sx={{ color: 'error.main' }}>Delete your account?</DialogTitle>
+          <DialogTitle sx={{ color: 'error.main' }}>{t('deleteAccountConfirmTitle')}</DialogTitle>
           <DialogContent>
             <Typography variant="body2" sx={{ mb: 1 }}>
-              This will permanently delete:
+              {t('deleteAccountListHeader')}
             </Typography>
             <Box component="ul" sx={{ pl: 2, mb: 1 }}>
               <li>
-                <Typography variant="body2">Your doctor profile</Typography>
+                <Typography variant="body2">{t('deleteListItem1')}</Typography>
               </li>
               <li>
-                <Typography variant="body2">Certificate uploads</Typography>
+                <Typography variant="body2">{t('deleteListItem2')}</Typography>
               </li>
               <li>
-                <Typography variant="body2">Patient access history</Typography>
+                <Typography variant="body2">{t('deleteListItem3')}</Typography>
               </li>
               <li>
-                <Typography variant="body2">Verification records</Typography>
+                <Typography variant="body2">{t('deleteListItem4')}</Typography>
               </li>
             </Box>
             <Alert severity="error" sx={{ mt: 1 }}>
-              This cannot be undone. You will be signed out immediately.
+              {t('deleteAccountWarning')}
             </Alert>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+            <Button onClick={() => setDeleteConfirmOpen(false)}>{tc('cancel')}</Button>
             <Button
               color="error"
               variant="contained"
@@ -661,7 +664,11 @@ export default function DoctorProfilePage() {
                 }
               }}
             >
-              {deleting ? <CircularProgress size={20} color="inherit" /> : 'Yes, Delete Account'}
+              {deleting ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : (
+                t('confirmDeleteAccount')
+              )}
             </Button>
           </DialogActions>
         </Dialog>

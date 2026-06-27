@@ -2,6 +2,7 @@
 
 import { useCallback, useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import Paper from '@mui/material/Paper';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -10,20 +11,21 @@ import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/Person';
 
 type TabItem = {
-  label: string;
+  labelKey: string;
   icon: React.ReactNode;
   route: string;
 };
 
 const TABS: TabItem[] = [
-  { label: 'Dashboard', icon: <HomeIcon />, route: '/dashboard/doctor' },
-  { label: 'Patients', icon: <SearchIcon />, route: '/dashboard/doctor/patients' },
-  { label: 'Profile', icon: <PersonIcon />, route: '/dashboard/doctor/profile' },
+  { labelKey: 'dashboard', icon: <HomeIcon />, route: '/dashboard/doctor' },
+  { labelKey: 'patients', icon: <SearchIcon />, route: '/dashboard/doctor/patients' },
+  { labelKey: 'profile', icon: <PersonIcon />, route: '/dashboard/doctor/profile' },
 ];
 
 export default function DoctorBottomNav() {
   const router = useRouter();
   const pathname = usePathname();
+  const t = useTranslations('doctorBottomNav');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -109,7 +111,7 @@ export default function DoctorBottomNav() {
                   lineHeight: 1,
                 }}
               >
-                {tab.label}
+                {t(tab.labelKey)}
               </Typography>
             </Box>
           );
