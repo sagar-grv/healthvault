@@ -185,12 +185,16 @@ export function usePermission() {
   }, []);
 
   const requestCamera = useCallback(async (): Promise<PermissionResult> => {
+    // iOS Safari: getUserMedia Promise MUST be created synchronously within
+    // gesture context. Any await before getUserMedia destroys the gesture
+    // context and causes NotAllowedError even when permission is granted.
+    // permissions.query is checked non-blocking via .then(), never await.
     try {
-      const perm = await navigator.permissions.query({ name: 'camera' as PermissionName });
-      if (perm.state === 'denied') {
-        persist({ camera: 'denied' });
-        return 'denied';
-      }
+      navigator.permissions.query({ name: 'camera' as PermissionName }).then((perm) => {
+        if (perm.state === 'denied') {
+          persist({ camera: 'denied' });
+        }
+      });
     } catch {
       /* permissions query not supported */
     }
@@ -237,12 +241,14 @@ export function usePermission() {
   }, [persist]);
 
   const requestGeolocation = useCallback(async (): Promise<PermissionResult> => {
+    // Use .then() pattern for consistency; getUserMedia/CurrentPosition is the
+    // critical call that must be created inside gesture context on iOS.
     try {
-      const perm = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
-      if (perm.state === 'denied') {
-        persist({ geolocation: 'denied' });
-        return 'denied';
-      }
+      navigator.permissions.query({ name: 'geolocation' as PermissionName }).then((perm) => {
+        if (perm.state === 'denied') {
+          persist({ geolocation: 'denied' });
+        }
+      });
     } catch {
       /* permissions query not supported */
     }

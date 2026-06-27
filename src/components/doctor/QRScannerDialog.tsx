@@ -225,13 +225,9 @@ export default function QRScannerDialog({
   }, [stopScanner, onClose]);
 
   const handleRetry = useCallback(async () => {
-    await stopScanner();
-    setScanState('idle');
-    setError('');
-    setTorchOn(false);
-    setShowSettings(false);
-    handleContinue();
-  }, [stopScanner, handleContinue]);
+    // iOS Safari caches NotAllowedError per page load — must reload
+    window.location.reload();
+  }, []);
 
   const handleToggleTorch = async () => {
     if (!scannerRef.current) return;
@@ -548,10 +544,10 @@ export default function QRScannerDialog({
             )}
             <Button
               variant="outlined"
-              onClick={handleContinue}
+              onClick={() => window.location.reload()}
               sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}
             >
-              Retry
+              Reload & Retry
             </Button>
             <Button variant="text" onClick={handleClose} sx={{ color: 'rgba(255,255,255,0.5)' }}>
               Go Back

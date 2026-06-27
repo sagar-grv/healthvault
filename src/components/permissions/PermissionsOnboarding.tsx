@@ -44,7 +44,7 @@ const steps: StepDef[] = [
   },
   {
     key: 'camera',
-    icon: <CameraAltIcon sx={{ fontSize: 56, color: 'white' }} />,
+    icon: <CameraAltIcon sx={{ fontSize: 56, color: 'primary.main' }} />,
     title: 'Camera Access',
     description:
       'Used to scan your medical reports and Health ID QR codes. Your photos are processed locally and never uploaded without your permission.',
@@ -53,7 +53,7 @@ const steps: StepDef[] = [
   },
   {
     key: 'notifications',
-    icon: <NotificationsIcon sx={{ fontSize: 56, color: 'white' }} />,
+    icon: <NotificationsIcon sx={{ fontSize: 56, color: 'primary.main' }} />,
     title: 'Notifications',
     description:
       'Get alerts when a doctor accesses your shared reports or when new results are available.',
@@ -64,7 +64,7 @@ const steps: StepDef[] = [
   },
   {
     key: 'geolocation',
-    icon: <LocationOnIcon sx={{ fontSize: 56, color: 'white' }} />,
+    icon: <LocationOnIcon sx={{ fontSize: 56, color: 'primary.main' }} />,
     title: 'Location Access',
     description:
       'Used only during Emergency SOS to share your location with your emergency contact. Your location is never tracked or stored.',
@@ -73,7 +73,7 @@ const steps: StepDef[] = [
   },
   {
     key: 'summary',
-    icon: <CheckCircleIcon sx={{ fontSize: 56, color: '#10B981' }} />,
+    icon: <CheckCircleIcon sx={{ fontSize: 56, color: 'success.main' }} />,
     title: 'All Set!',
     description: '',
     allowLabel: 'Go to Dashboard',
@@ -150,21 +150,15 @@ export default function PermissionsOnboarding({ onComplete, onSkip }: Permission
     const r = results[key];
     if (!r) return null;
     if (r === 'granted')
-      return <CheckCircleIcon sx={{ fontSize: 18, color: '#10B981', ml: 0.5 }} />;
+      return <CheckCircleIcon sx={{ fontSize: 18, color: 'success.main', ml: 0.5 }} />;
     if (r === 'skipped')
       return (
-        <Typography
-          component="span"
-          sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', ml: 0.5 }}
-        >
+        <Typography component="span" sx={{ fontSize: '0.7rem', color: 'text.secondary', ml: 0.5 }}>
           (skipped)
         </Typography>
       );
     return (
-      <Typography
-        component="span"
-        sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', ml: 0.5 }}
-      >
+      <Typography component="span" sx={{ fontSize: '0.7rem', color: 'text.secondary', ml: 0.5 }}>
         (denied)
       </Typography>
     );
@@ -176,7 +170,7 @@ export default function PermissionsOnboarding({ onComplete, onSkip }: Permission
         position: 'fixed',
         inset: 0,
         zIndex: 1400,
-        bgcolor: '#0a0a0a',
+        bgcolor: 'background.default',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -193,8 +187,8 @@ export default function PermissionsOnboarding({ onComplete, onSkip }: Permission
           left: 0,
           right: 0,
           height: 3,
-          bgcolor: 'rgba(255,255,255,0.08)',
-          '& .MuiLinearProgress-bar': { bgcolor: '#10B981' },
+          bgcolor: 'divider',
+          '& .MuiLinearProgress-bar': { bgcolor: 'secondary.main' },
         }}
       />
 
@@ -217,18 +211,16 @@ export default function PermissionsOnboarding({ onComplete, onSkip }: Permission
                 borderRadius: '50%',
                 bgcolor:
                   results[s.key] === 'granted'
-                    ? '#10B981'
+                    ? 'success.main'
                     : results[s.key]
-                      ? 'rgba(255,255,255,0.2)'
+                      ? 'text.secondary'
                       : currentStep === i + 1
-                        ? 'white'
-                        : 'rgba(255,255,255,0.15)',
+                        ? 'primary.main'
+                        : 'divider',
                 transition: 'background-color 0.3s',
               }}
             />
-            {i < steps.length - 3 && (
-              <Box sx={{ width: 16, height: 1, bgcolor: 'rgba(255,255,255,0.1)' }} />
-            )}
+            {i < steps.length - 3 && <Box sx={{ width: 16, height: 1, bgcolor: 'divider' }} />}
           </Box>
         ))}
       </Box>
@@ -251,7 +243,7 @@ export default function PermissionsOnboarding({ onComplete, onSkip }: Permission
       >
         <Box sx={{ mb: 3 }}>{step.icon}</Box>
 
-        <Typography variant="h5" color="white" sx={{ fontWeight: 700, mb: 1.5 }}>
+        <Typography variant="h5" color="text.primary" sx={{ fontWeight: 700, mb: 1.5 }}>
           {step.title}
         </Typography>
 
@@ -264,12 +256,13 @@ export default function PermissionsOnboarding({ onComplete, onSkip }: Permission
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   py: 1,
-                  borderBottom: '1px solid rgba(255,255,255,0.06)',
+                  borderBottom: '1px solid',
+                  borderColor: 'divider',
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CameraAltIcon sx={{ fontSize: 20, color: 'rgba(255,255,255,0.6)' }} />
-                  <Typography color="rgba(255,255,255,0.8)" sx={{ fontSize: '0.9rem' }}>
+                  <CameraAltIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
+                  <Typography color="text.primary" sx={{ fontSize: '0.9rem' }}>
                     Camera
                   </Typography>
                 </Box>
@@ -283,12 +276,13 @@ export default function PermissionsOnboarding({ onComplete, onSkip }: Permission
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   py: 1,
-                  borderBottom: '1px solid rgba(255,255,255,0.06)',
+                  borderBottom: '1px solid',
+                  borderColor: 'divider',
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <NotificationsIcon sx={{ fontSize: 20, color: 'rgba(255,255,255,0.6)' }} />
-                  <Typography color="rgba(255,255,255,0.8)" sx={{ fontSize: '0.9rem' }}>
+                  <NotificationsIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
+                  <Typography color="text.primary" sx={{ fontSize: '0.9rem' }}>
                     Notifications
                   </Typography>
                 </Box>
@@ -305,8 +299,8 @@ export default function PermissionsOnboarding({ onComplete, onSkip }: Permission
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <LocationOnIcon sx={{ fontSize: 20, color: 'rgba(255,255,255,0.6)' }} />
-                  <Typography color="rgba(255,255,255,0.8)" sx={{ fontSize: '0.9rem' }}>
+                  <LocationOnIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
+                  <Typography color="text.primary" sx={{ fontSize: '0.9rem' }}>
                     Location
                   </Typography>
                 </Box>
@@ -314,24 +308,21 @@ export default function PermissionsOnboarding({ onComplete, onSkip }: Permission
               </Box>
             )}
             <Typography
-              color="rgba(255,255,255,0.5)"
+              color="text.secondary"
               sx={{ fontSize: '0.8rem', mt: 2, textAlign: 'center' }}
             >
               You can change these anytime from your profile settings.
             </Typography>
           </Box>
         ) : (
-          <Typography
-            color="rgba(255,255,255,0.7)"
-            sx={{ mb: 2, lineHeight: 1.7, fontSize: '0.9rem' }}
-          >
+          <Typography color="text.secondary" sx={{ mb: 2, lineHeight: 1.7, fontSize: '0.9rem' }}>
             {step.description}
           </Typography>
         )}
 
         {step.mobileOnly && step.mobileNote && (
           <Typography
-            color="rgba(255,255,255,0.35)"
+            color="text.secondary"
             sx={{ fontSize: '0.75rem', mb: 2, fontStyle: 'italic' }}
           >
             {step.mobileNote}
@@ -346,8 +337,8 @@ export default function PermissionsOnboarding({ onComplete, onSkip }: Permission
             size="large"
             onClick={handleAllow}
             sx={{
-              bgcolor: step.key === 'summary' ? '#10B981' : undefined,
-              '&:hover': { bgcolor: step.key === 'summary' ? '#059669' : undefined },
+              bgcolor: step.key === 'summary' ? 'secondary.main' : undefined,
+              '&:hover': { bgcolor: step.key === 'summary' ? 'secondary.dark' : undefined },
             }}
           >
             {step.allowLabel}
@@ -357,7 +348,7 @@ export default function PermissionsOnboarding({ onComplete, onSkip }: Permission
               variant="text"
               onClick={handleSkip}
               startIcon={step.key === 'welcome' ? <SkipNextIcon /> : undefined}
-              sx={{ color: 'rgba(255,255,255,0.4)' }}
+              sx={{ color: 'text.secondary' }}
             >
               {step.skipLabel}
             </Button>
