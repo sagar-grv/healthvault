@@ -47,7 +47,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
   const [error, setError] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [capturedTitle, setCapturedTitle] = useState('');
-  const [hasStarted, setHasStarted] = useState(false);
 
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
     const videoEl = videoRef.current;
@@ -68,7 +67,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         videoEl.srcObject = mediaStream;
         videoEl.onloadedmetadata = () => setCameraReady(true);
       }
-      setHasStarted(true);
     } catch (err) {
       const e = err as Error;
       if (e.name === 'NotAllowedError') {
@@ -85,15 +83,18 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     }
   }, []);
 
-  // Cleanup only — camera start is triggered by user gesture
+  // Auto-start camera on mount; re-start when facing mode changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    startCamera(facingMode);
+    // Cleanup: stop camera tracks on unmount
     const videoEl = videoRef.current;
     return () => {
       if (videoEl?.srcObject) {
         (videoEl.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
       }
     };
-  }, []);
+  }, [facingMode, startCamera]);
 
   // Draw corner overlay on the crop stage
   useEffect(() => {
@@ -358,46 +359,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
             sx={{ color: 'text.primary', borderColor: 'divider' }}
           >
             Go Back
-          </Button>
-        </Box>
-      </Box>
-    );
-  }
-
-  if (!hasStarted) {
-    return (
-      <Box
-        sx={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 1300,
-          bgcolor: 'background.default',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          p: 4,
-        }}
-      >
-        <CameraAltIcon sx={{ fontSize: 64, color: 'primary.main', mb: 3 }} />
-        <Typography variant="h5" color="text.primary" sx={{ fontWeight: 700, mb: 1 }}>
-          Camera Access Needed
-        </Typography>
-        <Typography
-          color="text.secondary"
-          sx={{ textAlign: 'center', maxWidth: 320, mb: 3, lineHeight: 1.6 }}
-        >
-          HealthVault uses your camera to scan medical reports. Your photos stay on your device and
-          are never uploaded without your permission.
-        </Typography>
-        <Box
-          sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, width: '100%', maxWidth: 280 }}
-        >
-          <Button variant="contained" size="large" onClick={() => startCamera(facingMode)}>
-            Start Camera
-          </Button>
-          <Button variant="text" onClick={handleClose} sx={{ color: 'text.secondary' }}>
-            Cancel
           </Button>
         </Box>
       </Box>

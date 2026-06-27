@@ -44,7 +44,6 @@ export default function QRScannerDialog({
   const [cameraCount, setCameraCount] = useState(0);
   const [cameraIndex, setCameraIndex] = useState(0);
   const [uploading, setUploading] = useState(false);
-  const [hasStarted, setHasStarted] = useState(false);
 
   const stopScanner = useCallback(async () => {
     if (scannerRef.current) {
@@ -135,7 +134,6 @@ export default function QRScannerDialog({
       }
 
       setScanState('scanning');
-      setHasStarted(true);
     } catch (err: unknown) {
       const e = err as { name?: string; message?: string };
       const name = e?.name ?? '';
@@ -168,19 +166,13 @@ export default function QRScannerDialog({
     startTransition(() => {
       setScanState('idle');
       setError('');
-      setHasStarted(false);
       setTorchOn(false);
       setCameraCount(0);
       setCameraIndex(0);
     });
-  }, [open, stopScanner]);
-
-  const handleContinue = useCallback(() => {
-    // iOS Safari: getUserMedia Promise MUST be created synchronously within the
-    // click handler (gesture context). startScanner handles all error cases
-    // (NotAllowedError, NotFoundError, NotReadableError) with simple error text.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     startScanner();
-  }, [startScanner]);
+  }, [open, stopScanner, startScanner]);
 
   const handleClose = useCallback(() => {
     stopScanner();
@@ -387,57 +379,6 @@ export default function QRScannerDialog({
           <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
             Starting camera…
           </Typography>
-        </Box>
-      )}
-
-      {/* Permission prompt */}
-      {!hasStarted && scanState === 'idle' && (
-        <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 25,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            px: 4,
-          }}
-        >
-          <Box component="span" sx={{ fontSize: 64, mb: 3, lineHeight: 1 }}>
-            📷
-          </Box>
-          <Typography variant="h5" color="white" sx={{ fontWeight: 700, mb: 1 }}>
-            Camera Access Needed
-          </Typography>
-          <Typography
-            color="rgba(255,255,255,0.7)"
-            sx={{ textAlign: 'center', maxWidth: 320, mb: 3, lineHeight: 1.6 }}
-          >
-            HealthVault uses your camera to scan Health ID QR codes. Your camera feed is processed
-            locally and never leaves your device.
-          </Typography>
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 1.5,
-              width: '100%',
-              maxWidth: 280,
-            }}
-          >
-            <Button
-              variant="contained"
-              size="large"
-              onClick={handleContinue}
-              sx={{ bgcolor: 'secondary.light', '&:hover': { bgcolor: 'secondary.main' } }}
-            >
-              Continue
-            </Button>
-            <Button variant="text" onClick={handleClose} sx={{ color: 'rgba(255,255,255,0.5)' }}>
-              Cancel
-            </Button>
-          </Box>
         </Box>
       )}
 
