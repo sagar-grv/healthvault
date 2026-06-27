@@ -78,8 +78,10 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         setShowSettings(true);
       } else if (e.name === 'NotFoundError') {
         setError('No camera found on this device.');
+      } else if (e.name === 'NotReadableError') {
+        setError('Camera is in use by another app. Close it and try again.');
       } else {
-        setError('Could not access camera. Try again.');
+        setError(`Could not access camera (${e.name || 'unknown'}). Try again.`);
       }
     }
   }, []);
@@ -88,16 +90,9 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     // iOS Safari requires getUserMedia Promise to be created synchronously within
     // the click handler (gesture context). Any await before getUserMedia destroys
     // the gesture context and causes NotAllowedError even when permission is granted.
-    // The permissions pre-check is done non-blocking via .then(), never await.
-    try {
-      navigator.permissions.query({ name: 'camera' as PermissionName }).then((perm) => {
-        if (perm.state === 'denied') {
-          setShowSettings(true);
-        }
-      });
-    } catch {
-      /* permissions query not supported — proceed */
-    }
+    // Do NOT use permissions.query here — it resolves as a microtask and can race
+    // with startCamera's state updates, incorrectly showing the settings screen
+    // even after getUserMedia succeeds. startCamera handles NotAllowedError directly.
     startCamera(facingMode);
   }, [facingMode, startCamera]);
 

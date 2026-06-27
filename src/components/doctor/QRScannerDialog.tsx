@@ -154,7 +154,9 @@ export default function QRScannerDialog({
         setError('Camera is in use by another app. Close it and tap Retry.');
         setScanState('error');
       } else {
-        setError('Could not start camera. Enter the Health ID manually instead.');
+        setError(
+          `Could not start camera (${name || 'unknown'}). Enter the Health ID manually instead.`
+        );
         setScanState('error');
       }
     }
@@ -198,17 +200,10 @@ export default function QRScannerDialog({
     // Strategy: pre-establish camera permission by calling getUserMedia directly
     // in the gesture context. Once permission is granted on iOS Safari, subsequent
     // getUserMedia calls (including from html5-qrcode) work regardless of gesture
-    // context. The permissions pre-check is non-blocking via .then().
-    try {
-      navigator.permissions.query({ name: 'camera' as PermissionName }).then((perm) => {
-        if (perm.state === 'denied') {
-          setShowSettings(true);
-        }
-      });
-    } catch {
-      /* permissions query not supported — proceed */
-    }
-
+    // context. Do NOT use permissions.query here — it resolves as a microtask and
+    // can race with state updates, incorrectly showing the settings screen even
+    // after getUserMedia succeeds. startScanner handles NotAllowedError directly.
+    //
     // Pre-establish camera permission — creates the getUserMedia Promise inside gesture context
     try {
       const tempStream = await navigator.mediaDevices.getUserMedia({
