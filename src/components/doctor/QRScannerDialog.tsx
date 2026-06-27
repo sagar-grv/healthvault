@@ -13,10 +13,7 @@ import FlashlightOnIcon from '@mui/icons-material/FlashlightOn';
 import FlashlightOffIcon from '@mui/icons-material/FlashlightOff';
 import CameraswitchIcon from '@mui/icons-material/Cameraswitch';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-import SettingsIcon from '@mui/icons-material/Settings';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { parseQRContent } from '@/lib/utils/qr-parser';
-import { getBrowserSettingsInstructions, detectBrowser } from '@/lib/hooks/usePermission';
 
 interface QRScannerDialogProps {
   open: boolean;
@@ -48,7 +45,6 @@ export default function QRScannerDialog({
   const [cameraIndex, setCameraIndex] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
 
   const stopScanner = useCallback(async () => {
     if (scannerRef.current) {
@@ -145,8 +141,10 @@ export default function QRScannerDialog({
       const name = e?.name ?? '';
       const msg = (e?.message ?? '').toLowerCase();
       if (name === 'NotAllowedError' || msg.includes('permission') || msg.includes('denied')) {
-        setShowSettings(true);
-        setScanState('idle');
+        setError(
+          'Camera access was denied. Please allow camera access in your browser settings and try again.'
+        );
+        setScanState('error');
       } else if (name === 'NotFoundError' || msg.includes('no camera')) {
         setError('No camera found on this device.');
         setScanState('error');
@@ -161,21 +159,6 @@ export default function QRScannerDialog({
       }
     }
   }, [stopScanner, customParser, onScan]);
-
-  // Auto-reload when user returns from Settings after camera was blocked
-  // iOS Safari caches NotAllowedError per page load — only page reload clears it
-  useEffect(() => {
-    if (!showSettings) return;
-    let reloading = false;
-    const handler = () => {
-      if (document.visibilityState === 'visible' && !reloading) {
-        reloading = true;
-        window.location.reload();
-      }
-    };
-    document.addEventListener('visibilitychange', handler);
-    return () => document.removeEventListener('visibilitychange', handler);
-  }, [showSettings]);
 
   useEffect(() => {
     if (!open) {
@@ -192,36 +175,10 @@ export default function QRScannerDialog({
     });
   }, [open, stopScanner]);
 
-  const handleContinue = useCallback(async () => {
+  const handleContinue = useCallback(() => {
     // iOS Safari: getUserMedia Promise MUST be created synchronously within the
-    // click handler (gesture context). Any await before it destroys the gesture
-    // context and causes NotAllowedError even when permission is granted.
-    //
-    // Strategy: pre-establish camera permission by calling getUserMedia directly
-    // in the gesture context. Once permission is granted on iOS Safari, subsequent
-    // getUserMedia calls (including from html5-qrcode) work regardless of gesture
-    // context. Do NOT use permissions.query here — it resolves as a microtask and
-    // can race with state updates, incorrectly showing the settings screen even
-    // after getUserMedia succeeds. startScanner handles NotAllowedError directly.
-    //
-    // Pre-establish camera permission — creates the getUserMedia Promise inside gesture context
-    try {
-      const tempStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-        audio: false,
-      });
-      // Permission granted — stop the temp stream immediately
-      tempStream.getTracks().forEach((t) => t.stop());
-    } catch (err) {
-      const e = err as { name?: string };
-      if (e.name === 'NotAllowedError') {
-        setShowSettings(true);
-        return;
-      }
-      // Other errors (no camera, in use, etc.) — let startScanner handle them
-    }
-
-    setShowSettings(false);
+    // click handler (gesture context). startScanner handles all error cases
+    // (NotAllowedError, NotFoundError, NotReadableError) with simple error text.
     startScanner();
   }, [startScanner]);
 
@@ -230,7 +187,6 @@ export default function QRScannerDialog({
     setScanState('idle');
     setError('');
     setTorchOn(false);
-    setShowSettings(false);
     onClose();
   }, [stopScanner, onClose]);
 
@@ -435,7 +391,7 @@ export default function QRScannerDialog({
       )}
 
       {/* Permission prompt */}
-      {!hasStarted && scanState === 'idle' && !showSettings && (
+      {!hasStarted && scanState === 'idle' && (
         <Box
           sx={{
             position: 'absolute',
@@ -480,88 +436,6 @@ export default function QRScannerDialog({
             </Button>
             <Button variant="text" onClick={handleClose} sx={{ color: 'rgba(255,255,255,0.5)' }}>
               Cancel
-            </Button>
-          </Box>
-        </Box>
-      )}
-
-      {/* Settings instructions */}
-      {showSettings && (
-        <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 25,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            px: 4,
-          }}
-        >
-          <SettingsIcon sx={{ fontSize: 48, color: 'white', mb: 2 }} />
-          <Typography variant="h6" color="white" sx={{ fontWeight: 700, mb: 1 }}>
-            Camera Access Blocked
-          </Typography>
-          <Typography
-            color="rgba(255,255,255,0.6)"
-            sx={{ textAlign: 'center', mb: 2, fontSize: '0.85rem' }}
-          >
-            {detectBrowser() === 'ios_safari'
-              ? 'iOS Safari'
-              : detectBrowser() === 'chrome_android'
-                ? 'Chrome (Android)'
-                : 'Your browser'}{' '}
-            has blocked camera access.
-          </Typography>
-          <Box
-            component="ol"
-            sx={{
-              color: 'rgba(255,255,255,0.85)',
-              textAlign: 'left',
-              maxWidth: 340,
-              mb: 3,
-              fontSize: '0.85rem',
-              lineHeight: 1.8,
-              pl: 2.5,
-              '& li': { mb: 0.5 },
-            }}
-          >
-            {getBrowserSettingsInstructions('camera').steps.map((s, i) => (
-              <Box key={i} component="li" dangerouslySetInnerHTML={{ __html: s }} />
-            ))}
-          </Box>
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 1.5,
-              maxWidth: 280,
-              width: '100%',
-            }}
-          >
-            <Button
-              variant="contained"
-              startIcon={<OpenInNewIcon />}
-              onClick={() => {
-                const url = getBrowserSettingsInstructions('camera').settingsUrl;
-                if (url) window.open(url, '_blank');
-              }}
-              sx={{ bgcolor: 'secondary.light', '&:hover': { bgcolor: 'secondary.main' } }}
-            >
-              {getBrowserSettingsInstructions('camera').settingsUrl
-                ? 'Open Settings'
-                : 'Open Settings App'}
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => window.location.reload()}
-              sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}
-            >
-              Reload & Retry
-            </Button>
-            <Button variant="text" onClick={handleClose} sx={{ color: 'rgba(255,255,255,0.5)' }}>
-              Go Back
             </Button>
           </Box>
         </Box>

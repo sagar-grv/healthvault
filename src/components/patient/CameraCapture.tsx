@@ -15,8 +15,6 @@ import AddIcon from '@mui/icons-material/Add';
 import CheckIcon from '@mui/icons-material/Check';
 import ReplayIcon from '@mui/icons-material/Replay';
 import CropIcon from '@mui/icons-material/Crop';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import SettingsIcon from '@mui/icons-material/Settings';
 import {
   detectDocumentCorners,
   perspectiveCrop,
@@ -24,7 +22,6 @@ import {
   type DocumentCorners,
   type Point,
 } from '@/lib/utils/document-scanner';
-import { getBrowserSettingsInstructions, detectBrowser } from '@/lib/hooks/usePermission';
 
 interface CameraCaptureProps {
   onCapture: (images: Blob[], title?: string) => void;
@@ -51,17 +48,17 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
   const [cameraReady, setCameraReady] = useState(false);
   const [capturedTitle, setCapturedTitle] = useState('');
   const [hasStarted, setHasStarted] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
 
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
     const videoEl = videoRef.current;
     setError(null);
     setCameraReady(false);
-    setShowSettings(false);
 
     try {
       if (videoEl?.srcObject) {
         (videoEl.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
+        // Small delay so the camera hardware fully releases before re-acquiring
+        await new Promise((r) => setTimeout(r, 500));
       }
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 2560 } },
@@ -75,7 +72,9 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     } catch (err) {
       const e = err as Error;
       if (e.name === 'NotAllowedError') {
-        setShowSettings(true);
+        setError(
+          'Camera access was denied. Please allow camera access in your browser settings and try again.'
+        );
       } else if (e.name === 'NotFoundError') {
         setError('No camera found on this device.');
       } else if (e.name === 'NotReadableError') {
@@ -85,31 +84,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
       }
     }
   }, []);
-
-  const handleContinue = useCallback(() => {
-    // iOS Safari requires getUserMedia Promise to be created synchronously within
-    // the click handler (gesture context). Any await before getUserMedia destroys
-    // the gesture context and causes NotAllowedError even when permission is granted.
-    // Do NOT use permissions.query here — it resolves as a microtask and can race
-    // with startCamera's state updates, incorrectly showing the settings screen
-    // even after getUserMedia succeeds. startCamera handles NotAllowedError directly.
-    startCamera(facingMode);
-  }, [facingMode, startCamera]);
-
-  // Auto-reload when user returns from Settings after camera was blocked
-  // iOS Safari caches NotAllowedError per page load — only page reload clears it
-  useEffect(() => {
-    if (!showSettings) return;
-    let reloading = false;
-    const handler = () => {
-      if (document.visibilityState === 'visible' && !reloading) {
-        reloading = true;
-        window.location.reload();
-      }
-    };
-    document.addEventListener('visibilitychange', handler);
-    return () => document.removeEventListener('visibilitychange', handler);
-  }, [showSettings]);
 
   // Cleanup only — camera start is triggered by user gesture
   useEffect(() => {
@@ -390,79 +364,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     );
   }
 
-  if (showSettings) {
-    const { steps, settingsUrl } = getBrowserSettingsInstructions('camera');
-    const browser = detectBrowser();
-    return (
-      <Box
-        sx={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 1300,
-          bgcolor: 'background.default',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          p: 4,
-        }}
-      >
-        <SettingsIcon sx={{ fontSize: 48, color: 'text.primary', mb: 2 }} />
-        <Typography variant="h6" color="text.primary" sx={{ fontWeight: 700, mb: 2 }}>
-          Camera Access Blocked
-        </Typography>
-        <Typography color="text.secondary" sx={{ textAlign: 'center', mb: 1, fontSize: '0.85rem' }}>
-          {browser === 'ios_safari'
-            ? 'iOS Safari'
-            : browser === 'chrome_android'
-              ? 'Chrome (Android)'
-              : 'Your browser'}{' '}
-          has blocked camera access.
-        </Typography>
-        <Box
-          component="ol"
-          sx={{
-            color: 'text.primary',
-            textAlign: 'left',
-            maxWidth: 340,
-            mb: 3,
-            fontSize: '0.85rem',
-            lineHeight: 1.8,
-            pl: 2.5,
-            '& li': { mb: 0.5 },
-          }}
-        >
-          {steps.map((s, i) => (
-            <Box key={i} component="li" dangerouslySetInnerHTML={{ __html: s }} />
-          ))}
-        </Box>
-        <Box
-          sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxWidth: 280, width: '100%' }}
-        >
-          <Button
-            variant="contained"
-            startIcon={<OpenInNewIcon />}
-            onClick={() => {
-              if (settingsUrl) window.open(settingsUrl, '_blank');
-            }}
-          >
-            {settingsUrl ? 'Open Settings' : 'Open Settings App'}
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={reloadPage}
-            sx={{ color: 'text.primary', borderColor: 'divider' }}
-          >
-            Reload & Retry
-          </Button>
-          <Button variant="text" onClick={handleClose} sx={{ color: 'text.secondary' }}>
-            Go Back
-          </Button>
-        </Box>
-      </Box>
-    );
-  }
-
   if (!hasStarted) {
     return (
       <Box
@@ -492,8 +393,8 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         <Box
           sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, width: '100%', maxWidth: 280 }}
         >
-          <Button variant="contained" size="large" onClick={handleContinue}>
-            Continue
+          <Button variant="contained" size="large" onClick={() => startCamera(facingMode)}>
+            Start Camera
           </Button>
           <Button variant="text" onClick={handleClose} sx={{ color: 'text.secondary' }}>
             Cancel

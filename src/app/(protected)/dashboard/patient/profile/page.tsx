@@ -558,26 +558,6 @@ export default function PatientProfilePage() {
           </CardContent>
         </Card>
 
-        {/* ── Permissions ──────────────────────────────────────────────── */}
-        <Card sx={{ borderRadius: 3, mt: 2 }}>
-          <CardContent sx={{ p: 2.5 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
-              Permission Settings
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Manage camera, notification, and location permissions.
-            </Typography>
-            <Button
-              variant="outlined"
-              fullWidth
-              onClick={() => router.push('/permissions')}
-              sx={{ borderRadius: 2, py: 1 }}
-            >
-              Open Permission Settings
-            </Button>
-          </CardContent>
-        </Card>
-
         {/* ── Danger Zone ──────────────────────────────────────────────── */}
         <Card sx={{ borderRadius: 3, border: '1px solid', borderColor: 'error.light', mt: 2 }}>
           <CardContent sx={{ p: 2.5 }}>
