@@ -182,11 +182,12 @@ export default function QRScannerDialog({
     onClose();
   }, [stopScanner, onClose]);
 
-  const handleRetry = useCallback(() => {
+  const handleRetry = useCallback(async () => {
+    await stopScanner();
     setScanState('idle');
     setError('');
     startScanner();
-  }, [startScanner]);
+  }, [stopScanner, startScanner]);
 
   const handleToggleTorch = async () => {
     if (!scannerRef.current) return;

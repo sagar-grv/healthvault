@@ -15,6 +15,8 @@ import AddIcon from '@mui/icons-material/Add';
 import CheckIcon from '@mui/icons-material/Check';
 import ReplayIcon from '@mui/icons-material/Replay';
 import CropIcon from '@mui/icons-material/Crop';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import SettingsIcon from '@mui/icons-material/Settings';
 import {
   detectDocumentCorners,
   perspectiveCrop,
@@ -35,6 +37,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cropCanvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
+  const isGestureRetry = useRef(false);
 
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [capturedPages, setCapturedPages] = useState<Blob[]>([]);
@@ -47,32 +50,40 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
   const [error, setError] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [capturedTitle, setCapturedTitle] = useState('');
+  const [showGestureOverlay, setShowGestureOverlay] = useState(false);
+  const [showSettingsOverlay, setShowSettingsOverlay] = useState(false);
 
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
-    const videoEl = videoRef.current;
-    setError(null);
     setCameraReady(false);
 
     try {
-      if (videoEl?.srcObject) {
-        (videoEl.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
-        // Small delay so the camera hardware fully releases before re-acquiring
+      const currentVideo = videoRef.current;
+      if (currentVideo?.srcObject) {
+        (currentVideo.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
         await new Promise((r) => setTimeout(r, 500));
       }
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 2560 } },
         audio: false,
       });
+      const videoEl = videoRef.current;
       if (videoEl) {
         videoEl.srcObject = mediaStream;
         videoEl.onloadedmetadata = () => setCameraReady(true);
       }
+      setError(null);
+      setShowGestureOverlay(false);
+      setShowSettingsOverlay(false);
     } catch (err) {
       const e = err as Error;
       if (e.name === 'NotAllowedError') {
-        setError(
-          'Camera access was denied. Please allow camera access in your browser settings and try again.'
-        );
+        if (isGestureRetry.current) {
+          isGestureRetry.current = false;
+          setShowSettingsOverlay(true);
+          setShowGestureOverlay(false);
+        } else {
+          setShowGestureOverlay(true);
+        }
       } else if (e.name === 'NotFoundError') {
         setError('No camera found on this device.');
       } else if (e.name === 'NotReadableError') {
@@ -83,17 +94,20 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     }
   }, []);
 
-  // Auto-start camera on mount; re-start when facing mode changes
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     startCamera(facingMode);
-    // Cleanup: stop camera tracks on unmount
     const videoEl = videoRef.current;
     return () => {
       if (videoEl?.srcObject) {
         (videoEl.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
       }
     };
+  }, [facingMode, startCamera]);
+
+  const handleGestureTap = useCallback(() => {
+    isGestureRetry.current = true;
+    startCamera(facingMode);
   }, [facingMode, startCamera]);
 
   // Draw corner overlay on the crop stage
@@ -191,7 +205,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
             setRawImageUrl(rawUrl);
 
             if (detected) {
-              // Document clearly detected — silently apply crop and jump to preview
               const cropped = perspectiveCrop(canvas, detected);
               cropped.toBlob(
                 (croppedBlob) => {
@@ -207,7 +220,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
                 0.92
               );
             } else {
-              // No clear document found — show raw image in preview (skip crop drag UI)
               setCroppedUrl((prev) => {
                 if (prev) URL.revokeObjectURL(prev);
                 return rawUrl;
@@ -327,40 +339,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     onClose();
   }, [croppedUrl, rawImageUrl, onClose]);
 
-  if (error) {
-    return (
-      <Box
-        sx={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 1300,
-          bgcolor: 'background.default',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          p: 3,
-        }}
-      >
-        <Typography color="text.primary" sx={{ textAlign: 'center', mb: 3 }}>
-          {error}
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button variant="contained" onClick={() => startCamera(facingMode)}>
-            Try Again
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={handleClose}
-            sx={{ color: 'text.primary', borderColor: 'divider' }}
-          >
-            Go Back
-          </Button>
-        </Box>
-      </Box>
-    );
-  }
-
   return (
     <Box
       sx={{
@@ -415,7 +393,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         {stage !== 'camera' && <Box sx={{ width: 40 }} />}
       </Box>
 
-      {/* Stage: Camera */}
+      {/* Stage: Camera — video element always mounted */}
       {stage === 'camera' && (
         <Box sx={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
           <video
@@ -504,7 +482,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
       {/* Stage: Preview (cropped result) */}
       {stage === 'preview' && croppedUrl && (
         <Box sx={{ flex: 1, overflow: 'hidden' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={croppedUrl}
             alt="Cropped report"
@@ -626,6 +603,139 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
       {/* Hidden canvases */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
       <canvas ref={cropCanvasRef} style={{ display: 'none' }} />
+
+      {/* Gesture overlay — translucent, user taps to start camera */}
+      {showGestureOverlay && (
+        <Box
+          onClick={handleGestureTap}
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 20,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: 'rgba(0,0,0,0.55)',
+            cursor: 'pointer',
+          }}
+        >
+          <CameraAltIcon sx={{ fontSize: 64, color: 'white', mb: 3, opacity: 0.9 }} />
+          <Typography
+            variant="h6"
+            color="white"
+            sx={{ fontWeight: 600, mb: 1, textAlign: 'center' }}
+          >
+            Tap to start camera
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{ color: 'rgba(255,255,255,0.7)', textAlign: 'center', maxWidth: 280 }}
+          >
+            Camera access is needed to scan medical reports
+          </Typography>
+        </Box>
+      )}
+
+      {/* Settings overlay — permission permanently denied */}
+      {showSettingsOverlay && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 20,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: 'rgba(0,0,0,0.85)',
+            px: 4,
+          }}
+        >
+          <SettingsIcon sx={{ fontSize: 48, color: 'white', mb: 2 }} />
+          <Typography
+            variant="h6"
+            color="white"
+            sx={{ fontWeight: 700, mb: 2, textAlign: 'center' }}
+          >
+            Camera Access Blocked
+          </Typography>
+          <Typography
+            sx={{
+              color: 'rgba(255,255,255,0.7)',
+              textAlign: 'center',
+              mb: 3,
+              maxWidth: 320,
+              fontSize: '0.85rem',
+            }}
+          >
+            Please allow camera access in your browser settings, then try again.
+          </Typography>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1.5,
+              maxWidth: 280,
+              width: '100%',
+            }}
+          >
+            <Button
+              variant="contained"
+              startIcon={<OpenInNewIcon />}
+              onClick={() => window.open('chrome://settings/content/camera', '_blank')}
+            >
+              Open Settings
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setShowSettingsOverlay(false);
+                startCamera(facingMode);
+              }}
+              sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}
+            >
+              Try Again
+            </Button>
+            <Button variant="text" onClick={handleClose} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+              Go Back
+            </Button>
+          </Box>
+        </Box>
+      )}
+
+      {/* Error overlay — camera not found, in use, or other error */}
+      {error && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 20,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: 'rgba(0,0,0,0.85)',
+            px: 3,
+          }}
+        >
+          <Typography color="white" sx={{ textAlign: 'center', mb: 3 }}>
+            {error}
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button variant="contained" onClick={() => startCamera(facingMode)}>
+              Try Again
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={handleClose}
+              sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}
+            >
+              Go Back
+            </Button>
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 }
