@@ -194,44 +194,63 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     // Detect corners
     setDetecting(true);
     setTimeout(() => {
-      const detected = detectDocumentCorners(canvas);
-      const finalCorners = detected || getDefaultCorners(canvas.width, canvas.height);
-      setCorners(finalCorners);
+      try {
+        const detected = detectDocumentCorners(canvas);
+        const finalCorners = detected || getDefaultCorners(canvas.width, canvas.height);
+        setCorners(finalCorners);
 
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              setDetecting(false);
+              setError('Failed to process image. Try again.');
+              return;
+            }
+
             const rawUrl = URL.createObjectURL(blob);
             setRawImageUrl(rawUrl);
 
             if (detected) {
-              const cropped = perspectiveCrop(canvas, detected);
-              cropped.toBlob(
-                (croppedBlob) => {
-                  if (croppedBlob) {
-                    setCroppedUrl((prev) => {
-                      if (prev) URL.revokeObjectURL(prev);
-                      return URL.createObjectURL(croppedBlob);
-                    });
-                    setStage('preview');
-                  }
-                },
-                'image/jpeg',
-                0.92
-              );
+              try {
+                const cropped = perspectiveCrop(canvas, detected);
+                cropped.toBlob(
+                  (croppedBlob) => {
+                    if (croppedBlob) {
+                      setCroppedUrl((prev) => {
+                        if (prev) URL.revokeObjectURL(prev);
+                        return URL.createObjectURL(croppedBlob);
+                      });
+                      setStage('preview');
+                    }
+                    setDetecting(false);
+                  },
+                  'image/jpeg',
+                  0.92
+                );
+              } catch {
+                setCroppedUrl((prev) => {
+                  if (prev) URL.revokeObjectURL(prev);
+                  return rawUrl;
+                });
+                setStage('preview');
+                setDetecting(false);
+              }
             } else {
               setCroppedUrl((prev) => {
                 if (prev) URL.revokeObjectURL(prev);
                 return rawUrl;
               });
               setStage('preview');
+              setDetecting(false);
             }
-            setDetecting(false);
-          }
-        },
-        'image/jpeg',
-        0.95
-      );
+          },
+          'image/jpeg',
+          0.95
+        );
+      } catch {
+        setDetecting(false);
+        setError('Failed to process image. Try again.');
+      }
     }, 50);
   }, []);
 
@@ -311,6 +330,9 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         setRawImageUrl(null);
         setCorners(null);
         setStage('camera');
+      })
+      .catch(() => {
+        setError('Failed to add page. Try again.');
       });
   }, [croppedUrl, rawImageUrl]);
 
@@ -393,65 +415,70 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         {stage !== 'camera' && <Box sx={{ width: 40 }} />}
       </Box>
 
-      {/* Stage: Camera — video element always mounted */}
-      {stage === 'camera' && (
-        <Box sx={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+      {/* Video element — always mounted to preserve camera stream */}
+      <Box
+        sx={{
+          flex: 1,
+          position: 'relative',
+          overflow: 'hidden',
+          display: stage === 'camera' ? 'block' : 'none',
+        }}
+      >
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+        <Fade in={cameraReady}>
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: '10% 5%',
+              border: '2px solid rgba(255,255,255,0.6)',
+              borderRadius: 2,
+              pointerEvents: 'none',
+            }}
           />
-          <Fade in={cameraReady}>
-            <Box
+        </Fade>
+        <Fade in={cameraReady}>
+          <Box sx={{ position: 'absolute', bottom: 120, left: 0, right: 0, textAlign: 'center' }}>
+            <Typography
+              color="white"
+              variant="body2"
               sx={{
-                position: 'absolute',
-                inset: '10% 5%',
-                border: '2px solid rgba(255,255,255,0.6)',
+                bgcolor: 'rgba(0,0,0,0.5)',
+                display: 'inline-block',
+                px: 2,
+                py: 0.5,
                 borderRadius: 2,
-                pointerEvents: 'none',
-              }}
-            />
-          </Fade>
-          <Fade in={cameraReady}>
-            <Box sx={{ position: 'absolute', bottom: 120, left: 0, right: 0, textAlign: 'center' }}>
-              <Typography
-                color="white"
-                variant="body2"
-                sx={{
-                  bgcolor: 'rgba(0,0,0,0.5)',
-                  display: 'inline-block',
-                  px: 2,
-                  py: 0.5,
-                  borderRadius: 2,
-                }}
-              >
-                Hold steady over your report
-              </Typography>
-            </Box>
-          </Fade>
-          {detecting && (
-            <Box
-              sx={{
-                position: 'absolute',
-                inset: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: 'rgba(0,0,0,0.4)',
               }}
             >
-              <CircularProgress sx={{ color: 'secondary.light' }} />
-              <Typography color="white" sx={{ ml: 2 }}>
-                Detecting edges...
-              </Typography>
-            </Box>
-          )}
-        </Box>
-      )}
+              Hold steady over your report
+            </Typography>
+          </Box>
+        </Fade>
+        {detecting && (
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: 'rgba(0,0,0,0.4)',
+              pointerEvents: 'none',
+            }}
+          >
+            <CircularProgress sx={{ color: 'secondary.light' }} />
+            <Typography color="white" sx={{ ml: 2 }}>
+              Detecting edges...
+            </Typography>
+          </Box>
+        )}
+      </Box>
 
-      {/* Stage: Crop (adjust corners) */}
       {stage === 'crop' && rawImageUrl && (
         <Box sx={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
           <canvas
