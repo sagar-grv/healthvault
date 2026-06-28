@@ -675,9 +675,15 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         )}
       </Box>
 
-      {/* Hidden canvases */}
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
-      <canvas ref={cropCanvasRef} style={{ display: 'none' }} />
+      {/* Hidden canvases — use visibility:hidden instead of display:none so toBlob works */}
+      <canvas
+        ref={canvasRef}
+        style={{ visibility: 'hidden', position: 'absolute', pointerEvents: 'none' }}
+      />
+      <canvas
+        ref={cropCanvasRef}
+        style={{ visibility: 'hidden', position: 'absolute', pointerEvents: 'none' }}
+      />
 
       {/* Gesture overlay — translucent, user taps to start camera */}
       {showGestureOverlay && (
