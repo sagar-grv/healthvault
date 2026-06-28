@@ -179,63 +179,105 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     img.src = rawImageUrl;
   }, [stage, corners, rawImageUrl]);
 
+  const resetCapture = useCallback(() => {
+    setError(null);
+    setDetecting(false);
+    setCorners(null);
+    if (rawImageUrl) URL.revokeObjectURL(rawImageUrl);
+    setRawImageUrl(null);
+    if (croppedUrl) URL.revokeObjectURL(croppedUrl);
+    setCroppedUrl(null);
+    setStage('camera');
+    startCamera(facingMode);
+  }, [rawImageUrl, croppedUrl, facingMode, startCamera]);
+
   // Capture photo from video stream
   const capturePhoto = useCallback(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // Cap resolution to 1024px for faster processing
+    const MAX_DIM = 1024;
+    const srcW = video.videoWidth;
+    const srcH = video.videoHeight;
+    const scale = Math.min(MAX_DIM / srcW, MAX_DIM / srcH, 1);
+    const w = Math.round(srcW * scale);
+    const h = Math.round(srcH * scale);
+
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.drawImage(video, 0, 0);
+    ctx.drawImage(video, 0, 0, w, h);
 
-    // Detect corners
     setDetecting(true);
+
+    // toBlob with timeout fallback — prevents permanent lockout
+    const toBlobWithTimeout = (
+      c: HTMLCanvasElement,
+      type: string,
+      quality: number,
+      timeoutMs: number
+    ): Promise<Blob | null> =>
+      new Promise((resolve) => {
+        let settled = false;
+        const timer = setTimeout(() => {
+          if (!settled) {
+            settled = true;
+            resolve(null);
+          }
+        }, timeoutMs);
+        c.toBlob(
+          (blob) => {
+            if (!settled) {
+              settled = true;
+              clearTimeout(timer);
+              resolve(blob);
+            }
+          },
+          type,
+          quality
+        );
+      });
+
     setTimeout(() => {
       try {
         const detected = detectDocumentCorners(canvas);
-        const finalCorners = detected || getDefaultCorners(canvas.width, canvas.height);
+        const finalCorners = detected || getDefaultCorners(w, h);
         setCorners(finalCorners);
 
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              setDetecting(false);
-              setError('Failed to process image. Try again.');
-              return;
-            }
+        toBlobWithTimeout(canvas, 'image/jpeg', 0.95, 5000).then((blob) => {
+          if (!blob) {
+            setDetecting(false);
+            setError('Failed to process image. Try again.');
+            return;
+          }
 
-            const rawUrl = URL.createObjectURL(blob);
-            setRawImageUrl(rawUrl);
+          const rawUrl = URL.createObjectURL(blob);
+          setRawImageUrl(rawUrl);
 
-            if (detected) {
-              try {
-                const cropped = perspectiveCrop(canvas, detected);
-                cropped.toBlob(
-                  (croppedBlob) => {
-                    if (croppedBlob) {
-                      setCroppedUrl((prev) => {
-                        if (prev) URL.revokeObjectURL(prev);
-                        return URL.createObjectURL(croppedBlob);
-                      });
-                      setStage('preview');
-                    }
-                    setDetecting(false);
-                  },
-                  'image/jpeg',
-                  0.92
-                );
-              } catch {
-                setCroppedUrl((prev) => {
-                  if (prev) URL.revokeObjectURL(prev);
-                  return rawUrl;
-                });
-                setStage('preview');
+          if (detected) {
+            try {
+              const cropped = perspectiveCrop(canvas, detected);
+              toBlobWithTimeout(cropped, 'image/jpeg', 0.92, 5000).then((croppedBlob) => {
+                if (croppedBlob) {
+                  setCroppedUrl((prev) => {
+                    if (prev) URL.revokeObjectURL(prev);
+                    return URL.createObjectURL(croppedBlob);
+                  });
+                  setStage('preview');
+                } else {
+                  // Fallback: use raw image if cropped toBlob fails
+                  setCroppedUrl((prev) => {
+                    if (prev) URL.revokeObjectURL(prev);
+                    return rawUrl;
+                  });
+                  setStage('preview');
+                }
                 setDetecting(false);
-              }
-            } else {
+              });
+            } catch {
               setCroppedUrl((prev) => {
                 if (prev) URL.revokeObjectURL(prev);
                 return rawUrl;
@@ -243,10 +285,15 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
               setStage('preview');
               setDetecting(false);
             }
-          },
-          'image/jpeg',
-          0.95
-        );
+          } else {
+            setCroppedUrl((prev) => {
+              if (prev) URL.revokeObjectURL(prev);
+              return rawUrl;
+            });
+            setStage('preview');
+            setDetecting(false);
+          }
+        });
       } catch {
         setDetecting(false);
         setError('Failed to process image. Try again.');
@@ -333,6 +380,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
       })
       .catch(() => {
         setError('Failed to add page. Try again.');
+        setStage('camera');
       });
   }, [croppedUrl, rawImageUrl]);
 
@@ -750,7 +798,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
             {error}
           </Typography>
           <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button variant="contained" onClick={() => startCamera(facingMode)}>
+            <Button variant="contained" onClick={resetCapture}>
               Try Again
             </Button>
             <Button
