@@ -1,29 +1,28 @@
-# Last Session — June 27, 2026
+# Last Session — June 28, 2026
 
 ## Completed
 
-- **Wave 2.7**: Email verification UI — added verification banner alert on login page with "Resend" button when Supabase returns "Email not confirmed" error
-- **Wave 2.8**: Password reset flow — created `/reset-password` page (new password form), modified auth callback to redirect `type=recovery` to `/reset-password`
-- **Wave 2.9**: Password change UI — added "Change Password" dialog on patient profile page with current/new password fields; verifies current password via `signInWithPassword` before allowing update
-- **Wave 2.10**: Rewrote README.md from `create-next-app` boilerplate to HealthVault-specific docs (stack, scripts, structure, env vars, branch strategy)
-- **Wave 2.11**: Added i18n to doctor-facing pages:
-  - `DoctorDashboardClient.tsx`: 12 hardcoded strings → `doctorDashboard.*` keys
-  - `doctor/profile/page.tsx`: ~35 hardcoded strings → `doctorProfile.*` keys (+ `common.*` for cancel/somethingWentWrong)
-  - `DoctorBottomNav.tsx`: 3 hardcoded labels → `doctorBottomNav.*` keys
-  - `messages/en.json`: Added all new namespaces (`doctorDashboard`, `doctorProfile`, `patientsClient`, `patientView`, `sharedReports`, `doctorBottomNav`) with merge fixes for duplicate `common` section
-- Build passes (34 routes), all 52 tests pass, lint + typecheck clean
+- **Camera capture stuck after photo — FIXED (PR #80 + #81 merged)**: Two root causes:
+  1. `setDetecting(true)` ran unconditionally but `setDetecting(false)` was trapped inside `if(blob)` guard — null blob or exceptions left buttons permanently disabled.
+  2. `toBlob()` callbacks silently failed on large canvases (1920x2560) — no timeout, no recovery.
+  3. `perspectiveCrop` + `detectDocumentCorners` blocked main thread for 10-30s on mobile.
+  4. "Try Again" button only called `startCamera()`, didn't reset `stage` back to camera.
+- **Fixes applied**: try/catch around capturePhoto, 5s toBlob timeout, 1024px resolution cap (4x faster), `resetCapture()` that clears ALL state, acceptPage error sets stage=camera, fallback to raw image if cropped toBlob fails, pointerEvents:none on detecting overlay, video element always mounted (prevents black screen on retake).
+- **Camera Permissions-Policy fix (PR #79)**: `camera=()` → `camera=(self)` in next.config.mjs.
+- **Pre-launch audit completed**: 23 issues found across security, UI/UX, i18n, code quality.
 
 ## Files Changed
 
-- `src/app/auth/callback/route.ts` — added `type=recovery` → redirect to `/reset-password`
-- `src/app/(auth)/login/page.tsx` — added email verification banner + resend button
-- `src/app/(auth)/reset-password/page.tsx` — new file: reset password form
-- `src/app/(protected)/dashboard/patient/profile/page.tsx` — added password change dialog
-- `src/app/(protected)/dashboard/doctor/DoctorDashboardClient.tsx` — added i18n
-- `src/app/(protected)/dashboard/doctor/profile/page.tsx` — added i18n
-- `src/components/doctor/DoctorBottomNav.tsx` — added i18n
-- `messages/en.json` — added all doctor-facing i18n keys, fixed duplicate `common` section
-- `README.md` — rewrote from boilerplate to HealthVault-specific docs
+- `src/components/patient/CameraCapture.tsx` — 3 rounds of fixes (PR #80, #81)
+- `next.config.mjs` — line 33: `camera=()` → `camera=(self)`
+
+## What We Learned
+
+- Always check server-side headers (Permissions-Policy, CSP) before writing client-side camera fixes.
+- `canvas.toBlob()` callback can silently fail on large canvases — always wrap in Promise with timeout.
+- Synchronous pixel processing (perspectiveCrop, detectDocumentCorners) blocks the main thread — cap image resolution before processing.
+- When recovering from error, must reset ALL state (stage, corners, URLs, error, detecting) — not just restart camera.
+- AI systems (Gemini) are NOT called during camera capture flow — the hang is purely client-side canvas operations.
 
 ## Next
 
