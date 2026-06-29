@@ -64,7 +64,6 @@ function toBlobWithTimeout(
 export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const cropCanvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const isGestureRetry = useRef(false);
 
@@ -148,6 +147,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     if (!ctx) return;
 
     const img = new Image();
+    img.onerror = () => setError('Failed to load image for cropping. Try retaking the photo.');
     img.onload = () => {
       overlay.width = img.width;
       overlay.height = img.height;
@@ -685,11 +685,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         ref={canvasRef}
         style={{ visibility: 'hidden', position: 'absolute', pointerEvents: 'none' }}
       />
-      <canvas
-        ref={cropCanvasRef}
-        style={{ visibility: 'hidden', position: 'absolute', pointerEvents: 'none' }}
-      />
-
       {/* Gesture overlay — translucent, user taps to start camera */}
       {showGestureOverlay && (
         <Box
