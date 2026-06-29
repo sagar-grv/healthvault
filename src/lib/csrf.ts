@@ -1,5 +1,13 @@
 import { NextRequest } from 'next/server';
 
+function tryParseOrigin(url: string): string | null {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+}
+
 export function validateOrigin(request: NextRequest): boolean {
   const origin = request.headers.get('origin');
   const referer = request.headers.get('referer') || '';
@@ -13,18 +21,25 @@ export function validateOrigin(request: NextRequest): boolean {
     return true;
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  if (!siteUrl) {
-    // In dev, allow if origin matches localhost
-    if (process.env.NODE_ENV === 'development') return true;
-    return false;
+  const incoming = tryParseOrigin(headerOrigin);
+  if (!incoming) return false;
+
+  // Primary: NEXT_PUBLIC_SITE_URL
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    const allowed = tryParseOrigin(process.env.NEXT_PUBLIC_SITE_URL);
+    if (allowed === incoming) return true;
   }
 
-  try {
-    const allowed = new URL(siteUrl).origin;
-    const incoming = new URL(headerOrigin).origin;
-    return incoming === allowed;
-  } catch {
-    return false;
+  // Vercel preview deployments
+  if (process.env.VERCEL_URL) {
+    const vercelOrigin = tryParseOrigin(`https://${process.env.VERCEL_URL}`);
+    if (vercelOrigin === incoming) return true;
   }
+
+  // Dev: allow localhost
+  if (process.env.NODE_ENV === 'development' && incoming.startsWith('http://localhost')) {
+    return true;
+  }
+
+  return false;
 }
