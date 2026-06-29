@@ -76,106 +76,18 @@ export default function UploadReportPage() {
   const [uploadDone, setUploadDone] = useState(false);
   const [redirectCountdown, setRedirectCountdown] = useState(0);
 
-  // Handle camera capture — pre-fills the file field (single) or batch uploads (multi-page)
   const handleCameraCapture = (images: Blob[], captureTitle?: string) => {
     if (!images.length) return;
 
-    // Single image: pre-fill the form as before
-    if (images.length === 1) {
-      setShowCamera(false);
-      const blob = images[0];
-      const capturedFile = new File([blob], 'scanned-report.jpg', { type: 'image/jpeg' });
-      setFile(capturedFile);
-      setCompressionInfo(null);
-      if (!title) setTitle(captureTitle || 'Scanned Report');
-      if (!reportDate) setReportDate(new Date().toISOString().split('T')[0]);
-      return;
-    }
-
-    // Multiple images: batch-upload each as a separate report
-    uploadCapturedPages(images, captureTitle || 'Scanned Report');
-  };
-
-  // Batch upload multiple camera captures as separate reports
-  const uploadCapturedPages = async (blobs: Blob[], baseTitle: string) => {
     setShowCamera(false);
-    setUploading(true);
-    setProgress(0);
-
-    try {
-      const rateCheck = await checkUploadAllowed();
-      if (!rateCheck.allowed) {
-        setError(rateCheck.error || 'Upload limit reached');
-        setUploading(false);
-        return;
-      }
-
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setError(t('sessionExpired'));
-        setUploading(false);
-        return;
-      }
-
-      const effectiveDate = reportDate || new Date().toISOString().split('T')[0];
-      let completed = 0;
-
-      for (let i = 0; i < blobs.length; i++) {
-        setProgressLabel(`Uploading page ${i + 1} of ${blobs.length}...`);
-
-        const pageTitle = blobs.length > 1 ? `${baseTitle} (Page ${i + 1})` : baseTitle;
-        const fileName = `scan-page-${i + 1}.jpg`;
-        const reportId = crypto.randomUUID();
-        const filePath = `${user.id}/${reportId}/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('reports')
-          .upload(filePath, blobs[i], { contentType: 'image/jpeg', upsert: false });
-
-        if (uploadError) {
-          setError(`Upload failed on page ${i + 1}: ${uploadError.message}`);
-          setUploading(false);
-          return;
-        }
-
-        const { error: dbError } = await supabase.from('reports').insert({
-          id: reportId,
-          patient_id: user.id,
-          title: pageTitle,
-          report_type: reportType,
-          file_path: filePath,
-          file_name: fileName,
-          file_size: blobs[i].size,
-          mime_type: 'image/jpeg',
-          notes: null,
-          report_date: effectiveDate,
-          is_shareable: isShareable,
-        });
-
-        if (dbError) {
-          setError(`Failed to save page ${i + 1}: ${dbError.message}`);
-          await supabase.storage.from('reports').remove([filePath]);
-          setUploading(false);
-          return;
-        }
-
-        completed++;
-        setProgress(Math.round((completed / blobs.length) * 100));
-      }
-
-      setProgressLabel(t('done'));
-      setProgress(100);
-      await recordUpload();
-      setUploading(false);
-      setUploadDone(true);
-      setRedirectCountdown(2);
-    } catch {
-      setError(t('unknownError'));
-      setUploading(false);
-    }
+    const blob = images[0];
+    const isPdf = blob.type === 'application/pdf';
+    const fileName = isPdf ? 'scanned-report.pdf' : 'scanned-report.jpg';
+    const capturedFile = new File([blob], fileName, { type: blob.type });
+    setFile(capturedFile);
+    setCompressionInfo(null);
+    if (!title) setTitle(captureTitle || (isPdf ? 'Merged Scan' : 'Scanned Report'));
+    if (!reportDate) setReportDate(new Date().toISOString().split('T')[0]);
   };
 
   const handleFileChange = (selectedFile: File | null) => {
