@@ -8,6 +8,18 @@ function tryParseOrigin(url: string): string | null {
   }
 }
 
+function validateOriginByHost(request: NextRequest, expectedOrigin?: string): boolean {
+  const host = request.headers.get('host');
+  if (!host) return false;
+
+  const proto = request.headers.get('x-forwarded-proto') || 'https';
+  const hostOrigin = tryParseOrigin(`${proto}://${host}`);
+  if (!hostOrigin) return false;
+
+  if (expectedOrigin) return hostOrigin === expectedOrigin;
+  return true;
+}
+
 export function validateOrigin(request: NextRequest): boolean {
   const origin = request.headers.get('origin');
   const referer = request.headers.get('referer') || '';
@@ -18,6 +30,12 @@ export function validateOrigin(request: NextRequest): boolean {
       return false;
     }
     return true;
+  }
+
+  // Some browsers/extensions send Origin: "null" (opaque origin).
+  // We can't compare by origin, so validate by Host header instead.
+  if (origin === 'null') {
+    return validateOriginByHost(request);
   }
 
   const incoming = tryParseOrigin(headerOrigin);
@@ -31,12 +49,5 @@ export function validateOrigin(request: NextRequest): boolean {
 
   // Accept if origin matches the Host header
   // Covers Vercel preview URLs, custom domains, and local dev
-  const host = request.headers.get('host');
-  if (host) {
-    const proto = request.headers.get('x-forwarded-proto') || 'https';
-    const hostOrigin = tryParseOrigin(`${proto}://${host}`);
-    if (hostOrigin === incoming) return true;
-  }
-
-  return false;
+  return validateOriginByHost(request, incoming);
 }

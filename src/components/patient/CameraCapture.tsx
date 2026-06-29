@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
@@ -17,7 +16,6 @@ import ReplayIcon from '@mui/icons-material/Replay';
 import CropIcon from '@mui/icons-material/Crop';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import SettingsIcon from '@mui/icons-material/Settings';
-import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
 import {
   detectDocumentCorners,
   perspectiveCrop,
@@ -66,7 +64,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
-  const detectionCanvasRef = useRef<HTMLCanvasElement>(null);
   const isGestureRetry = useRef(false);
 
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
@@ -79,10 +76,8 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
   const [detecting, setDetecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
-  const [capturedTitle, setCapturedTitle] = useState('');
   const [showGestureOverlay, setShowGestureOverlay] = useState(false);
   const [showSettingsOverlay, setShowSettingsOverlay] = useState(false);
-  const [docDetected, setDocDetected] = useState(false);
   const pendingPageBlob = useRef<Blob | null>(null);
 
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
@@ -136,40 +131,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
       }
     };
   }, [facingMode, startCamera]);
-
-  // Live document detection — runs while camera is active
-  useEffect(() => {
-    if (stage !== 'camera' || !cameraReady) return;
-    const timer = setInterval(() => {
-      const video = videoRef.current;
-      const dc = detectionCanvasRef.current;
-      if (!video || !dc || !video.videoWidth) return;
-      const w = Math.min(video.videoWidth, 640);
-      const h = Math.round(video.videoHeight * (w / video.videoWidth));
-      dc.width = w;
-      dc.height = h;
-      const ctx = dc.getContext('2d');
-      if (!ctx) return;
-      ctx.drawImage(video, 0, 0, w, h);
-      const detected = detectDocumentCorners(dc);
-      if (!detected) {
-        setDocDetected(false);
-        return;
-      }
-      // Reject false positives: if most corners are at image edge, no real document
-      const margin = Math.min(w, h) * 0.04;
-      const isAtEdge = (pt: Point) =>
-        pt.x < margin || pt.x > w - margin || pt.y < margin || pt.y > h - margin;
-      const edgeCorners = [
-        detected.topLeft,
-        detected.topRight,
-        detected.bottomRight,
-        detected.bottomLeft,
-      ].filter(isAtEdge).length;
-      setDocDetected(edgeCorners < 3);
-    }, 800);
-    return () => clearInterval(timer);
-  }, [stage, cameraReady]);
 
   const handleGestureTap = useCallback(() => {
     isGestureRetry.current = true;
@@ -441,8 +402,8 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     if (videoRef.current?.srcObject) {
       (videoRef.current.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
     }
-    onCapture(capturedPages, capturedTitle || undefined);
-  }, [capturedPages, capturedTitle, onCapture]);
+    onCapture(capturedPages);
+  }, [capturedPages, onCapture]);
 
   const handleClose = useCallback(() => {
     if (videoRef.current?.srcObject) {
@@ -528,39 +489,11 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
             sx={{
               position: 'absolute',
               inset: '10% 5%',
-              border: '2px solid',
-              borderColor: docDetected ? 'success.main' : 'rgba(255,255,255,0.6)',
+              border: '2px solid rgba(255,255,255,0.6)',
               borderRadius: 2,
               pointerEvents: 'none',
-              transition: 'border-color 0.3s',
             }}
           />
-        </Fade>
-        <Fade in={cameraReady}>
-          <Box sx={{ position: 'absolute', bottom: 120, left: 0, right: 0, textAlign: 'center' }}>
-            <Typography
-              color="white"
-              variant="body2"
-              sx={{
-                bgcolor: docDetected ? 'success.main' : 'rgba(0,0,0,0.5)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 0.5,
-                px: 2,
-                py: 0.5,
-                borderRadius: 2,
-                transition: 'background-color 0.3s',
-              }}
-            >
-              {docDetected ? (
-                <>
-                  <CheckCircleOutlineRoundedIcon sx={{ fontSize: 16 }} /> Document detected
-                </>
-              ) : (
-                'Hold steady over your report'
-              )}
-            </Typography>
-          </Box>
         </Fade>
         {detecting && (
           <Box
@@ -625,29 +558,15 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         {stage === 'camera' && (
           <>
             {capturedPages.length > 0 && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <TextField
-                  value={capturedTitle}
-                  onChange={(e) => setCapturedTitle(e.target.value)}
-                  placeholder="Report name (optional)"
-                  size="small"
-                  sx={{
-                    input: { color: 'white', fontSize: '0.85rem' },
-                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
-                    '& .MuiInputBase-input::placeholder': { color: 'rgba(255,255,255,0.5)' },
-                    minWidth: 180,
-                  }}
-                />
-                <Button
-                  variant="contained"
-                  color="success"
-                  startIcon={<CheckIcon />}
-                  onClick={finishCapture}
-                  sx={{ borderRadius: 3, whiteSpace: 'nowrap' }}
-                >
-                  Done ({capturedPages.length})
-                </Button>
-              </Box>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<CheckIcon />}
+                onClick={finishCapture}
+                sx={{ borderRadius: 3, whiteSpace: 'nowrap' }}
+              >
+                Done ({capturedPages.length})
+              </Button>
             )}
             <IconButton
               onClick={capturePhoto}
@@ -655,20 +574,17 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
               sx={{
                 width: 72,
                 height: 72,
-                border: '4px solid',
-                borderColor: docDetected ? 'success.main' : 'white',
-                bgcolor: docDetected ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.2)',
-                transition: 'border-color 0.3s, background-color 0.3s',
+                border: '4px solid white',
+                bgcolor: 'rgba(255,255,255,0.2)',
                 '&:hover': {
-                  bgcolor: docDetected ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.3)',
+                  bgcolor: 'rgba(255,255,255,0.3)',
                 },
               }}
             >
               <CameraAltIcon
                 sx={{
                   fontSize: 32,
-                  color: docDetected ? 'success.light' : 'white',
-                  transition: 'color 0.3s',
+                  color: 'white',
                 }}
               />
             </IconButton>
@@ -745,7 +661,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         ref={canvasRef}
         style={{ visibility: 'hidden', position: 'absolute', pointerEvents: 'none' }}
       />
-      <canvas ref={detectionCanvasRef} style={{ display: 'none' }} />
       {/* Gesture overlay — translucent, user taps to start camera */}
       {showGestureOverlay && (
         <Box
