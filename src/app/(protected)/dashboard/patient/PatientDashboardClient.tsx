@@ -192,70 +192,63 @@ export default function PatientDashboardClient({
       const supabase = createClient();
       const userId = profile.id;
       const today = new Date().toISOString().split('T')[0];
-      const newReports: typeof reports = [];
 
-      for (let i = 0; i < images.length; i++) {
-        const rawBlob = images[i];
-        const rawFile = new File([rawBlob], 'camera-capture.jpg', { type: 'image/jpeg' });
-        const optimized = isOptimizableImage(rawFile) ? await optimizeImage(rawFile) : null;
-        const uploadBlob = optimized?.blob ?? rawBlob;
-        const uploadName = optimized?.fileName ?? `capture-${i + 1}.jpg`;
-        const uploadMime = optimized?.mimeType ?? 'image/jpeg';
+      const rawBlob = images[0];
+      const isPdf = rawBlob.type === 'application/pdf';
+      const rawFile = new File([rawBlob], isPdf ? 'scan.pdf' : 'camera-capture.jpg', {
+        type: rawBlob.type,
+      });
+      const optimized = !isPdf && isOptimizableImage(rawFile) ? await optimizeImage(rawFile) : null;
+      const uploadBlob = optimized?.blob ?? rawBlob;
+      const uploadName = optimized?.fileName ?? (isPdf ? 'scan.pdf' : 'capture.jpg');
+      const uploadMime = optimized?.mimeType ?? rawBlob.type;
 
-        const reportId = crypto.randomUUID();
-        const filePath = `${userId}/${reportId}/${uploadName}`;
-        const thumbnailPath = optimized?.thumbnail ? `${userId}/${reportId}/thumb.jpg` : null;
+      const reportId = crypto.randomUUID();
+      const filePath = `${userId}/${reportId}/${uploadName}`;
+      const thumbnailPath = optimized?.thumbnail ? `${userId}/${reportId}/thumb.jpg` : null;
 
-        const { error: uploadErr } = await supabase.storage
-          .from('reports')
-          .upload(filePath, uploadBlob, { contentType: uploadMime, upsert: false });
+      const { error: uploadErr } = await supabase.storage
+        .from('reports')
+        .upload(filePath, uploadBlob, { contentType: uploadMime, upsert: false });
 
-        if (uploadErr) {
-          setSnackbar({ open: true, message: t('uploadFailed'), severity: 'error' });
-          return;
-        }
-
-        const pageTitle =
-          images.length > 1
-            ? `${captureTitle || 'Captured Report'} (Page ${i + 1})`
-            : captureTitle || 'Captured Report';
-
-        const [, { data: newReport, error: dbErr }] = await Promise.all([
-          thumbnailPath && optimized?.thumbnail
-            ? supabase.storage.from('reports').upload(thumbnailPath, optimized.thumbnail, {
-                contentType: 'image/jpeg',
-                upsert: false,
-              })
-            : Promise.resolve({ error: null }),
-          supabase
-            .from('reports')
-            .insert({
-              id: reportId,
-              patient_id: userId,
-              title: pageTitle,
-              report_type: 'other',
-              file_path: filePath,
-              file_name: uploadName,
-              file_size: uploadBlob.size,
-              mime_type: uploadMime,
-              report_date: today,
-              is_shareable: false,
-              thumbnail_path: thumbnailPath,
-            })
-            .select()
-            .single(),
-        ]);
-
-        if (dbErr) {
-          setSnackbar({ open: true, message: 'Failed to save. Try again.', severity: 'error' });
-          await supabase.storage.from('reports').remove([filePath]);
-          return;
-        }
-
-        newReports.push(newReport);
+      if (uploadErr) {
+        setSnackbar({ open: true, message: t('uploadFailed'), severity: 'error' });
+        return;
       }
 
-      setReports((prev) => [...newReports, ...prev]);
+      const [, { data: newReport, error: dbErr }] = await Promise.all([
+        thumbnailPath && optimized?.thumbnail
+          ? supabase.storage.from('reports').upload(thumbnailPath, optimized.thumbnail, {
+              contentType: 'image/jpeg',
+              upsert: false,
+            })
+          : Promise.resolve({ error: null }),
+        supabase
+          .from('reports')
+          .insert({
+            id: reportId,
+            patient_id: userId,
+            title: captureTitle || 'Captured Report',
+            report_type: 'other',
+            file_path: filePath,
+            file_name: uploadName,
+            file_size: uploadBlob.size,
+            mime_type: uploadMime,
+            report_date: today,
+            is_shareable: false,
+            thumbnail_path: thumbnailPath,
+          })
+          .select()
+          .single(),
+      ]);
+
+      if (dbErr) {
+        setSnackbar({ open: true, message: 'Failed to save. Try again.', severity: 'error' });
+        await supabase.storage.from('reports').remove([filePath]);
+        return;
+      }
+
+      setReports((prev) => [newReport, ...prev]);
       await recordUpload();
       setSnackbar({ open: true, message: t('reportSaved'), severity: 'success' });
     } catch {

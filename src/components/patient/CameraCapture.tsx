@@ -398,11 +398,16 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     setStage('camera');
   }, [croppedUrl, rawImageUrl]);
 
-  const finishCapture = useCallback(() => {
+  const finishCapture = useCallback(async () => {
     if (videoRef.current?.srcObject) {
       (videoRef.current.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
     }
-    onCapture(capturedPages);
+    if (capturedPages.length > 1) {
+      const { mergeImagesToPdf } = await import('@/lib/utils/merge-images-to-pdf');
+      onCapture([await mergeImagesToPdf(capturedPages)]);
+    } else {
+      onCapture(capturedPages);
+    }
   }, [capturedPages, onCapture]);
 
   const handleClose = useCallback(() => {

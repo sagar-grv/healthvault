@@ -1,43 +1,50 @@
-# Last Session � Critical Fix Sprint (Camera + AI Pipeline)
+# Last Session — Critical Auth + Multi-Page + Camera Cleanup
 
-**Date**: 2026-06-29  
-**Branch**: main (via feat/critical-fix-sprint ? merge)
+**Date**: 2026-06-29
+**Branch**: main (via PR #85 — squash merge from fix/critical-auth-multipage-cleanup)
 
 ## What Was Completed
 
-### Camera Fixes (6 bugs, 3 fix branches)
+### Root Cause Investigation
 
-1. **Camera applyCrop toBlob timeout** � Extracted `toBlobWithTimeout` (5s), catches TimeoutError gracefully
-2. **Settings deep link browser-agnostic** � Replaced `chrome://settings/content/camera` with browser-detect + fallback text
-3. **Camera cleanup** � Added `onerror` handler on overlay Image; removed dead `cropCanvasRef` ref + canvas element
+| #   | Symptom                                | Root Cause Found                                                                                                                      | Fix                                                                           |
+| --- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| A   | AI 403 Forbidden (all routes)          | `validateOrigin` fails when browser sends `Origin: null` (opaque origin from sandboxed contexts, mobile browsers, privacy extensions) | CSRF now checks Host header when origin is `"null"`                           |
+| B   | AI "API key not configured"            | `GOOGLE_GEMINI_API_KEY` and `NVIDIA_API_KEY` stored as empty strings `""` in Vercel production environment                            | Overwritten with actual key values via Vercel CLI                             |
+| C   | Multi-page scan only uploads 1st image | `upload/page.tsx:83` and `PatientDashboardClient.tsx:197` both use `images[0]` only                                                   | Iterate over all images; batch-upload multi-page captures as separate reports |
+| D   | False document detection               | `detectDocumentCorners` detects any quadrilateral (laptop screens, boxes) as document                                                 | Removed live detection indicator entirely                                     |
+| E   | Useless text field before Done         | "Report name (optional)" TextField with no clear user value                                                                           | Removed                                                                       |
 
-### AI Pipeline Fixes (4 bugs, 4 fix branches)
+### Code Changes (4 files, +192/-171 lines)
 
-4. **Provider-router fallback broadened** � From `is429` only to `isRetryable` (429, 403, 503, TypeError, AbortError, network/timeout strings)
-5. **Size threshold alignment** � 3MB ? 10MB (`MAX_AI_FILE_BYTES`), shared between guardrails.ts and extract-report route
-6. **Explain-report wired to provider-router** � Replaced direct GoogleGenerativeAI SDK with `callTextAI()` ? Gemini ? NVIDIA fallback
-7. **Dead code removal** � Deleted `report-extractor.ts` (81 lines, zero imports) and `ai-ocr.ts` (0 bytes, never implemented)
+- **`src/lib/csrf.ts`** — Handle `Origin: null` via Host-based validation. Refactored into shared `validateOriginByHost()` helper.
+- **`src/components/patient/CameraCapture.tsx`** — Removed `docDetected` state, live detection `useEffect`, framing guide border color, detection badge text, shutter button doc-detected styling, `detectionCanvasRef`, `capturedTitle` state, "Report name (optional)" TextField.
+- **`src/app/(protected)/dashboard/patient/upload/page.tsx`** — Single image pre-fills form as before; multi-page batch-uploads each as separate report via `uploadCapturedPages()`.
+- **`src/app/(protected)/dashboard/patient/PatientDashboardClient.tsx`** — Loops over `images` array, creates one report per page.
 
-### Deployment
+### Vercel Environment
 
-- Branch protection disabled ? merged directly to main ? pushed ? Vercel deploy
-- CI + CodeQL both passed on main
-- Security review: CSP OK, permissions-policy OK, auth on all routes, rate limiting in place
-- Branch protection re-enabled (1 review required)
+- `GOOGLE_GEMINI_API_KEY` — removed and re-added with actual value (was empty)
+- `NVIDIA_API_KEY` — removed and re-added with actual value (was empty)
+- Verified via `vercel env ls`: both show `Encrypted` with fresh timestamps
+
+### Verification
+
+- `npm run lint` — 0 errors, 2 pre-existing warnings
+- `npm test` — 52/52 pass
+- `npm run build` — succeeds
+- Vercel deploy: `https://healthvault-dusky.vercel.app` — build succeeded, production aliased
 
 ## Files Changed
 
-- `src/components/patient/CameraCapture.tsx` � 6 camera bugs
-- `src/lib/ai/provider-router.ts` � broadened fallback
-- `src/lib/ai/guardrails.ts` � size threshold
-- `src/app/api/extract-report/route.ts` � shared constant import
-- `src/app/api/explain-report/route.ts` � wired to provider-router
-- `src/lib/ai/report-extractor.ts` � deleted
-- `src/lib/verification/ai-ocr.ts` � deleted
+- `src/lib/csrf.ts` — Fix A
+- `src/components/patient/CameraCapture.tsx` — Fix C + D
+- `src/app/(protected)/dashboard/patient/upload/page.tsx` — Fix B
+- `src/app/(protected)/dashboard/patient/PatientDashboardClient.tsx` — Fix B2
 
 ## What's Next
 
-- Fix 8 (camera-gesture-simplify) was deferred � would change UX flow from auto-start to gesture-first
-- Monitor for 24h for regression reports
-- Address Dependabot vulnerabilities (3 found on main branch)
-- Consider replacing `unsafe-inline` CSP with nonce/hash-based script-src
+- Test multi-page capture in production (upload 3+ pages, verify all saved as separate reports)
+- Test AI features: extract-report, analyze-report, explain-report, doctor-assistant — should no longer return 403 or "key not configured"
+- Address 3 Dependabot vulnerabilities (2 moderate, 1 low) on main branch
+- Consider replacing `'unsafe-inline'` CSP with nonce/hash-based `script-src`
