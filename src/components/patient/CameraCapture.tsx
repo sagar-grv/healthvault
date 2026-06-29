@@ -80,6 +80,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
   const [capturedTitle, setCapturedTitle] = useState('');
   const [showGestureOverlay, setShowGestureOverlay] = useState(false);
   const [showSettingsOverlay, setShowSettingsOverlay] = useState(false);
+  const pendingPageBlob = useRef<Blob | null>(null);
 
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
     setCameraReady(false);
@@ -209,6 +210,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
   }, [stage, corners, rawImageUrl]);
 
   const resetCapture = useCallback(() => {
+    pendingPageBlob.current = null;
     setError(null);
     setDetecting(false);
     setCorners(null);
@@ -269,13 +271,14 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
               const cropped = perspectiveCrop(canvas, detected);
               toBlobWithTimeout(cropped, 'image/jpeg', 0.92, 5000).then((croppedBlob) => {
                 if (croppedBlob) {
+                  pendingPageBlob.current = croppedBlob;
                   setCroppedUrl((prev) => {
                     if (prev) URL.revokeObjectURL(prev);
                     return URL.createObjectURL(croppedBlob);
                   });
                   setStage('preview');
                 } else {
-                  // Fallback: use raw image if cropped toBlob fails
+                  pendingPageBlob.current = blob;
                   setCroppedUrl((prev) => {
                     if (prev) URL.revokeObjectURL(prev);
                     return rawUrl;
@@ -285,6 +288,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
                 setDetecting(false);
               });
             } catch {
+              pendingPageBlob.current = blob;
               setCroppedUrl((prev) => {
                 if (prev) URL.revokeObjectURL(prev);
                 return rawUrl;
@@ -293,6 +297,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
               setDetecting(false);
             }
           } else {
+            pendingPageBlob.current = blob;
             setCroppedUrl((prev) => {
               if (prev) URL.revokeObjectURL(prev);
               return rawUrl;
@@ -359,6 +364,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     const cropped = perspectiveCrop(canvas, corners);
     toBlobWithTimeout(cropped, 'image/jpeg', 0.92, 5000).then((blob) => {
       if (blob) {
+        pendingPageBlob.current = blob;
         if (croppedUrl) URL.revokeObjectURL(croppedUrl);
         const url = URL.createObjectURL(blob);
         setCroppedUrl(url);
@@ -371,25 +377,23 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
 
   // Accept and add to pages
   const acceptPage = useCallback(() => {
-    if (!croppedUrl) return;
-    fetch(croppedUrl)
-      .then((r) => r.blob())
-      .then((blob) => {
-        setCapturedPages((prev) => [...prev, blob]);
-        URL.revokeObjectURL(croppedUrl);
-        setCroppedUrl(null);
-        if (rawImageUrl) URL.revokeObjectURL(rawImageUrl);
-        setRawImageUrl(null);
-        setCorners(null);
-        setStage('camera');
-      })
-      .catch(() => {
-        setError('Failed to add page. Try again.');
-        setStage('camera');
-      });
+    const blob = pendingPageBlob.current;
+    if (!blob) {
+      setError('Failed to add page. Try again.');
+      return;
+    }
+    pendingPageBlob.current = null;
+    setCapturedPages((prev) => [...prev, blob]);
+    if (croppedUrl) URL.revokeObjectURL(croppedUrl);
+    setCroppedUrl(null);
+    if (rawImageUrl) URL.revokeObjectURL(rawImageUrl);
+    setRawImageUrl(null);
+    setCorners(null);
+    setStage('camera');
   }, [croppedUrl, rawImageUrl]);
 
   const retake = useCallback(() => {
+    pendingPageBlob.current = null;
     if (croppedUrl) URL.revokeObjectURL(croppedUrl);
     if (rawImageUrl) URL.revokeObjectURL(rawImageUrl);
     setCroppedUrl(null);
