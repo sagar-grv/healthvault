@@ -32,10 +32,38 @@ interface CameraCaptureProps {
 
 type Stage = 'camera' | 'crop' | 'preview';
 
+// Shared helper: toBlob with timeout — prevents silent hang on some browsers
+function toBlobWithTimeout(
+  c: HTMLCanvasElement,
+  type: string,
+  quality: number,
+  timeoutMs: number
+): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        resolve(null);
+      }
+    }, timeoutMs);
+    c.toBlob(
+      (blob) => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          resolve(blob);
+        }
+      },
+      type,
+      quality
+    );
+  });
+}
+
 export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const cropCanvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const isGestureRetry = useRef(false);
 
@@ -119,6 +147,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     if (!ctx) return;
 
     const img = new Image();
+    img.onerror = () => setError('Failed to load image for cropping. Try retaking the photo.');
     img.onload = () => {
       overlay.width = img.width;
       overlay.height = img.height;
@@ -195,7 +224,10 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
   const capturePhoto = useCallback(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!video || !canvas) return;
+    if (!video || !canvas) {
+      setError('Camera not ready. Try again.');
+      return;
+    }
 
     // Cap resolution to 1024px for faster processing
     const MAX_DIM = 1024;
@@ -208,38 +240,13 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+      setError('Could not process camera feed. Try again.');
+      return;
+    }
     ctx.drawImage(video, 0, 0, w, h);
 
     setDetecting(true);
-
-    // toBlob with timeout fallback — prevents permanent lockout
-    const toBlobWithTimeout = (
-      c: HTMLCanvasElement,
-      type: string,
-      quality: number,
-      timeoutMs: number
-    ): Promise<Blob | null> =>
-      new Promise((resolve) => {
-        let settled = false;
-        const timer = setTimeout(() => {
-          if (!settled) {
-            settled = true;
-            resolve(null);
-          }
-        }, timeoutMs);
-        c.toBlob(
-          (blob) => {
-            if (!settled) {
-              settled = true;
-              clearTimeout(timer);
-              resolve(blob);
-            }
-          },
-          type,
-          quality
-        );
-      });
 
     setTimeout(() => {
       try {
@@ -350,18 +357,16 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     if (!canvas || !corners) return;
 
     const cropped = perspectiveCrop(canvas, corners);
-    cropped.toBlob(
-      (blob) => {
-        if (blob) {
-          if (croppedUrl) URL.revokeObjectURL(croppedUrl);
-          const url = URL.createObjectURL(blob);
-          setCroppedUrl(url);
-          setStage('preview');
-        }
-      },
-      'image/jpeg',
-      0.92
-    );
+    toBlobWithTimeout(cropped, 'image/jpeg', 0.92, 5000).then((blob) => {
+      if (blob) {
+        if (croppedUrl) URL.revokeObjectURL(croppedUrl);
+        const url = URL.createObjectURL(blob);
+        setCroppedUrl(url);
+        setStage('preview');
+      } else {
+        setError('Failed to crop image. Try retaking the photo.');
+      }
+    });
   }, [corners, croppedUrl]);
 
   // Accept and add to pages
@@ -680,11 +685,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         ref={canvasRef}
         style={{ visibility: 'hidden', position: 'absolute', pointerEvents: 'none' }}
       />
-      <canvas
-        ref={cropCanvasRef}
-        style={{ visibility: 'hidden', position: 'absolute', pointerEvents: 'none' }}
-      />
-
       {/* Gesture overlay — translucent, user taps to start camera */}
       {showGestureOverlay && (
         <Box
@@ -764,7 +764,23 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
             <Button
               variant="contained"
               startIcon={<OpenInNewIcon />}
-              onClick={() => window.open('chrome://settings/content/camera', '_blank')}
+              onClick={() => {
+                const ua = navigator.userAgent;
+                const isChrome = /Chrome\//.test(ua) && !/Edg\//.test(ua) && !/OPR\//.test(ua);
+                const isEdge = /Edg\//.test(ua);
+                const isFirefox = /Firefox\//.test(ua);
+                if (isChrome) {
+                  window.open('chrome://settings/content/camera', '_blank');
+                } else if (isEdge) {
+                  window.open('edge://settings/content/camera', '_blank');
+                } else if (isFirefox) {
+                  window.open('about:preferences#privacy', '_blank');
+                } else {
+                  setError(
+                    'Open your browser settings, find Site/Camera permissions, and allow this site.'
+                  );
+                }
+              }}
             >
               Open Settings
             </Button>
@@ -772,6 +788,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
               variant="outlined"
               onClick={() => {
                 setShowSettingsOverlay(false);
+                isGestureRetry.current = true;
                 startCamera(facingMode);
               }}
               sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}

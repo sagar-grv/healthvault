@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { validateOrigin } from '@/lib/csrf';
 import { checkAIGuardrails, logAuditEntry } from '@/lib/ai/guardrails';
+import { callTextAI } from '@/lib/ai/provider-router';
 
 /**
  * POST /api/explain-report
@@ -109,15 +110,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'AI not configured' }, { status: 503 });
-    }
-
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
     const systemPrompt = buildExplanationPrompt(language);
 
     // Build context from extracted data
@@ -144,8 +136,10 @@ ${
     .join('\n') || 'No specific values extracted.'
 }`;
 
-    const result = await model.generateContent([systemPrompt, reportContext]);
-    const responseText = result.response.text();
+    const aiResponse = await callTextAI([
+      { role: 'user', content: `${systemPrompt}\n\n${reportContext}` },
+    ]);
+    const responseText = aiResponse.text;
 
     // Parse JSON response
     let parsed;

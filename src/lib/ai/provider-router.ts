@@ -67,7 +67,12 @@ async function callNvidia(messages: AIMessage[], model: string, maxTokens = 2048
       throw new Error(`NVIDIA API error ${response.status}: ${err}`);
     }
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error(`NVIDIA API returned malformed JSON (status ${response.status})`);
+    }
     return data.choices?.[0]?.message?.content || '';
   } finally {
     clearTimeout(timeoutId);
@@ -133,17 +138,35 @@ export async function callVisionAI(
     );
     return { text, provider: 'gemini', model: 'gemini-2.5-flash' };
   } catch (err) {
-    const error = err as { message?: string; status?: number; toString?: () => string };
+    const error = err as {
+      message?: string;
+      status?: number;
+      toString?: () => string;
+      name?: string;
+    };
     const errStr = error.message || error.toString?.() || '';
-    const is429 =
+    const isRetryable =
       error.status === 429 ||
+      error.status === 503 ||
+      error.status === 403 ||
       errStr.includes('429') ||
+      errStr.includes('503') ||
+      errStr.includes('403') ||
       errStr.includes('quota') ||
       errStr.includes('rate') ||
       errStr.includes('RESOURCE_EXHAUSTED') ||
-      errStr.includes('Too Many Requests');
-    if (!is429) throw err; // Only fallback on rate limit errors
-    console.warn('[AI] Gemini rate limited, falling back to NVIDIA');
+      errStr.includes('Too Many Requests') ||
+      errStr.includes('fetch') ||
+      errStr.includes('network') ||
+      errStr.includes('timeout') ||
+      errStr.includes('abort') ||
+      error.name === 'AbortError' ||
+      error.name === 'TypeError';
+    if (!isRetryable) throw err;
+    console.warn(
+      '[AI] Gemini failed, falling back to NVIDIA:',
+      error.message || errStr.slice(0, 100)
+    );
   }
 
   // Fallback: NVIDIA phi-4-multimodal (vision capable, free endpoint)
@@ -176,17 +199,35 @@ export async function callTextAI(messages: AIMessage[], maxTokens = 2048): Promi
     const text = await callGemini(messages);
     return { text, provider: 'gemini', model: 'gemini-2.5-flash' };
   } catch (err) {
-    const error = err as { message?: string; status?: number; toString?: () => string };
+    const error = err as {
+      message?: string;
+      status?: number;
+      toString?: () => string;
+      name?: string;
+    };
     const errStr = error.message || error.toString?.() || '';
-    const is429 =
+    const isRetryable =
       error.status === 429 ||
+      error.status === 503 ||
+      error.status === 403 ||
       errStr.includes('429') ||
+      errStr.includes('503') ||
+      errStr.includes('403') ||
       errStr.includes('quota') ||
       errStr.includes('rate') ||
       errStr.includes('RESOURCE_EXHAUSTED') ||
-      errStr.includes('Too Many Requests');
-    if (!is429) throw err;
-    console.warn('[AI] Gemini rate limited, falling back to NVIDIA');
+      errStr.includes('Too Many Requests') ||
+      errStr.includes('fetch') ||
+      errStr.includes('network') ||
+      errStr.includes('timeout') ||
+      errStr.includes('abort') ||
+      error.name === 'AbortError' ||
+      error.name === 'TypeError';
+    if (!isRetryable) throw err;
+    console.warn(
+      '[AI] Gemini failed, falling back to NVIDIA:',
+      error.message || errStr.slice(0, 100)
+    );
   }
 
   // Fallback: NVIDIA nemotron-super (text only, excellent quality, free)
