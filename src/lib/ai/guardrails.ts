@@ -22,8 +22,8 @@ export type AIRouteType =
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-/** Max file size we'll send to Gemini — ~3MB unencoded (~4MB base64) */
-export const MAX_AI_FILE_BYTES = 3 * 1024 * 1024;
+/** Max file size we'll send to Gemini — ~10MB unencoded (~13.3MB base64) */
+export const MAX_AI_FILE_BYTES = 10 * 1024 * 1024;
 
 /** Max AI analyses per user per hour (across all routes combined) */
 export const AI_HOURLY_LIMIT = 20;
@@ -88,11 +88,11 @@ export async function checkAIGuardrails(
       action: routeType,
       file_size_bytes: fileSizeBytes,
       flagged: true,
-      flag_reason: `File too large: ${Math.round(fileSizeBytes / 1024 / 1024)}MB > 3MB limit`,
+      flag_reason: `File too large: ${Math.round(fileSizeBytes / 1024 / 1024)}MB > ${MAX_AI_FILE_BYTES / 1024 / 1024}MB limit`,
     });
     return {
       allowed: false,
-      reason: 'File is too large for AI analysis. Maximum size is 3MB.',
+      reason: `File is too large for AI analysis. Maximum size is ${MAX_AI_FILE_BYTES / 1024 / 1024}MB.`,
       status: 413,
     };
   }
