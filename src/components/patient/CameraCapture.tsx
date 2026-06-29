@@ -83,8 +83,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
   const [showGestureOverlay, setShowGestureOverlay] = useState(false);
   const [showSettingsOverlay, setShowSettingsOverlay] = useState(false);
   const [docDetected, setDocDetected] = useState(false);
-  const [pagePreviewUrls, setPagePreviewUrls] = useState<string[]>([]);
-  const pagePreviewUrlsRef = useRef<string[]>([]);
   const pendingPageBlob = useRef<Blob | null>(null);
 
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
@@ -153,7 +151,22 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
       const ctx = dc.getContext('2d');
       if (!ctx) return;
       ctx.drawImage(video, 0, 0, w, h);
-      setDocDetected(!!detectDocumentCorners(dc));
+      const detected = detectDocumentCorners(dc);
+      if (!detected) {
+        setDocDetected(false);
+        return;
+      }
+      // Reject false positives: if most corners are at image edge, no real document
+      const margin = Math.min(w, h) * 0.04;
+      const isAtEdge = (pt: Point) =>
+        pt.x < margin || pt.x > w - margin || pt.y < margin || pt.y > h - margin;
+      const edgeCorners = [
+        detected.topLeft,
+        detected.topRight,
+        detected.bottomRight,
+        detected.bottomLeft,
+      ].filter(isAtEdge).length;
+      setDocDetected(edgeCorners < 3);
     }, 800);
     return () => clearInterval(timer);
   }, [stage, cameraReady]);
@@ -406,9 +419,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     }
     pendingPageBlob.current = null;
     setCapturedPages((prev) => [...prev, blob]);
-    const previewUrl = URL.createObjectURL(blob);
-    pagePreviewUrlsRef.current = [...pagePreviewUrlsRef.current, previewUrl];
-    setPagePreviewUrls(pagePreviewUrlsRef.current);
     if (croppedUrl) URL.revokeObjectURL(croppedUrl);
     setCroppedUrl(null);
     if (rawImageUrl) URL.revokeObjectURL(rawImageUrl);
@@ -431,8 +441,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     if (videoRef.current?.srcObject) {
       (videoRef.current.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
     }
-    pagePreviewUrlsRef.current.forEach(URL.revokeObjectURL);
-    pagePreviewUrlsRef.current = [];
     onCapture(capturedPages, capturedTitle || undefined);
   }, [capturedPages, capturedTitle, onCapture]);
 
@@ -440,8 +448,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     if (videoRef.current?.srcObject) {
       (videoRef.current.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
     }
-    pagePreviewUrlsRef.current.forEach(URL.revokeObjectURL);
-    pagePreviewUrlsRef.current = [];
     if (croppedUrl) URL.revokeObjectURL(croppedUrl);
     if (rawImageUrl) URL.revokeObjectURL(rawImageUrl);
     onClose();
@@ -611,40 +617,6 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
             alt="Cropped report"
             style={{ width: '100%', height: '100%', objectFit: 'contain' }}
           />
-        </Box>
-      )}
-
-      {/* Page thumbnails strip */}
-      {stage === 'camera' && pagePreviewUrls.length > 0 && (
-        <Box
-          sx={{
-            display: 'flex',
-            gap: 0.5,
-            px: 2,
-            py: 1,
-            overflowX: 'auto',
-            justifyContent: 'center',
-          }}
-        >
-          {pagePreviewUrls.map((url, i) => (
-            <Box
-              key={i}
-              sx={{
-                width: 48,
-                height: 64,
-                borderRadius: 1,
-                border: '1px solid rgba(255,255,255,0.3)',
-                overflow: 'hidden',
-                flexShrink: 0,
-              }}
-            >
-              <img
-                src={url}
-                alt={`Page ${i + 1}`}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            </Box>
-          ))}
         </Box>
       )}
 
