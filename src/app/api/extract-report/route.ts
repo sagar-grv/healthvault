@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { validateOrigin } from '@/lib/csrf';
-import { checkAIGuardrails, logAuditEntry } from '@/lib/ai/guardrails';
+import { checkAIGuardrails, logAuditEntry, MAX_AI_FILE_BYTES } from '@/lib/ai/guardrails';
 
 /**
  * POST /api/extract-report
@@ -88,8 +88,11 @@ export async function POST(request: NextRequest) {
 
     // Size check (base64 is ~33% larger than binary)
     const estimatedBytes = (image.length * 3) / 4;
-    if (estimatedBytes > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: 'Image too large (max 10MB)' }, { status: 413 });
+    if (estimatedBytes > MAX_AI_FILE_BYTES) {
+      return NextResponse.json(
+        { error: `Image too large (max ${MAX_AI_FILE_BYTES / 1024 / 1024}MB)` },
+        { status: 413 }
+      );
     }
 
     // Rate limiting via guardrails
