@@ -769,7 +769,23 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
             <Button
               variant="contained"
               startIcon={<OpenInNewIcon />}
-              onClick={() => window.open('chrome://settings/content/camera', '_blank')}
+              onClick={() => {
+                const ua = navigator.userAgent;
+                const isChrome = /Chrome\//.test(ua) && !/Edg\//.test(ua) && !/OPR\//.test(ua);
+                const isEdge = /Edg\//.test(ua);
+                const isFirefox = /Firefox\//.test(ua);
+                if (isChrome) {
+                  window.open('chrome://settings/content/camera', '_blank');
+                } else if (isEdge) {
+                  window.open('edge://settings/content/camera', '_blank');
+                } else if (isFirefox) {
+                  window.open('about:preferences#privacy', '_blank');
+                } else {
+                  setError(
+                    'Open your browser settings, find Site/Camera permissions, and allow this site.'
+                  );
+                }
+              }}
             >
               Open Settings
             </Button>
