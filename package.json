@@ -40,11 +40,15 @@
     "html5-qrcode": "^2.3.8",
     "jspdf": "^4.2.1",
     "nanoid": "^5.1.11",
-    "next": "16.2.9",
+    "next": "^16.2.9",
     "next-intl": "^4.13.0",
     "qrcode.react": "^4.2.0",
     "react": "19.2.7",
     "react-dom": "19.2.7"
+  },
+  "overrides": {
+    "postcss": "8.5.10",
+    "js-yaml": "4.2.0"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
