@@ -17,6 +17,7 @@ import ReplayIcon from '@mui/icons-material/Replay';
 import CropIcon from '@mui/icons-material/Crop';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import SettingsIcon from '@mui/icons-material/Settings';
+import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
 import {
   detectDocumentCorners,
   perspectiveCrop,
@@ -65,6 +66,7 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
+  const detectionCanvasRef = useRef<HTMLCanvasElement>(null);
   const isGestureRetry = useRef(false);
 
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
@@ -80,6 +82,9 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
   const [capturedTitle, setCapturedTitle] = useState('');
   const [showGestureOverlay, setShowGestureOverlay] = useState(false);
   const [showSettingsOverlay, setShowSettingsOverlay] = useState(false);
+  const [docDetected, setDocDetected] = useState(false);
+  const [pagePreviewUrls, setPagePreviewUrls] = useState<string[]>([]);
+  const pagePreviewUrlsRef = useRef<string[]>([]);
   const pendingPageBlob = useRef<Blob | null>(null);
 
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
@@ -133,6 +138,25 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
       }
     };
   }, [facingMode, startCamera]);
+
+  // Live document detection — runs while camera is active
+  useEffect(() => {
+    if (stage !== 'camera' || !cameraReady) return;
+    const timer = setInterval(() => {
+      const video = videoRef.current;
+      const dc = detectionCanvasRef.current;
+      if (!video || !dc || !video.videoWidth) return;
+      const w = Math.min(video.videoWidth, 640);
+      const h = Math.round(video.videoHeight * (w / video.videoWidth));
+      dc.width = w;
+      dc.height = h;
+      const ctx = dc.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(video, 0, 0, w, h);
+      setDocDetected(!!detectDocumentCorners(dc));
+    }, 800);
+    return () => clearInterval(timer);
+  }, [stage, cameraReady]);
 
   const handleGestureTap = useCallback(() => {
     isGestureRetry.current = true;
@@ -250,53 +274,43 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
 
     setDetecting(true);
 
-    setTimeout(() => {
-      try {
-        const detected = detectDocumentCorners(canvas);
-        const finalCorners = detected || getDefaultCorners(w, h);
-        setCorners(finalCorners);
+    try {
+      const detected = detectDocumentCorners(canvas);
+      const finalCorners = detected || getDefaultCorners(w, h);
+      setCorners(finalCorners);
 
-        toBlobWithTimeout(canvas, 'image/jpeg', 0.95, 5000).then((blob) => {
-          if (!blob) {
-            setDetecting(false);
-            setError('Failed to process image. Try again.');
-            return;
-          }
+      toBlobWithTimeout(canvas, 'image/jpeg', 0.95, 5000).then((blob) => {
+        if (!blob) {
+          setDetecting(false);
+          setError('Failed to process image. Try again.');
+          return;
+        }
 
-          const rawUrl = URL.createObjectURL(blob);
-          setRawImageUrl(rawUrl);
+        const rawUrl = URL.createObjectURL(blob);
+        setRawImageUrl(rawUrl);
 
-          if (detected) {
-            try {
-              const cropped = perspectiveCrop(canvas, detected);
-              toBlobWithTimeout(cropped, 'image/jpeg', 0.92, 5000).then((croppedBlob) => {
-                if (croppedBlob) {
-                  pendingPageBlob.current = croppedBlob;
-                  setCroppedUrl((prev) => {
-                    if (prev) URL.revokeObjectURL(prev);
-                    return URL.createObjectURL(croppedBlob);
-                  });
-                  setStage('preview');
-                } else {
-                  pendingPageBlob.current = blob;
-                  setCroppedUrl((prev) => {
-                    if (prev) URL.revokeObjectURL(prev);
-                    return rawUrl;
-                  });
-                  setStage('preview');
-                }
-                setDetecting(false);
-              });
-            } catch {
-              pendingPageBlob.current = blob;
-              setCroppedUrl((prev) => {
-                if (prev) URL.revokeObjectURL(prev);
-                return rawUrl;
-              });
-              setStage('preview');
+        if (detected) {
+          try {
+            const cropped = perspectiveCrop(canvas, detected);
+            toBlobWithTimeout(cropped, 'image/jpeg', 0.92, 5000).then((croppedBlob) => {
+              if (croppedBlob) {
+                pendingPageBlob.current = croppedBlob;
+                setCroppedUrl((prev) => {
+                  if (prev) URL.revokeObjectURL(prev);
+                  return URL.createObjectURL(croppedBlob);
+                });
+                setStage('preview');
+              } else {
+                pendingPageBlob.current = blob;
+                setCroppedUrl((prev) => {
+                  if (prev) URL.revokeObjectURL(prev);
+                  return rawUrl;
+                });
+                setStage('preview');
+              }
               setDetecting(false);
-            }
-          } else {
+            });
+          } catch {
             pendingPageBlob.current = blob;
             setCroppedUrl((prev) => {
               if (prev) URL.revokeObjectURL(prev);
@@ -305,12 +319,20 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
             setStage('preview');
             setDetecting(false);
           }
-        });
-      } catch {
-        setDetecting(false);
-        setError('Failed to process image. Try again.');
-      }
-    }, 50);
+        } else {
+          pendingPageBlob.current = blob;
+          setCroppedUrl((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return rawUrl;
+          });
+          setStage('preview');
+          setDetecting(false);
+        }
+      });
+    } catch {
+      setDetecting(false);
+      setError('Failed to process image. Try again.');
+    }
   }, []);
 
   // Handle corner drag on overlay canvas
@@ -384,6 +406,9 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     }
     pendingPageBlob.current = null;
     setCapturedPages((prev) => [...prev, blob]);
+    const previewUrl = URL.createObjectURL(blob);
+    pagePreviewUrlsRef.current = [...pagePreviewUrlsRef.current, previewUrl];
+    setPagePreviewUrls(pagePreviewUrlsRef.current);
     if (croppedUrl) URL.revokeObjectURL(croppedUrl);
     setCroppedUrl(null);
     if (rawImageUrl) URL.revokeObjectURL(rawImageUrl);
@@ -406,6 +431,8 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     if (videoRef.current?.srcObject) {
       (videoRef.current.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
     }
+    pagePreviewUrlsRef.current.forEach(URL.revokeObjectURL);
+    pagePreviewUrlsRef.current = [];
     onCapture(capturedPages, capturedTitle || undefined);
   }, [capturedPages, capturedTitle, onCapture]);
 
@@ -413,6 +440,8 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
     if (videoRef.current?.srcObject) {
       (videoRef.current.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
     }
+    pagePreviewUrlsRef.current.forEach(URL.revokeObjectURL);
+    pagePreviewUrlsRef.current = [];
     if (croppedUrl) URL.revokeObjectURL(croppedUrl);
     if (rawImageUrl) URL.revokeObjectURL(rawImageUrl);
     onClose();
@@ -493,9 +522,11 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
             sx={{
               position: 'absolute',
               inset: '10% 5%',
-              border: '2px solid rgba(255,255,255,0.6)',
+              border: '2px solid',
+              borderColor: docDetected ? 'success.main' : 'rgba(255,255,255,0.6)',
               borderRadius: 2,
               pointerEvents: 'none',
+              transition: 'border-color 0.3s',
             }}
           />
         </Fade>
@@ -505,14 +536,23 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
               color="white"
               variant="body2"
               sx={{
-                bgcolor: 'rgba(0,0,0,0.5)',
-                display: 'inline-block',
+                bgcolor: docDetected ? 'success.main' : 'rgba(0,0,0,0.5)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.5,
                 px: 2,
                 py: 0.5,
                 borderRadius: 2,
+                transition: 'background-color 0.3s',
               }}
             >
-              Hold steady over your report
+              {docDetected ? (
+                <>
+                  <CheckCircleOutlineRoundedIcon sx={{ fontSize: 16 }} /> Document detected
+                </>
+              ) : (
+                'Hold steady over your report'
+              )}
             </Typography>
           </Box>
         </Fade>
@@ -574,6 +614,40 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         </Box>
       )}
 
+      {/* Page thumbnails strip */}
+      {stage === 'camera' && pagePreviewUrls.length > 0 && (
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 0.5,
+            px: 2,
+            py: 1,
+            overflowX: 'auto',
+            justifyContent: 'center',
+          }}
+        >
+          {pagePreviewUrls.map((url, i) => (
+            <Box
+              key={i}
+              sx={{
+                width: 48,
+                height: 64,
+                borderRadius: 1,
+                border: '1px solid rgba(255,255,255,0.3)',
+                overflow: 'hidden',
+                flexShrink: 0,
+              }}
+            >
+              <img
+                src={url}
+                alt={`Page ${i + 1}`}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </Box>
+          ))}
+        </Box>
+      )}
+
       {/* Bottom controls */}
       <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 3 }}>
         {stage === 'camera' && (
@@ -609,12 +683,22 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
               sx={{
                 width: 72,
                 height: 72,
-                border: '4px solid white',
-                bgcolor: 'rgba(255,255,255,0.2)',
-                '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+                border: '4px solid',
+                borderColor: docDetected ? 'success.main' : 'white',
+                bgcolor: docDetected ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.2)',
+                transition: 'border-color 0.3s, background-color 0.3s',
+                '&:hover': {
+                  bgcolor: docDetected ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.3)',
+                },
               }}
             >
-              <CameraAltIcon sx={{ fontSize: 32, color: 'white' }} />
+              <CameraAltIcon
+                sx={{
+                  fontSize: 32,
+                  color: docDetected ? 'success.light' : 'white',
+                  transition: 'color 0.3s',
+                }}
+              />
             </IconButton>
             {capturedPages.length === 0 && <Box sx={{ width: 72 }} />}
           </>
@@ -684,11 +768,12 @@ export default function CameraCapture({ onCapture, onClose }: CameraCaptureProps
         )}
       </Box>
 
-      {/* Hidden canvases — use visibility:hidden instead of display:none so toBlob works */}
+      {/* Hidden canvases */}
       <canvas
         ref={canvasRef}
         style={{ visibility: 'hidden', position: 'absolute', pointerEvents: 'none' }}
       />
+      <canvas ref={detectionCanvasRef} style={{ display: 'none' }} />
       {/* Gesture overlay — translucent, user taps to start camera */}
       {showGestureOverlay && (
         <Box
