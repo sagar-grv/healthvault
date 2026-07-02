@@ -101,33 +101,53 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph Client["Frontend — Next.js 16 · React 19 · MUI 9"]
-        P[Patient App]
-        D[Doctor App]
+        P["Patient App"]
+        D["Doctor App"]
     end
 
     subgraph API["API Layer"]
-        R1[/analyze-report]
-        R2[/interpret-report]
-        R3[/doctor-assistant]
-        R4[/emergency/:id]
-        R5[/extract-report]
+        R1["/analyze-report"]
+        R2["/interpret-report"]
+        R3["/doctor-assistant"]
+        R4["/emergency/:id"]
+        R5["/extract-report"]
     end
 
     subgraph AI["AI Providers"]
-        G[Gemini 2.5 Flash]
-        N[NVIDIA NIM Fallback]
+        G["Gemini 2.5 Flash"]
+        N["NVIDIA NIM Fallback"]
     end
 
     subgraph Data["Data Layer"]
-        DB[(Supabase\nPostgres 17)]
-        S[Supabase\nStorage]
-        Auth[Supabase\nAuth]
+        DB[("Supabase Postgres 17")]
+        S["Supabase Storage"]
+        Auth["Supabase Auth"]
     end
 
-    Client --> API
-    API --> AI
-    API --> Data
-    AI -.->|fallback| N
+    P --> R1
+    P --> R2
+    P --> R5
+    D --> R3
+    P --> R4
+
+    R1 --> G
+    R2 --> G
+    R3 --> G
+    R5 --> G
+
+    G -.->|Fallback| N
+
+    R1 --> DB
+    R2 --> DB
+    R3 --> DB
+    R4 --> DB
+    R5 --> DB
+
+    R1 --> S
+    R5 --> S
+
+    P --> Auth
+    D --> Auth
 ```
 
 ### Report Lifecycle
