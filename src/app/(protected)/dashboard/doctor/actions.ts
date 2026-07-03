@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { isValidHealthId, normalizeHealthId } from '@/lib/utils/health-id';
 
@@ -211,6 +212,98 @@ export async function getSharedReportDetails(shareId: string) {
     share: { ...share, patient: patientProfile ? [patientProfile] : [] },
     reports: reports || [],
   };
+}
+
+export async function getQueueStats() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { stats: null };
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const [{ count: waiting }, { count: todayCompleted }, { count: inCons }] = await Promise.all([
+    supabase
+      .from('queue_entries')
+      .select('*', { count: 'exact', head: true })
+      .eq('doctor_id', user.id)
+      .eq('status', 'waiting'),
+    supabase
+      .from('queue_entries')
+      .select('*', { count: 'exact', head: true })
+      .eq('doctor_id', user.id)
+      .eq('status', 'completed')
+      .gte('consultation_started_at', today),
+    supabase
+      .from('queue_entries')
+      .select('*', { count: 'exact', head: true })
+      .eq('doctor_id', user.id)
+      .eq('status', 'in_consultation'),
+  ]);
+
+  return {
+    stats: {
+      waiting: waiting || 0,
+      todayCompleted: todayCompleted || 0,
+      inConsultation: inCons || 0,
+    },
+  };
+}
+
+export async function updateQueueEntryStatus(entryId: string, status: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const validStatuses = ['waiting', 'in_consultation', 'completed', 'cancelled', 'no_show'];
+  if (!validStatuses.includes(status)) return { error: 'Invalid status' };
+
+  const now = new Date().toISOString();
+  const updateData: Record<string, unknown> = { status, updated_at: now };
+  if (status === 'in_consultation') updateData.consultation_started_at = now;
+  if (status === 'completed') updateData.consultation_ended_at = now;
+
+  const { error } = await supabase
+    .from('queue_entries')
+    .update(updateData)
+    .eq('id', entryId)
+    .eq('doctor_id', user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath('/dashboard/doctor');
+  return { success: true };
+}
+
+export async function getPreCheckSubmissions() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { submissions: [] };
+
+  const { data } = await supabase
+    .from('pre_check_submissions')
+    .select('*')
+    .eq('doctor_id', user.id)
+    .eq('status', 'submitted')
+    .order('submitted_at', { ascending: false })
+    .limit(20);
+
+  if (!data || data.length === 0) return { submissions: [] };
+
+  const patientIds = [...new Set(data.map((s) => s.patient_id))];
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, full_name, health_id')
+    .in('id', patientIds);
+
+  const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
+  const enriched = data.map((s) => ({ ...s, patient: profileMap.get(s.patient_id) || null }));
+
+  return { submissions: enriched };
 }
 
 /** Schedule account deletion for 72h from now (soft delete). */

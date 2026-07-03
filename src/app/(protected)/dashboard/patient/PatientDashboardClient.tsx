@@ -62,6 +62,9 @@ const LanguagePicker = dynamic(() => import('@/components/patient/LanguagePicker
 const AppointmentShareSheet = dynamic(() => import('@/components/patient/AppointmentShareSheet'), {
   ssr: false,
 });
+const PreCheckForm = dynamic(() => import('@/components/patient/PreCheckForm'), {
+  ssr: false,
+});
 interface PatientDashboardClientProps {
   profile: Profile;
   reports: Report[];
@@ -89,6 +92,7 @@ export default function PatientDashboardClient({
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
+  const [preCheckOpen, setPreCheckOpen] = useState(false);
   const [shareConfirmReport, setShareConfirmReport] = useState<Report | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Report | null>(null);
 
@@ -459,6 +463,33 @@ export default function PatientDashboardClient({
           </CardContent>
         </Card>
 
+        {/* Quick Actions Card */}
+        <Card
+          className="animate-fade-in-up"
+          sx={{
+            mb: 3,
+            border: '2px dashed',
+            borderColor: 'primary.main',
+            bgcolor: 'rgba(37,99,235,0.04)',
+          }}
+        >
+          <CardContent
+            sx={{ p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+          >
+            <Box>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                Pre-Check Before Visit
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Fill symptoms & vitals to skip paperwork at the clinic
+              </Typography>
+            </Box>
+            <Button variant="contained" onClick={() => setPreCheckOpen(true)} size="small">
+              Start Pre-Check
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Recent Reports Section */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Box>
@@ -821,6 +852,9 @@ export default function PatientDashboardClient({
         onClose={() => setLangPickerOpen(false)}
         onSelect={handleLocaleSelect}
       />
+
+      {/* Pre-Check Form Dialog */}
+      <PreCheckForm open={preCheckOpen} onClose={() => setPreCheckOpen(false)} />
 
       {/* Share with Doctor sheet */}
       <AppointmentShareSheet
