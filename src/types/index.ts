@@ -74,6 +74,8 @@ export interface DoctorProfile {
   clinic_name: string | null;
   clinic_address: string | null;
   city: string | null;
+  latitude: number | null;
+  longitude: number | null;
   hpr_id: string | null;
   verification_state: VerificationState;
   verification_submitted_at: string | null;
