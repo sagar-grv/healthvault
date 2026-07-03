@@ -137,6 +137,109 @@ export async function revokeShare(shareId: string) {
   return { success: true };
 }
 
+export async function getDoctors() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('get_doctor_display_info', { p_doctor_id: null });
+  if (error) return { doctors: [] };
+  const rows = Array.isArray(data) ? data : [];
+  return { doctors: rows };
+}
+
+export async function createPreCheckDraft(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const doctorId = formData.get('doctor_id') as string;
+  if (!doctorId) return { error: 'Doctor is required' };
+
+  const { data, error } = await supabase
+    .from('pre_check_submissions')
+    .insert({
+      patient_id: user.id,
+      doctor_id: doctorId,
+      status: 'draft',
+    })
+    .select()
+    .single();
+
+  if (error) return { error: error.message };
+  return { id: data.id };
+}
+
+export async function savePreCheckDraft(draftId: string, formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const symptoms = formData.get('symptoms') as string;
+  const vitalsRaw = formData.get('vitals') as string;
+  const reportIdsRaw = formData.get('report_ids') as string;
+
+  const payload: Record<string, unknown> = {};
+  if (symptoms) payload.symptoms = symptoms;
+  if (vitalsRaw) payload.vitals = JSON.parse(vitalsRaw);
+  if (reportIdsRaw) payload.attached_report_ids = JSON.parse(reportIdsRaw);
+
+  const { error } = await supabase
+    .from('pre_check_submissions')
+    .update(payload)
+    .eq('id', draftId)
+    .eq('patient_id', user.id);
+
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
+export async function submitPreCheck(draftId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { data: submission, error: fetchError } = await supabase
+    .from('pre_check_submissions')
+    .select('*')
+    .eq('id', draftId)
+    .eq('patient_id', user.id)
+    .single();
+
+  if (fetchError || !submission) return { error: 'Pre-check not found' };
+  if (!submission.symptoms) return { error: 'Please describe your symptoms first' };
+
+  const { error } = await supabase
+    .from('pre_check_submissions')
+    .update({ status: 'submitted', submitted_at: new Date().toISOString() })
+    .eq('id', draftId)
+    .eq('patient_id', user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath('/dashboard/patient');
+  return { success: true };
+}
+
+export async function getMyPreChecks() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { submissions: [] };
+
+  const { data } = await supabase
+    .from('pre_check_submissions')
+    .select('*')
+    .eq('patient_id', user.id)
+    .order('updated_at', { ascending: false })
+    .limit(10);
+
+  return { submissions: data || [] };
+}
+
 /** Schedule account deletion for 72h from now (soft delete). */
 export async function deleteAccount(): Promise<{ error?: string }> {
   const supabase = await createClient();

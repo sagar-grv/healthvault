@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -32,13 +32,16 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CloseIcon from '@mui/icons-material/Close';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServicesOutlined';
 import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
+import Badge from '@mui/material/Badge';
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import { createClient } from '@/lib/supabase/client';
 import { useTranslations } from 'next-intl';
 import { Profile, DoctorProfile } from '@/types';
 import { isValidHealthId, normalizeHealthId } from '@/lib/utils/health-id';
 import ThemeToggle from '@/components/ThemeToggle';
 import { QRCodeSVG } from 'qrcode.react';
-import { searchPatient } from './actions';
+import { searchPatient, getQueueStats } from './actions';
+import QueueBoard from '@/components/doctor/QueueBoard';
 
 // Lazy load AI assistant — only loaded after page renders
 const DoctorAIAssistant = dynamic(() => import('@/components/doctor/DoctorAIAssistant'), {
@@ -60,6 +63,8 @@ export default function DoctorDashboardClient({
   const [searchInput, setSearchInput] = useState('');
   const [searchError, setSearchError] = useState('');
   const [isPending, startTransition] = useTransition();
+  const [showQueue, setShowQueue] = useState(false);
+  const [queueBadge, setQueueBadge] = useState(0);
   const [showMyQR, setShowMyQR] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
@@ -82,6 +87,16 @@ export default function DoctorDashboardClient({
       }
     });
   };
+
+  useEffect(() => {
+    const fetchBadge = async () => {
+      const result = await getQueueStats();
+      if (result.stats) setQueueBadge(result.stats.waiting);
+    };
+    fetchBadge();
+    const interval = setInterval(fetchBadge, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -153,6 +168,11 @@ export default function DoctorDashboardClient({
                 height: 26,
               }}
             />
+            <IconButton onClick={() => setShowQueue(!showQueue)} size="small" aria-label="Queue">
+              <Badge badgeContent={queueBadge} color="error" overlap="circular">
+                <PeopleAltIcon sx={{ fontSize: 22 }} />
+              </Badge>
+            </IconButton>
             <ThemeToggle />
             <IconButton
               onClick={() => router.push('/dashboard/doctor/profile')}
@@ -173,197 +193,222 @@ export default function DoctorDashboardClient({
         </AppBar>
 
         <Box sx={{ px: 2, py: 2.5, maxWidth: 640, mx: 'auto' }}>
-          {/* Profile Incomplete Banner */}
-          {profileIncomplete && (
-            <Alert
-              severity="warning"
-              icon={<WarningAmberIcon />}
-              action={
-                <Button
-                  size="small"
-                  color="inherit"
-                  onClick={() => router.push('/dashboard/doctor/profile')}
-                >
-                  {t('complete')}
-                </Button>
-              }
-              sx={{ mb: 2.5 }}
-            >
-              {t('completeProfilePrompt')}
-            </Alert>
-          )}
-
-          {/* Welcome header */}
-          <Box
-            sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}
-            className="animate-fade-in-up"
-          >
-            <Avatar
-              sx={{
-                width: 44,
-                height: 44,
-                background: 'linear-gradient(135deg, #047857, #10B981)',
-                fontSize: '1rem',
-                fontWeight: 700,
-                boxShadow: '0 4px 12px rgba(5,150,105,0.25)',
-              }}
-            >
-              {initials}
-            </Avatar>
+          {showQueue ? (
             <Box>
-              <Typography variant="h5" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
-                {t('greeting', { name: firstName })}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {doctorProfile?.specialization ||
-                  doctorProfile?.qualification ||
-                  t('generalMedicineFallback')}
-                {doctorProfile?.clinic_name && ' · ' + doctorProfile.clinic_name}
-              </Typography>
-            </Box>
-          </Box>
-
-          {/* Stats row */}
-          <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }} className="animate-fade-in-up">
-            <Card
-              sx={{
-                flex: 1,
-                textAlign: 'center',
-                bgcolor:
-                  doctorProfile?.verification_state === 'admin_verified'
-                    ? 'rgba(5,150,105,0.08)'
-                    : 'rgba(245,158,11,0.08)',
-                border: `1px solid ${doctorProfile?.verification_state === 'admin_verified' ? 'rgba(5,150,105,0.30)' : 'rgba(245,158,11,0.35)'}`,
-                boxShadow: 'none',
-              }}
-            >
-              <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Typography
-                  variant="h4"
-                  sx={{
-                    color:
-                      doctorProfile?.verification_state === 'admin_verified'
-                        ? 'success.main'
-                        : 'warning.main',
-                    fontWeight: 800,
-                  }}
-                >
-                  {doctorProfile?.verification_state === 'admin_verified' ? '✓' : '—'}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-                  {doctorProfile?.verification_state === 'admin_verified'
-                    ? t('verified')
-                    : t('unverified')}
-                </Typography>
-              </CardContent>
-            </Card>
-            <Card
-              sx={{
-                flex: 1,
-                textAlign: 'center',
-                bgcolor: 'rgba(37,99,235,0.08)',
-                border: '1px solid rgba(37,99,235,0.25)',
-                boxShadow: 'none',
-                cursor: 'pointer',
-                '&:hover': { bgcolor: 'rgba(37,99,235,0.14)' },
-              }}
-              onClick={() => router.push('/dashboard/doctor/profile')}
-            >
-              <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Typography variant="h4" sx={{ color: 'primary.main', fontWeight: 800 }}>
-                  →
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-                  {t('myProfile')}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Box>
-
-          {/* Search Card — Primary Element */}
-          <Card
-            className="animate-fade-in-up"
-            sx={{
-              mb: 3,
-              boxShadow: '0 2px 12px rgba(5,150,105,0.1)',
-              border: '1px solid rgba(5,150,105,0.30)',
-            }}
-          >
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h5" sx={{ mb: 0.5, fontWeight: 700 }}>
-                {t('lookUpPatient')}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
-                {t('searchHint')}
-              </Typography>
-
-              <Box component="form" onSubmit={handleSearch}>
-                <TextField
-                  fullWidth
-                  placeholder={t('healthIdPlaceholder')}
-                  value={searchInput}
-                  onChange={(e) => {
-                    setSearchInput(e.target.value.toUpperCase());
-                    setSearchError('');
-                  }}
-                  required
-                  sx={{ mb: searchError ? 1.5 : 2 }}
-                  slotProps={{
-                    input: {
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SearchIcon sx={{ color: 'secondary.main' }} />
-                        </InputAdornment>
-                      ),
-                      sx: {
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: '1.1rem',
-                        fontWeight: 700,
-                        letterSpacing: '0.08em',
-                        bgcolor: 'background.default',
-                      },
-                    },
-                  }}
-                />
-                {searchError && (
-                  <Alert severity="error" sx={{ mb: 2 }}>
-                    {searchError}
-                  </Alert>
-                )}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <Button
-                  type="submit"
-                  variant="contained"
-                  color="secondary"
-                  fullWidth
-                  size="large"
-                  disabled={isPending || !searchInput.trim()}
-                  endIcon={<ArrowForwardIcon />}
-                  sx={{ py: 1.5, fontSize: '1rem', boxShadow: '0 4px 12px rgba(5,150,105,0.3)' }}
+                  variant="text"
+                  size="small"
+                  onClick={() => setShowQueue(false)}
+                  sx={{ fontSize: '0.75rem' }}
                 >
-                  {isPending ? t('searching') : t('viewPatientRecords')}
+                  ← Back to Dashboard
                 </Button>
               </Box>
-            </CardContent>
-          </Card>
+              <QueueBoard doctorId={profile.id} />
+            </Box>
+          ) : (
+            <Box>
+              {/* Profile Incomplete Banner */}
+              {profileIncomplete && (
+                <Alert
+                  severity="warning"
+                  icon={<WarningAmberIcon />}
+                  action={
+                    <Button
+                      size="small"
+                      color="inherit"
+                      onClick={() => router.push('/dashboard/doctor/profile')}
+                    >
+                      {t('complete')}
+                    </Button>
+                  }
+                  sx={{ mb: 2.5 }}
+                >
+                  {t('completeProfilePrompt')}
+                </Alert>
+              )}
 
-          {/* Info for doctors */}
-          <Card
-            sx={{
-              mb: 3,
-              bgcolor: 'rgba(245,158,11,0.08)',
-              border: '1px solid rgba(245,158,11,0.30)',
-              boxShadow: 'none',
-            }}
-          >
-            <CardContent sx={{ p: 2.5 }}>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: 'warning.dark', mb: 0.5 }}>
-                {t('howItWorks')}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t('howItWorksBody')}
-              </Typography>
-            </CardContent>
-          </Card>
+              {/* Welcome header */}
+              <Box
+                sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}
+                className="animate-fade-in-up"
+              >
+                <Avatar
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    background: 'linear-gradient(135deg, #047857, #10B981)',
+                    fontSize: '1rem',
+                    fontWeight: 700,
+                    boxShadow: '0 4px 12px rgba(5,150,105,0.25)',
+                  }}
+                >
+                  {initials}
+                </Avatar>
+                <Box>
+                  <Typography variant="h5" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+                    {t('greeting', { name: firstName })}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {doctorProfile?.specialization ||
+                      doctorProfile?.qualification ||
+                      t('generalMedicineFallback')}
+                    {doctorProfile?.clinic_name && ' · ' + doctorProfile.clinic_name}
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Stats row */}
+              <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }} className="animate-fade-in-up">
+                <Card
+                  sx={{
+                    flex: 1,
+                    textAlign: 'center',
+                    bgcolor:
+                      doctorProfile?.verification_state === 'admin_verified'
+                        ? 'rgba(5,150,105,0.08)'
+                        : 'rgba(245,158,11,0.08)',
+                    border: `1px solid ${doctorProfile?.verification_state === 'admin_verified' ? 'rgba(5,150,105,0.30)' : 'rgba(245,158,11,0.35)'}`,
+                    boxShadow: 'none',
+                  }}
+                >
+                  <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                    <Typography
+                      variant="h4"
+                      sx={{
+                        color:
+                          doctorProfile?.verification_state === 'admin_verified'
+                            ? 'success.main'
+                            : 'warning.main',
+                        fontWeight: 800,
+                      }}
+                    >
+                      {doctorProfile?.verification_state === 'admin_verified' ? '✓' : '—'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                      {doctorProfile?.verification_state === 'admin_verified'
+                        ? t('verified')
+                        : t('unverified')}
+                    </Typography>
+                  </CardContent>
+                </Card>
+                <Card
+                  sx={{
+                    flex: 1,
+                    textAlign: 'center',
+                    bgcolor: 'rgba(37,99,235,0.08)',
+                    border: '1px solid rgba(37,99,235,0.25)',
+                    boxShadow: 'none',
+                    cursor: 'pointer',
+                    '&:hover': { bgcolor: 'rgba(37,99,235,0.14)' },
+                  }}
+                  onClick={() => router.push('/dashboard/doctor/profile')}
+                >
+                  <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                    <Typography variant="h4" sx={{ color: 'primary.main', fontWeight: 800 }}>
+                      →
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                      {t('myProfile')}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Box>
+
+              {/* Search Card — Primary Element */}
+              <Card
+                className="animate-fade-in-up"
+                sx={{
+                  mb: 3,
+                  boxShadow: '0 2px 12px rgba(5,150,105,0.1)',
+                  border: '1px solid rgba(5,150,105,0.30)',
+                }}
+              >
+                <CardContent sx={{ p: 3 }}>
+                  <Typography variant="h5" sx={{ mb: 0.5, fontWeight: 700 }}>
+                    {t('lookUpPatient')}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+                    {t('searchHint')}
+                  </Typography>
+
+                  <Box component="form" onSubmit={handleSearch}>
+                    <TextField
+                      fullWidth
+                      placeholder={t('healthIdPlaceholder')}
+                      value={searchInput}
+                      onChange={(e) => {
+                        setSearchInput(e.target.value.toUpperCase());
+                        setSearchError('');
+                      }}
+                      required
+                      sx={{ mb: searchError ? 1.5 : 2 }}
+                      slotProps={{
+                        input: {
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <SearchIcon sx={{ color: 'secondary.main' }} />
+                            </InputAdornment>
+                          ),
+                          sx: {
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: '1.1rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.08em',
+                            bgcolor: 'background.default',
+                          },
+                        },
+                      }}
+                    />
+                    {searchError && (
+                      <Alert severity="error" sx={{ mb: 2 }}>
+                        {searchError}
+                      </Alert>
+                    )}
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      color="secondary"
+                      fullWidth
+                      size="large"
+                      disabled={isPending || !searchInput.trim()}
+                      endIcon={<ArrowForwardIcon />}
+                      sx={{
+                        py: 1.5,
+                        fontSize: '1rem',
+                        boxShadow: '0 4px 12px rgba(5,150,105,0.3)',
+                      }}
+                    >
+                      {isPending ? t('searching') : t('viewPatientRecords')}
+                    </Button>
+                  </Box>
+                </CardContent>
+              </Card>
+
+              {/* Info for doctors */}
+              <Card
+                sx={{
+                  mb: 3,
+                  bgcolor: 'rgba(245,158,11,0.08)',
+                  border: '1px solid rgba(245,158,11,0.30)',
+                  boxShadow: 'none',
+                }}
+              >
+                <CardContent sx={{ p: 2.5 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontWeight: 600, color: 'warning.dark', mb: 0.5 }}
+                  >
+                    {t('howItWorks')}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {t('howItWorksBody')}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Box>
+          )}
         </Box>
       </Box>
 

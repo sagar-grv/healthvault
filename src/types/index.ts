@@ -136,3 +136,76 @@ export interface SharedReport {
   patient?: Profile;
   doctor?: Profile;
 }
+
+// Pre-Check Types
+export interface SymptomEntry {
+  name: string;
+  severity: 'mild' | 'moderate' | 'severe';
+  duration: string;
+  body_part?: string;
+}
+
+export interface PatientVitals {
+  blood_pressure_systolic?: number;
+  blood_pressure_diastolic?: number;
+  heart_rate?: number;
+  temperature_f?: number;
+  weight_kg?: number;
+  blood_sugar_mg?: number;
+  oxygen_saturation?: number;
+}
+
+export interface PreCheckSubmission {
+  id: string;
+  patient_id: string;
+  doctor_id: string | null;
+  symptoms: SymptomEntry[];
+  vitals: PatientVitals;
+  existing_conditions: string[];
+  current_medications: string[];
+  allergies: string[];
+  past_surgeries: string[];
+  family_history: string[];
+  ai_summary: string | null;
+  ai_key_findings: unknown;
+  status: 'draft' | 'submitted' | 'reviewed';
+  submitted_at: string | null;
+  reviewed_at: string | null;
+  doctor_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Queue Types
+export interface PriorityReason {
+  rule: string;
+  points: number;
+  description: string;
+}
+
+export interface QueueEntry {
+  id: string;
+  patient_id: string;
+  doctor_id: string;
+  priority_score: number;
+  priority_reasons: PriorityReason[];
+  status: 'waiting' | 'in_consultation' | 'completed' | 'cancelled' | 'no_show';
+  checked_in_at: string;
+  consultation_started_at: string | null;
+  consultation_ended_at: string | null;
+  pre_check_id: string | null;
+  created_at: string;
+  updated_at: string;
+  patient?: Profile;
+  pre_check?: PreCheckSubmission;
+}
+
+export interface QueueRule {
+  id: string;
+  rule_name: string;
+  rule_type: 'age' | 'condition' | 'vital' | 'pre_check';
+  condition_config: Record<string, unknown>;
+  points: number;
+  is_active: boolean;
+  created_at: string;
+}
