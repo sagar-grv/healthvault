@@ -1,37 +1,53 @@
-# Last Session — Multi-Page PDF Merge
+# Last Session — Digital Pre-Check Form + Emergency Priority Queue
 
-**Date**: 2026-06-29
-**Branch**: main (via PR #86 — squash merge from fix/multi-page-merge-pdf)
+**Date**: 2026-07-03
+**Branch**: feat/pre-check-and-queue (PR #93)
 
 ## What Was Completed
 
-### Multi-Page PDF Merge
+### Digital Pre-Check Form
 
-Multi-page camera scans now merge all captured pages into a **single PDF** file instead of uploading each page as a separate report. When user scans page 1 → adds page → scans page 2 → adds page → Done, the app produces one `application/pdf` blob with each captured image as a separate PDF page.
+- Patient Dashboard "Start Pre-Check" button triggers a multi-step Dialog
+- Steps: Select Doctor → Symptoms (with common symptom chips) → Vitals → Attach Reports → Review & Submit
+- Draft auto-saves at each step for crash recovery
+- Server actions: `getDoctors`, `createPreCheckDraft`, `savePreCheckDraft`, `submitPreCheck`
 
-### Code Changes (5 files, +360/-183 lines)
+### Emergency Priority Queue
 
-- **`src/lib/utils/merge-images-to-pdf.ts`** (new) — Client-side PDF generator using `jspdf`. Converts `Blob[]` of JPEGs into a single PDF with each image fitted to one page.
-- **`src/components/patient/CameraCapture.tsx`** — `finishCapture` now async: if `capturedPages.length > 1`, dynamically imports `mergeImagesToPdf` and passes `[pdfBlob]` to `onCapture`. Single-page flow unchanged.
-- **`src/app/(protected)/dashboard/patient/upload/page.tsx`** — Removed `uploadCapturedPages` (batch-upload loop). Handler always receives 1 blob; detects PDF vs JPEG by `blob.type` and sets file with correct name/extension.
-- **`src/app/(protected)/dashboard/patient/PatientDashboardClient.tsx`** — Simplified from loop to single-blob upload. PDF skips image optimization, JPEG still optimized.
-- **`package.json`** — Added `jspdf` dependency.
+- Doctor Dashboard toggles between dashboard and queue view (AppBar button with badge)
+- QueueBoard component with Supabase Realtime channel (waiting/in-consult/completed tabs)
+- Priority calculator engine: Senior Citizen (+20), Critical Emergency (+30), High BP (+15), High Fever (+10), Pre-Check Completed (+5)
+- PriorityBadge with color-coded chip + tooltip showing rule breakdown
+- 30s stat polling for queue counts (waiting/in-consult/completed)
+
+### API Routes (9 new)
+
+- `api/pre-check` — GET (list), POST (create)
+- `api/pre-check/[id]` — GET, PATCH
+- `api/pre-check/[id]/submit` — POST (submit draft)
+- `api/pre-check/[id]/review` — POST (doctor review)
+- `api/pre-check/[id]/ai-summary` — POST (AI summary gen)
+- `api/queue` — GET (list), POST (check-in)
+- `api/queue/[id]` — PATCH (update status), DELETE
+- `api/queue/[id]/priority` — GET (recalculate priority)
+- `api/queue/rules` — GET (list rules)
+- `api/queue/stats` — GET (queue stats)
+
+### Database
+
+- `20260703000001_pre_check_submissions.sql` — pre_check_submissions table with RLS
+- `20260703000002_queue_entries.sql` — queue_entries table with RLS + seed rules
 
 ### Verification
 
 - `npm run lint` — 0 errors, 2 pre-existing warnings
-- `npm run typecheck` — pass
-- `npm test` — 52/52 pass
-- `npm run build` — succeeds
-- GitHub Actions CI: all checks pass (Lint, TypeScript Check, Unit Tests, Build, CodeQL)
-- Vercel production deploy: `https://healthvault-dusky.vercel.app`
-
-### Branch Protection
-
-- Temporarily disabled → merged PR #86 → re-enabled (1 review required, strict status checks)
+- `npm run build` — production build succeeds
+- Husky pre-commit hooks passed (prettier + eslint)
 
 ## What's Next
 
-- Test multi-page scan in production: scan 3+ pages, verify single PDF with all pages
-- Address 3 Dependabot vulnerabilities (2 moderate, 1 low) on main branch
-- Consider replacing `'unsafe-inline'` CSP with nonce/hash-based `script-src`
+1. User reviews PR #93 on Vercel preview
+2. User approves merge ("merge"/"approve"/"ship it")
+3. Merge PR to main (squash)
+4. Restore branch protection on main
+5. Vercel auto-deploys production

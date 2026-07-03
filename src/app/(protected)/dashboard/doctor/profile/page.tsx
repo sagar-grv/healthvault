@@ -51,6 +51,9 @@ export default function DoctorProfilePage() {
   const [clinicName, setClinicName] = useState('');
   const [clinicAddress, setClinicAddress] = useState('');
   const [city, setCity] = useState('');
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
+  const [locating, setLocating] = useState(false);
   const [verificationState, setVerificationState] = useState('unverified');
   const [userId, setUserId] = useState('');
   const [loading, setLoading] = useState(true);
@@ -92,6 +95,8 @@ export default function DoctorProfilePage() {
         setClinicName(doctorProfile.clinic_name || '');
         setClinicAddress(doctorProfile.clinic_address || '');
         setCity(doctorProfile.city || '');
+        setLatitude(doctorProfile.latitude?.toString() || '');
+        setLongitude(doctorProfile.longitude?.toString() || '');
         setVerificationState(doctorProfile.verification_state || 'unverified');
       }
       setLoading(false);
@@ -132,6 +137,8 @@ export default function DoctorProfilePage() {
           clinic_name: clinicName || null,
           clinic_address: clinicAddress || null,
           city: city || null,
+          latitude: latitude ? Number(latitude) : null,
+          longitude: longitude ? Number(longitude) : null,
         }),
       ]);
       if (profileRes.error || doctorRes.error) {
@@ -542,7 +549,64 @@ export default function DoctorProfilePage() {
               value={city}
               onChange={(e) => setCity(e.target.value)}
               placeholder={t('cityPlaceholder')}
+              sx={{ mb: 2 }}
             />
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+              Clinic Location (optional) — enables patients to find you nearby
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+              <TextField
+                label="Latitude"
+                size="small"
+                value={latitude}
+                onChange={(e) => setLatitude(e.target.value)}
+                placeholder="28.6139"
+                sx={{ flex: 1 }}
+              />
+              <TextField
+                label="Longitude"
+                size="small"
+                value={longitude}
+                onChange={(e) => setLongitude(e.target.value)}
+                placeholder="77.2090"
+                sx={{ flex: 1 }}
+              />
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  if (!navigator.geolocation) {
+                    setSnackbar({
+                      open: true,
+                      message: 'Geolocation not supported',
+                      severity: 'error',
+                    });
+                    return;
+                  }
+                  setLocating(true);
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      setLatitude(pos.coords.latitude.toFixed(6));
+                      setLongitude(pos.coords.longitude.toFixed(6));
+                      setLocating(false);
+                    },
+                    () => {
+                      setLocating(false);
+                      setSnackbar({
+                        open: true,
+                        message: 'Could not get location. Allow location access and try again.',
+                        severity: 'error',
+                      });
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 }
+                  );
+                }}
+                disabled={locating}
+                sx={{ whiteSpace: 'nowrap', minWidth: 100 }}
+              >
+                {locating ? <CircularProgress size={16} /> : 'Auto-detect'}
+              </Button>
+            </Box>
           </CardContent>
         </Card>
 
