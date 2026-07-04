@@ -14,9 +14,8 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Switch from '@mui/material/Switch';
-import SpeedDial from '@mui/material/SpeedDial';
-import SpeedDialAction from '@mui/material/SpeedDialAction';
-import SpeedDialIcon from '@mui/material/SpeedDialIcon';
+import Fab from '@mui/material/Fab';
+import Grow from '@mui/material/Grow';
 import Tooltip from '@mui/material/Tooltip';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -26,6 +25,7 @@ import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import LockIcon from '@mui/icons-material/Lock';
 import PublicIcon from '@mui/icons-material/Public';
@@ -98,6 +98,7 @@ export default function PatientDashboardClient({
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
+  const [speedOpen, setSpeedOpen] = useState(false);
   const [preCheckOpen, setPreCheckOpen] = useState(false);
   const [doctorQrOpen, setDoctorQrOpen] = useState(false);
   const [shareConfirmReport, setShareConfirmReport] = useState<Report | null>(null);
@@ -672,60 +673,123 @@ export default function PatientDashboardClient({
         )}
       </Box>
 
-      {/* SpeedDial FAB — centered above bottom nav */}
-      <SpeedDial
-        ariaLabel="Quick actions"
-        icon={<SpeedDialIcon icon={<AddIcon />} />}
-        direction="up"
+      {/* Semi-circle expandable FAB */}
+      <Box
         sx={{
           position: 'fixed',
           bottom: 'calc(92px + env(safe-area-inset-bottom, 0px))',
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 1200,
-          '& .MuiSpeedDial-fab': {
+        }}
+      >
+        {/* Action buttons */}
+        {[
+          {
+            icon: <AssignmentOutlinedIcon />,
+            label: 'Pre-Check',
+            onClick: () => {
+              setSpeedOpen(false);
+              setPreCheckOpen(true);
+            },
+            x: -68,
+            y: -82,
+          },
+          {
+            icon: <NoteAddIcon />,
+            label: 'Add Report',
+            onClick: () => {
+              setSpeedOpen(false);
+              setAddSheetOpen(true);
+            },
+            x: 0,
+            y: -112,
+          },
+          {
+            icon: <QrCodeScannerIcon />,
+            label: 'Scan QR',
+            onClick: () => {
+              setSpeedOpen(false);
+              setDoctorQrOpen(true);
+            },
+            x: 68,
+            y: -82,
+          },
+        ].map((action, i) => (
+          <Grow key={action.label} in={speedOpen} timeout={{ enter: 200 + i * 60, exit: 200 }}>
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: -action.y,
+                left: `calc(50% + ${action.x}px)`,
+                transform: 'translateX(-50%)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 0.5,
+                pointerEvents: speedOpen ? 'auto' : 'none',
+              }}
+            >
+              <Fab
+                size="small"
+                aria-label={action.label}
+                onClick={action.onClick}
+                sx={{
+                  width: 48,
+                  height: 48,
+                  bgcolor: 'background.paper',
+                  color: 'primary.main',
+                  border: '2px solid',
+                  borderColor: 'primary.main',
+                  boxShadow: 3,
+                  '&:hover': { bgcolor: 'action.hover', transform: 'scale(1.08)' },
+                  transition: 'transform 0.15s, background-color 0.2s',
+                }}
+              >
+                {action.icon}
+              </Fab>
+              <Typography
+                variant="caption"
+                sx={{
+                  fontWeight: 700,
+                  color: 'text.primary',
+                  bgcolor: 'background.paper',
+                  px: 0.75,
+                  py: 0.15,
+                  borderRadius: 1,
+                  whiteSpace: 'nowrap',
+                  boxShadow: 1,
+                }}
+              >
+                {action.label}
+              </Typography>
+            </Box>
+          </Grow>
+        ))}
+
+        {/* Main FAB toggle */}
+        <Fab
+          color="primary"
+          aria-label={speedOpen ? 'Close' : 'Quick actions'}
+          disabled={uploadingCamera}
+          onClick={() => setSpeedOpen((p) => !p)}
+          sx={{
             width: 60,
             height: 60,
+            boxShadow: '0 8px 24px rgba(37,99,235,0.35)',
             animation: 'fabPulse 2.5s ease-in-out infinite',
-          },
-          '& .MuiSpeedDial-actions': {
-            gap: 0.5,
-            mb: 1,
-          },
-        }}
-        FabProps={{ disabled: uploadingCamera }}
-      >
-        <SpeedDialAction
-          icon={<QrCodeScannerIcon />}
-          title="Scan Doctor QR"
-          slotProps={{
-            tooltip: { open: true },
-            fab: { sx: { bgcolor: 'secondary.main', '&:hover': { bgcolor: 'secondary.dark' } } },
+            transition: 'transform 0.25s, box-shadow 0.25s',
+            '&:hover': { transform: 'scale(1.06)' },
           }}
-          onClick={() => setDoctorQrOpen(true)}
-        />
-        <SpeedDialAction
-          icon={<NoteAddIcon />}
-          title="Add Report"
-          slotProps={{ tooltip: { open: true } }}
-          onClick={() => setAddSheetOpen(true)}
-        />
-        <SpeedDialAction
-          icon={<AssignmentOutlinedIcon />}
-          title="Pre-Check"
-          slotProps={{ tooltip: { open: true } }}
-          onClick={() => setPreCheckOpen(true)}
-        />
-      </SpeedDial>
+        >
+          {speedOpen ? <CloseIcon sx={{ fontSize: 28 }} /> : <AddIcon sx={{ fontSize: 28 }} />}
+        </Fab>
+      </Box>
 
       <style>{`
 @keyframes fabPulse {
-  0%, 100% {
-    box-shadow: 0 8px 24px rgba(37,99,235,0.35);
-  }
-  50% {
-    box-shadow: 0 8px 32px rgba(37,99,235,0.50), 0 0 0 10px rgba(37,99,235,0.10);
-  }
+  0%, 100% { box-shadow: 0 8px 24px rgba(37,99,235,0.35); }
+  50% { box-shadow: 0 8px 32px rgba(37,99,235,0.50), 0 0 0 10px rgba(37,99,235,0.10); }
 }
 `}</style>
 
