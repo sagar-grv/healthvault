@@ -672,30 +672,37 @@ export default function PatientDashboardClient({
         )}
       </Box>
 
-      {/* SpeedDial FAB — Pre-Check, Add Report, Scan Doctor QR */}
+      {/* SpeedDial FAB — centered above bottom nav */}
       <SpeedDial
         ariaLabel="Quick actions"
         icon={<SpeedDialIcon icon={<AddIcon />} />}
         direction="up"
         sx={{
           position: 'fixed',
-          bottom: 'calc(88px + env(safe-area-inset-bottom, 0px))',
-          right: 20,
+          bottom: 'calc(92px + env(safe-area-inset-bottom, 0px))',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1200,
           '& .MuiSpeedDial-fab': {
             width: 60,
             height: 60,
-            boxShadow: '0 8px 24px rgba(37,99,235,0.35)',
+            animation: 'fabPulse 2.5s ease-in-out infinite',
+          },
+          '& .MuiSpeedDial-actions': {
+            gap: 0.5,
+            mb: 1,
           },
         }}
-        FabProps={{
-          disabled: uploadingCamera,
-        }}
+        FabProps={{ disabled: uploadingCamera }}
       >
         <SpeedDialAction
-          icon={<AssignmentOutlinedIcon />}
-          title="Pre-Check"
-          slotProps={{ tooltip: { open: true } }}
-          onClick={() => setPreCheckOpen(true)}
+          icon={<QrCodeScannerIcon />}
+          title="Scan Doctor QR"
+          slotProps={{
+            tooltip: { open: true },
+            fab: { sx: { bgcolor: 'secondary.main', '&:hover': { bgcolor: 'secondary.dark' } } },
+          }}
+          onClick={() => setDoctorQrOpen(true)}
         />
         <SpeedDialAction
           icon={<NoteAddIcon />}
@@ -704,12 +711,23 @@ export default function PatientDashboardClient({
           onClick={() => setAddSheetOpen(true)}
         />
         <SpeedDialAction
-          icon={<QrCodeScannerIcon />}
-          title="Scan Doctor QR"
+          icon={<AssignmentOutlinedIcon />}
+          title="Pre-Check"
           slotProps={{ tooltip: { open: true } }}
-          onClick={() => setDoctorQrOpen(true)}
+          onClick={() => setPreCheckOpen(true)}
         />
       </SpeedDial>
+
+      <style>{`
+@keyframes fabPulse {
+  0%, 100% {
+    box-shadow: 0 8px 24px rgba(37,99,235,0.35);
+  }
+  50% {
+    box-shadow: 0 8px 32px rgba(37,99,235,0.50), 0 0 0 10px rgba(37,99,235,0.10);
+  }
+}
+`}</style>
 
       {/* Snackbar */}
       <Snackbar
