@@ -2,7 +2,6 @@
 
 import { useCallback, useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import Paper from '@mui/material/Paper';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -10,12 +9,7 @@ import HomeIcon from '@mui/icons-material/Home';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import HistoryIcon from '@mui/icons-material/History';
 import PersonIcon from '@mui/icons-material/Person';
-import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import { useTranslations } from 'next-intl';
-
-const DoctorQRShareFlow = dynamic(() => import('@/components/patient/DoctorQRShareFlow'), {
-  ssr: false,
-});
 
 type TabItem = {
   labelKey: string | null;
@@ -50,7 +44,6 @@ export default function PatientBottomNav() {
   const router = useRouter();
   const pathname = usePathname();
   const t = useTranslations('common');
-  const [qrOpen, setQrOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -148,52 +141,9 @@ export default function PatientBottomNav() {
             position: 'relative',
           }}
         >
-          {renderTab(TABS[0])}
-          {renderTab(TABS[1])}
-
-          {/* Center QR FAB */}
-          <Box
-            onClick={() => setQrOpen(true)}
-            sx={{
-              width: 52,
-              height: 52,
-              borderRadius: '50%',
-              bgcolor: 'primary.main',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              mt: -2,
-              mx: 0.5,
-              cursor: 'pointer',
-              flexShrink: 0,
-              boxShadow: '0 4px 16px rgba(37,99,235,0.40)',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              animation: mounted ? 'navQrPulse 2.5s ease-in-out infinite' : 'none',
-              '&:hover': {
-                transform: 'scale(1.08)',
-                boxShadow: '0 6px 24px rgba(37,99,235,0.55)',
-              },
-              '&:active': {
-                transform: 'scale(0.92)',
-              },
-            }}
-          >
-            <QrCodeScannerIcon sx={{ color: '#fff', fontSize: 24 }} />
-          </Box>
-
-          {renderTab(TABS[2])}
-          {renderTab(TABS[3])}
+          {TABS.map((tab) => renderTab(tab))}
         </Box>
       </Paper>
-
-      <style>{`
-@keyframes navQrPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.04); }
-}
-`}</style>
-
-      <DoctorQRShareFlow open={qrOpen} onClose={() => setQrOpen(false)} reports={[]} />
     </>
   );
 }

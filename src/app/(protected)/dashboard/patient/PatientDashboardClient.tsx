@@ -14,7 +14,9 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Switch from '@mui/material/Switch';
-import Fab from '@mui/material/Fab';
+import SpeedDial from '@mui/material/SpeedDial';
+import SpeedDialAction from '@mui/material/SpeedDialAction';
+import SpeedDialIcon from '@mui/material/SpeedDialIcon';
 import Tooltip from '@mui/material/Tooltip';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -34,6 +36,7 @@ import LanguageIcon from '@mui/icons-material/Language';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServicesOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
+import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, Report } from '@/types';
@@ -65,6 +68,9 @@ const AppointmentShareSheet = dynamic(() => import('@/components/patient/Appoint
 const PreCheckForm = dynamic(() => import('@/components/patient/PreCheckForm'), {
   ssr: false,
 });
+const DoctorQRShareFlow = dynamic(() => import('@/components/patient/DoctorQRShareFlow'), {
+  ssr: false,
+});
 interface PatientDashboardClientProps {
   profile: Profile;
   reports: Report[];
@@ -93,6 +99,7 @@ export default function PatientDashboardClient({
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   const [preCheckOpen, setPreCheckOpen] = useState(false);
+  const [doctorQrOpen, setDoctorQrOpen] = useState(false);
   const [shareConfirmReport, setShareConfirmReport] = useState<Report | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Report | null>(null);
 
@@ -463,33 +470,6 @@ export default function PatientDashboardClient({
           </CardContent>
         </Card>
 
-        {/* Quick Actions Card */}
-        <Card
-          className="animate-fade-in-up"
-          sx={{
-            mb: 3,
-            border: '2px dashed',
-            borderColor: 'primary.main',
-            bgcolor: 'rgba(37,99,235,0.04)',
-          }}
-        >
-          <CardContent
-            sx={{ p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-          >
-            <Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                Pre-Check Before Visit
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Fill symptoms & vitals to skip paperwork at the clinic
-              </Typography>
-            </Box>
-            <Button variant="contained" onClick={() => setPreCheckOpen(true)} size="small">
-              Start Pre-Check
-            </Button>
-          </CardContent>
-        </Card>
-
         {/* Recent Reports Section */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Box>
@@ -692,25 +672,44 @@ export default function PatientDashboardClient({
         )}
       </Box>
 
-      {/* FAB — opens Add Report sheet (Scan / Upload) */}
-      <Fab
-        color="primary"
-        aria-label="Add report"
-        disabled={uploadingCamera}
-        onClick={() => setAddSheetOpen(true)}
+      {/* SpeedDial FAB — Pre-Check, Add Report, Scan Doctor QR */}
+      <SpeedDial
+        ariaLabel="Quick actions"
+        icon={<SpeedDialIcon icon={<AddIcon />} />}
+        direction="up"
         sx={{
           position: 'fixed',
           bottom: 'calc(88px + env(safe-area-inset-bottom, 0px))',
           right: 20,
-          width: 60,
-          height: 60,
-          boxShadow: '0 8px 24px rgba(37,99,235,0.35)',
-          '&:hover': { transform: 'scale(1.05)' },
-          transition: 'transform 0.15s ease',
+          '& .MuiSpeedDial-fab': {
+            width: 60,
+            height: 60,
+            boxShadow: '0 8px 24px rgba(37,99,235,0.35)',
+          },
+        }}
+        FabProps={{
+          disabled: uploadingCamera,
         }}
       >
-        <AddIcon sx={{ fontSize: 28 }} />
-      </Fab>
+        <SpeedDialAction
+          icon={<AssignmentOutlinedIcon />}
+          title="Pre-Check"
+          slotProps={{ tooltip: { open: true } }}
+          onClick={() => setPreCheckOpen(true)}
+        />
+        <SpeedDialAction
+          icon={<NoteAddIcon />}
+          title="Add Report"
+          slotProps={{ tooltip: { open: true } }}
+          onClick={() => setAddSheetOpen(true)}
+        />
+        <SpeedDialAction
+          icon={<QrCodeScannerIcon />}
+          title="Scan Doctor QR"
+          slotProps={{ tooltip: { open: true } }}
+          onClick={() => setDoctorQrOpen(true)}
+        />
+      </SpeedDial>
 
       {/* Snackbar */}
       <Snackbar
@@ -855,6 +854,13 @@ export default function PatientDashboardClient({
 
       {/* Pre-Check Form Dialog */}
       <PreCheckForm open={preCheckOpen} onClose={() => setPreCheckOpen(false)} />
+
+      {/* Doctor QR Share Flow */}
+      <DoctorQRShareFlow
+        open={doctorQrOpen}
+        onClose={() => setDoctorQrOpen(false)}
+        reports={reports}
+      />
 
       {/* Share with Doctor sheet */}
       <AppointmentShareSheet

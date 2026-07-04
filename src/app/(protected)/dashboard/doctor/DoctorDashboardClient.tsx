@@ -89,14 +89,37 @@ export default function DoctorDashboardClient({
   };
 
   useEffect(() => {
+    let cancelled = false;
     const fetchBadge = async () => {
+      if (cancelled) return;
       const result = await getQueueStats();
-      if (result.stats) setQueueBadge(result.stats.waiting);
+      if (!cancelled && result.stats) setQueueBadge(result.stats.waiting);
     };
     fetchBadge();
+
+    const channel = createClient()
+      .channel('doctor-queue-badge')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'queue_entries',
+          filter: `doctor_id=eq.${profile.id}`,
+        },
+        () => {
+          fetchBadge();
+        }
+      )
+      .subscribe();
+
     const interval = setInterval(fetchBadge, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      cancelled = true;
+      channel.unsubscribe();
+      clearInterval(interval);
+    };
+  }, [profile.id]);
 
   const handleLogout = async () => {
     const supabase = createClient();
