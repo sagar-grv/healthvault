@@ -663,12 +663,14 @@ export default function PatientDashboardClient({
         onClick={() => setAddSheetOpen(true)}
         sx={{
           position: 'fixed',
-          bottom: 16,
-          right: 16,
+          bottom: 'calc(88px + env(safe-area-inset-bottom, 0px))',
+          right: 20,
+          width: 60,
+          height: 60,
           zIndex: 1200,
         }}
       >
-        <AddIcon />
+        <AddIcon sx={{ fontSize: 28 }} />
       </Fab>
 
       {snackbarComponent}
