@@ -45,8 +45,8 @@ const features = [
   },
   {
     icon: <SpeedIcon />,
-    title: '2-Tap Sharing',
-    desc: 'Show your Health ID QR code. Doctor searches. Done in 10 seconds.',
+    title: 'Clinician Review',
+    desc: 'AI output is supporting information. Clinicians review the underlying record before use.',
     color: '#FFF7ED',
     iconColor: '#C2410C',
   },
@@ -56,8 +56,8 @@ const steps = [
   {
     number: '01',
     icon: <CloudUploadIcon sx={{ fontSize: 28 }} />,
-    title: 'Upload Reports',
-    desc: 'Take a photo or upload PDFs of your prescriptions, lab results, and scans.',
+    title: 'Patient Shares Records',
+    desc: 'Before the visit, the patient uploads paper reports, PDFs, prescriptions, or scans from any phone.',
     color: '#EFF6FF',
     borderColor: '#BFDBFE',
     iconBg: 'linear-gradient(135deg, #1D4ED8, #3B82F6)',
@@ -65,8 +65,8 @@ const steps = [
   {
     number: '02',
     icon: <BadgeIcon sx={{ fontSize: 28 }} />,
-    title: 'Share Your ID',
-    desc: 'Get a unique Health ID. Show it to your doctor — verbally, as QR, or via WhatsApp.',
+    title: 'HealthVault Organizes History',
+    desc: 'AI extracts key details into a reviewable draft while the original records remain available.',
     color: '#F0FDF4',
     borderColor: '#A7F3D0',
     iconBg: 'linear-gradient(135deg, #047857, #10B981)',
@@ -74,8 +74,8 @@ const steps = [
   {
     number: '03',
     icon: <VisibilityIcon sx={{ fontSize: 28 }} />,
-    title: 'Doctor Sees History',
-    desc: 'Your doctor instantly accesses your shared records digitally. No paper needed.',
+    title: 'Doctor Reviews Context',
+    desc: 'The clinic reviews the consented record history before or during the consultation.',
     color: '#EFF6FF',
     borderColor: '#BFDBFE',
     iconBg: 'linear-gradient(135deg, #1D4ED8, #2563EB)',
@@ -132,12 +132,12 @@ export default function HomePage() {
               </Button>
               <Button
                 component={Link}
-                href="/register"
+                href="/register/doctor"
                 variant="contained"
                 size="small"
                 sx={{ borderRadius: 2 }}
               >
-                Get Started
+                Start Pilot
               </Button>
             </Box>
           </Box>
@@ -152,7 +152,7 @@ export default function HomePage() {
         <Container maxWidth="md" sx={{ textAlign: { xs: 'center', md: 'left' } }}>
           <Chip
             icon={<ShieldIcon sx={{ fontSize: '14px !important' }} />}
-            label="ABDM-ready · Private by default"
+            label="Clinic pilot · Works alongside existing systems"
             sx={{
               mb: 3,
               bgcolor: '#DBEAFE',
@@ -170,11 +170,11 @@ export default function HomePage() {
               lineHeight: 1.1,
             }}
           >
-            Your medical records.{' '}
+            Know the patient&apos;s story{' '}
             <Box component="span" className="text-gradient-blue">
-              Secure. Paperless.
+              Before the visit.
             </Box>{' '}
-            Always with you.
+            Without changing your EMR.
           </Typography>
 
           <Typography
@@ -188,8 +188,8 @@ export default function HomePage() {
               lineHeight: 1.7,
             }}
           >
-            Stop carrying physical reports to every doctor. HealthVault gives you a digital Health
-            ID that any doctor can look up — with your permission.
+            HealthVault helps patients share paper reports, PDFs, and prior prescriptions before a
+            visit, so doctors can review an organized record history with consent. No EMR migration.
           </Typography>
 
           {/* Single primary CTA — patient path. Doctor link is secondary. */}
@@ -204,7 +204,7 @@ export default function HomePage() {
           >
             <Button
               component={Link}
-              href="/register/patient"
+              href="/register/doctor"
               variant="contained"
               size="large"
               endIcon={<ArrowForwardIcon />}
@@ -216,26 +216,26 @@ export default function HomePage() {
                 minWidth: 260,
               }}
             >
-              Create your free Health ID
+              Start a clinic pilot
             </Button>
             <Typography variant="body2" color="text.secondary">
-              Are you a doctor?{' '}
+              Preparing for a visit?{' '}
               <Link
-                href="/register/doctor"
+                href="/register/patient"
                 style={{
                   color: 'var(--mui-palette-secondary-main)',
                   fontWeight: 600,
                   textDecoration: 'none',
                 }}
               >
-                Register here
+                Patient access
               </Link>
             </Typography>
           </Box>
 
           {/* Social proof pills */}
           <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
-            {['Free to use', 'No app download needed', 'ABHA-ready', 'Works on any phone'].map(
+            {['No EMR migration', 'Patient-controlled sharing', 'Access audit trail', 'Works on any phone'].map(
               (f) => (
                 <Box
                   key={f}
@@ -276,7 +276,7 @@ export default function HomePage() {
               Simple as 1-2-3
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 440, mx: 'auto' }}>
-              From signup to sharing with a doctor in under 3 minutes.
+              From patient upload to doctor review in one guided flow.
             </Typography>
           </Box>
 
@@ -343,23 +343,23 @@ export default function HomePage() {
           <Grid container spacing={5} sx={{ alignItems: 'center' }}>
             <Grid size={{ xs: 12, md: 6 }}>
               <Chip
-                label="For doctors"
+                label="For independent clinics"
                 size="small"
                 sx={{ mb: 2, bgcolor: '#D1FAE5', color: 'secondary.dark', fontWeight: 600 }}
               />
               <Typography variant="h2" sx={{ mb: 2 }}>
-                Not another clinic system.
+                The intake layer before your clinic system.
               </Typography>
               <Typography variant="body1" color="text.secondary" sx={{ mb: 3, lineHeight: 1.8 }}>
-                HealthVault doesn&apos;t replace your clinic software. It gives you a window into
-                records from other clinics — prescriptions, tests, and scans you&apos;ve never had
-                access to before.
+                Use HealthVault before the consultation to collect patient-provided reports and review an
+                organized history. Your existing EMR, paper process, or practice software stays in
+                place.
               </Typography>
               {[
-                'Keep using your existing system',
-                'One search to see all history',
-                'Every access is logged',
-                'ABDM-compliant design',
+                'Works alongside your existing workflow',
+                'Patient-controlled record sharing',
+                'Every record access is logged',
+                'ABDM sandbox integration planned',
               ].map((f) => (
                 <Box key={f} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
                   <CheckCircleIcon sx={{ fontSize: 18, color: 'secondary.main' }} />
@@ -377,7 +377,7 @@ export default function HomePage() {
                 sx={{ mt: 3, px: 3 }}
                 endIcon={<ArrowForwardIcon />}
               >
-                Register as Doctor
+                Start a clinic pilot
               </Button>
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
@@ -507,15 +507,15 @@ export default function HomePage() {
       <Box className="gradient-patient" sx={{ py: { xs: 8, md: 12 }, px: 2, textAlign: 'center' }}>
         <Container maxWidth="sm">
           <Typography variant="h2" sx={{ color: 'white', mb: 2 }}>
-            Start today — it&apos;s free
+            Pilot the clinic workflow
           </Typography>
           <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.8)', mb: 4, fontWeight: 400 }}>
-            Get your Health ID in 30 seconds. No payment, no app download.
+            Test patient record intake with a small clinic cohort. No EMR migration required.
           </Typography>
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Button
               component={Link}
-              href="/register/patient"
+              href="/register/doctor"
               variant="contained"
               size="large"
               sx={{
@@ -527,11 +527,11 @@ export default function HomePage() {
                 boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
               }}
             >
-              Get my Health ID
+              Start clinic pilot
             </Button>
             <Button
               component={Link}
-              href="/login"
+              href="/register/patient"
               variant="outlined"
               size="large"
               sx={{
@@ -546,7 +546,7 @@ export default function HomePage() {
                 py: 1.75,
               }}
             >
-              Sign in
+              Patient access
             </Button>
           </Box>
         </Container>
@@ -583,7 +583,7 @@ export default function HomePage() {
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ color: 'grey.500' }}>
-              Future ABDM/ABHA integration ready · Made for India
+              Independent prototype · ABDM sandbox integration planned · AI output requires clinical review
             </Typography>
           </Box>
         </Container>
