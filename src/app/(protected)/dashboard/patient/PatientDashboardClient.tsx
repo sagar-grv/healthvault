@@ -15,17 +15,16 @@ import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Switch from '@mui/material/Switch';
 import Fab from '@mui/material/Fab';
-import Grow from '@mui/material/Grow';
+
 import Tooltip from '@mui/material/Tooltip';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
-import Snackbar from '@mui/material/Snackbar';
-import Alert from '@mui/material/Alert';
 import LogoutIcon from '@mui/icons-material/Logout';
+import { useSnackbar } from '@/hooks/useSnackbar';
 import AddIcon from '@mui/icons-material/Add';
-import CloseIcon from '@mui/icons-material/Close';
+
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import LockIcon from '@mui/icons-material/Lock';
 import PublicIcon from '@mui/icons-material/Public';
@@ -36,8 +35,8 @@ import LanguageIcon from '@mui/icons-material/Language';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServicesOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
-import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
-import { useTranslations } from 'next-intl';
+
+import { useTranslations, useLocale } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { Profile, Report } from '@/types';
 import { REPORT_TYPES, REPORT_TYPE_COLORS } from '@/constants';
@@ -65,9 +64,6 @@ const LanguagePicker = dynamic(() => import('@/components/patient/LanguagePicker
 const AppointmentShareSheet = dynamic(() => import('@/components/patient/AppointmentShareSheet'), {
   ssr: false,
 });
-const PreCheckForm = dynamic(() => import('@/components/patient/PreCheckForm'), {
-  ssr: false,
-});
 const DoctorQRShareFlow = dynamic(() => import('@/components/patient/DoctorQRShareFlow'), {
   ssr: false,
 });
@@ -83,12 +79,12 @@ export default function PatientDashboardClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations('dashboard');
+  const locale = useLocale();
   const [reports, setReports] = useState<Report[]>(initialReports);
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error' | 'info';
-  }>({ open: false, message: '', severity: 'success' });
+  const { showSnackbar, snackbarComponent } = useSnackbar({
+    anchorOrigin: { vertical: 'top', horizontal: 'center' },
+    autoHideDuration: 3000,
+  });
   const [viewingReport, setViewingReport] = useState<Report | null>(null);
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
@@ -98,8 +94,6 @@ export default function PatientDashboardClient({
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
-  const [speedOpen, setSpeedOpen] = useState(false);
-  const [preCheckOpen, setPreCheckOpen] = useState(false);
   const [doctorQrOpen, setDoctorQrOpen] = useState(false);
   const [shareConfirmReport, setShareConfirmReport] = useState<Report | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Report | null>(null);
@@ -108,7 +102,7 @@ export default function PatientDashboardClient({
   useEffect(() => {
     if (searchParams.get('uploaded') === '1') {
       requestAnimationFrame(() => {
-        setSnackbar({ open: true, message: 'Report uploaded successfully!', severity: 'success' });
+        showSnackbar('Report uploaded successfully!', 'success');
       });
       const url = new URL(window.location.href);
       url.searchParams.delete('uploaded');
@@ -125,13 +119,9 @@ export default function PatientDashboardClient({
     if (profile.health_id) {
       try {
         await navigator.clipboard.writeText(profile.health_id);
-        setSnackbar({ open: true, message: 'Health ID copied!', severity: 'success' });
+        showSnackbar('Health ID copied!', 'success');
       } catch {
-        setSnackbar({
-          open: true,
-          message: 'Could not copy. Please copy manually.',
-          severity: 'error',
-        });
+        showSnackbar('Could not copy. Please copy manually.', 'error');
       }
     }
   };
@@ -148,17 +138,13 @@ export default function PatientDashboardClient({
       .update({ is_shareable: !currentValue })
       .eq('id', reportId);
     if (error) {
-      setSnackbar({ open: true, message: 'Failed to update. Try again.', severity: 'error' });
+      showSnackbar('Failed to update. Try again.', 'error');
       return;
     }
     setReports((prev) =>
       prev.map((r) => (r.id === reportId ? { ...r, is_shareable: !currentValue } : r))
     );
-    setSnackbar({
-      open: true,
-      message: !currentValue ? t('reportIsNowShareable') : t('reportIsNowPrivate'),
-      severity: 'success',
-    });
+    showSnackbar(!currentValue ? t('reportIsNowShareable') : t('reportIsNowPrivate'), 'success');
   };
 
   const handleDeleteReport = async (reportId: string, filePath: string) => {
@@ -168,13 +154,13 @@ export default function PatientDashboardClient({
       supabase.from('reports').delete().eq('id', reportId),
     ]);
     if (dbResult.error) {
-      setSnackbar({ open: true, message: 'Failed to delete. Try again.', severity: 'error' });
+      showSnackbar('Failed to delete. Try again.', 'error');
       return;
     }
     // Close detail dialog if the deleted report is currently open
     if (viewingReport?.id === reportId) setViewingReport(null);
     setReports((prev) => prev.filter((r) => r.id !== reportId));
-    setSnackbar({ open: true, message: 'Report deleted.', severity: 'success' });
+    showSnackbar('Report deleted.', 'success');
   };
 
   const handleLogout = async () => {
@@ -188,16 +174,12 @@ export default function PatientDashboardClient({
     setShowCamera(false);
     if (!images.length) return;
     setUploadingCamera(true);
-    setSnackbar({ open: true, message: t('processingReport'), severity: 'info' });
+    showSnackbar(t('processingReport'), 'info');
 
     try {
       const rateCheck = await checkUploadAllowed();
       if (!rateCheck.allowed) {
-        setSnackbar({
-          open: true,
-          message: rateCheck.error || 'Upload limit reached',
-          severity: 'error',
-        });
+        showSnackbar(rateCheck.error || 'Upload limit reached', 'error');
         return;
       }
 
@@ -224,7 +206,7 @@ export default function PatientDashboardClient({
         .upload(filePath, uploadBlob, { contentType: uploadMime, upsert: false });
 
       if (uploadErr) {
-        setSnackbar({ open: true, message: t('uploadFailed'), severity: 'error' });
+        showSnackbar(t('uploadFailed'), 'error');
         return;
       }
 
@@ -255,16 +237,16 @@ export default function PatientDashboardClient({
       ]);
 
       if (dbErr) {
-        setSnackbar({ open: true, message: 'Failed to save. Try again.', severity: 'error' });
+        showSnackbar('Failed to save. Try again.', 'error');
         await supabase.storage.from('reports').remove([filePath]);
         return;
       }
 
       setReports((prev) => [newReport, ...prev]);
       await recordUpload();
-      setSnackbar({ open: true, message: t('reportSaved'), severity: 'success' });
+      showSnackbar(t('reportSaved'), 'success');
     } catch {
-      setSnackbar({ open: true, message: t('somethingWentWrong'), severity: 'error' });
+      showSnackbar(t('somethingWentWrong'), 'error');
     } finally {
       setUploadingCamera(false);
     }
@@ -594,7 +576,7 @@ export default function PatientDashboardClient({
                           }}
                         />
                         <Typography variant="caption" color="text.secondary">
-                          {new Date(report.report_date).toLocaleDateString('en-IN', {
+                          {new Date(report.report_date).toLocaleDateString(locale, {
                             day: 'numeric',
                             month: 'short',
                             year: 'numeric',
@@ -673,140 +655,23 @@ export default function PatientDashboardClient({
         )}
       </Box>
 
-      {/* Semi-circle expandable FAB */}
-      <Box
+      {/* FAB — opens Add Report sheet (Scan / Upload) */}
+      <Fab
+        color="primary"
+        aria-label="Add report"
+        disabled={uploadingCamera}
+        onClick={() => setAddSheetOpen(true)}
         sx={{
           position: 'fixed',
-          bottom: 'calc(92px + env(safe-area-inset-bottom, 0px))',
-          left: '50%',
-          transform: 'translateX(-50%)',
+          bottom: 16,
+          right: 16,
           zIndex: 1200,
         }}
       >
-        {/* Action buttons */}
-        {[
-          {
-            icon: <AssignmentOutlinedIcon />,
-            label: 'Pre-Check',
-            onClick: () => {
-              setSpeedOpen(false);
-              setPreCheckOpen(true);
-            },
-            x: -68,
-            y: -82,
-          },
-          {
-            icon: <NoteAddIcon />,
-            label: 'Add Report',
-            onClick: () => {
-              setSpeedOpen(false);
-              setAddSheetOpen(true);
-            },
-            x: 0,
-            y: -112,
-          },
-          {
-            icon: <QrCodeScannerIcon />,
-            label: 'Scan QR',
-            onClick: () => {
-              setSpeedOpen(false);
-              setDoctorQrOpen(true);
-            },
-            x: 68,
-            y: -82,
-          },
-        ].map((action, i) => (
-          <Grow key={action.label} in={speedOpen} timeout={{ enter: 200 + i * 60, exit: 200 }}>
-            <Box
-              sx={{
-                position: 'absolute',
-                bottom: -action.y,
-                left: `calc(50% + ${action.x}px)`,
-                transform: 'translateX(-50%)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 0.5,
-                pointerEvents: speedOpen ? 'auto' : 'none',
-              }}
-            >
-              <Fab
-                size="small"
-                aria-label={action.label}
-                onClick={action.onClick}
-                sx={{
-                  width: 48,
-                  height: 48,
-                  bgcolor: 'background.paper',
-                  color: 'primary.main',
-                  border: '2px solid',
-                  borderColor: 'primary.main',
-                  boxShadow: 3,
-                  '&:hover': { bgcolor: 'action.hover', transform: 'scale(1.08)' },
-                  transition: 'transform 0.15s, background-color 0.2s',
-                }}
-              >
-                {action.icon}
-              </Fab>
-              <Typography
-                variant="caption"
-                sx={{
-                  fontWeight: 700,
-                  color: 'text.primary',
-                  bgcolor: 'background.paper',
-                  px: 0.75,
-                  py: 0.15,
-                  borderRadius: 1,
-                  whiteSpace: 'nowrap',
-                  boxShadow: 1,
-                }}
-              >
-                {action.label}
-              </Typography>
-            </Box>
-          </Grow>
-        ))}
+        <AddIcon />
+      </Fab>
 
-        {/* Main FAB toggle */}
-        <Fab
-          color="primary"
-          aria-label={speedOpen ? 'Close' : 'Quick actions'}
-          disabled={uploadingCamera}
-          onClick={() => setSpeedOpen((p) => !p)}
-          sx={{
-            width: 60,
-            height: 60,
-            boxShadow: '0 8px 24px rgba(37,99,235,0.35)',
-            animation: 'fabPulse 2.5s ease-in-out infinite',
-            transition: 'transform 0.25s, box-shadow 0.25s',
-            '&:hover': { transform: 'scale(1.06)' },
-          }}
-        >
-          {speedOpen ? <CloseIcon sx={{ fontSize: 28 }} /> : <AddIcon sx={{ fontSize: 28 }} />}
-        </Fab>
-      </Box>
-
-      <style>{`
-@keyframes fabPulse {
-  0%, 100% { box-shadow: 0 8px 24px rgba(37,99,235,0.35); }
-  50% { box-shadow: 0 8px 32px rgba(37,99,235,0.50), 0 0 0 10px rgba(37,99,235,0.10); }
-}
-`}</style>
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert
-          severity={snackbar.severity}
-          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      {snackbarComponent}
 
       {/* Report Detail Dialog */}
       <ReportDetailDialog
@@ -816,11 +681,11 @@ export default function PatientDashboardClient({
         onClose={() => setViewingReport(null)}
         onUpdated={(updated) => {
           setReports((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
-          setSnackbar({ open: true, message: 'Report updated', severity: 'success' });
+          showSnackbar('Report updated', 'success');
         }}
         onDeleted={(id) => {
           setReports((prev) => prev.filter((r) => r.id !== id));
-          setSnackbar({ open: true, message: 'Report deleted', severity: 'success' });
+          showSnackbar('Report deleted', 'success');
         }}
       />
 
@@ -933,9 +798,6 @@ export default function PatientDashboardClient({
         onClose={() => setLangPickerOpen(false)}
         onSelect={handleLocaleSelect}
       />
-
-      {/* Pre-Check Form Dialog */}
-      <PreCheckForm open={preCheckOpen} onClose={() => setPreCheckOpen(false)} />
 
       {/* Doctor QR Share Flow */}
       <DoctorQRShareFlow
