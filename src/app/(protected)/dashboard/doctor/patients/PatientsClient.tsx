@@ -26,6 +26,7 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import SortIcon from '@mui/icons-material/Sort';
 import VisibilityIcon from '@mui/icons-material/VisibilityOutlined';
 import SharedWithMePanel from '@/components/doctor/SharedWithMePanel';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface PatientInfo {
   id: string;
@@ -122,12 +123,14 @@ export default function PatientsClient({
   const [dateTo, setDateTo] = useState('');
   const [historyQuery, setHistoryQuery] = useState('');
   const [isRefreshing, startRefreshing] = useTransition();
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  const debouncedHistoryQuery = useDebounce(historyQuery, 300);
 
   const filteredPatients = useMemo(() => {
     let filtered = shares;
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
+    if (debouncedSearchQuery.trim()) {
+      const q = debouncedSearchQuery.trim().toLowerCase();
       filtered = filtered.filter(
         (share) =>
           share.patient?.full_name?.toLowerCase().includes(q) ||
@@ -170,10 +173,10 @@ export default function PatientsClient({
     }
 
     return Array.from(map.values());
-  }, [shares, searchQuery, sortBy, dateFrom, dateTo]);
+  }, [shares, debouncedSearchQuery, sortBy, dateFrom, dateTo]);
 
   const activityItems = useMemo(() => {
-    const q = historyQuery.trim().toLowerCase();
+    const q = debouncedHistoryQuery.trim().toLowerCase();
 
     const items: ActivityItem[] = [
       ...accessLogs.map((log) => ({
@@ -208,7 +211,7 @@ export default function PatientsClient({
     return [...filtered].sort(
       (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
-  }, [accessLogs, searchAttempts, historyQuery]);
+  }, [accessLogs, searchAttempts, debouncedHistoryQuery]);
 
   const totalReports = shares.reduce((sum, share) => sum + share.report_ids.length, 0);
 

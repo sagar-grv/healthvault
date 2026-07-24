@@ -29,12 +29,7 @@ export default function NotFound() {
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
         The page you&apos;re looking for doesn&apos;t exist.
       </Typography>
-      <Button
-        component={Link}
-        href="/"
-        variant="contained"
-        startIcon={<HomeIcon />}
-      >
+      <Button component={Link} href="/" variant="contained" startIcon={<HomeIcon />}>
         Go Home
       </Button>
     </Box>
