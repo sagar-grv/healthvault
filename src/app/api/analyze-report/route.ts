@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { validateOrigin } from '@/lib/csrf';
-import { parseGeminiAnalysis } from '@/lib/ai/analysis-parser';
 import {
   checkAIGuardrails,
   buildSecureSystemPrompt,
@@ -9,32 +8,32 @@ import {
   logAuditEntry,
   detectPromptInjection,
 } from '@/lib/ai/guardrails';
+import type { EvidenceClaim, ClaimType } from '@/types/evidence';
+import { verifyClaims } from '@/lib/evidence/claim-verifier';
+import { insertClaimsBatch } from '@/lib/evidence/graph';
+import { pickModel } from '@/lib/ai/model-router';
 
-function calculateConfidence(data: {
-  summary?: string | null;
-  key_findings?: unknown;
-  abnormal_values?: unknown;
-  medications_found?: unknown;
-  recommendation?: string | null;
-}): number {
-  let c = 0;
-  if (data.summary && data.summary !== 'No summary available.') c += 0.2;
-  if (Array.isArray(data.key_findings) && data.key_findings.length > 0) c += 0.2;
-  if (Array.isArray(data.abnormal_values) && data.abnormal_values.length > 0) c += 0.15;
-  if (Array.isArray(data.medications_found) && data.medications_found.length > 0) c += 0.15;
-  if (data.recommendation && data.recommendation.length > 10) c += 0.15;
-  if (data.summary && data.summary.length > 20) c += 0.1;
-  if (
-    data.summary &&
-    data.summary !== 'No summary available.' &&
-    Array.isArray(data.key_findings) &&
-    data.key_findings.length > 0 &&
-    data.recommendation &&
-    data.recommendation.length > 10
-  ) {
-    c += 0.05;
+function parseFacts(raw: string): EvidenceClaim[] {
+  try {
+    const cleaned = raw
+      .replace(/```json\n?/g, '')
+      .replace(/```\n?/g, '')
+      .trim();
+    const parsed = JSON.parse(cleaned);
+    const facts = parsed.facts ?? [];
+    return facts.map((f: Record<string, unknown>, i: number) => ({
+      id: `fact-${i}`,
+      reportId: '',
+      claim: (f.claim as string) ?? '',
+      claimType: 'document_fact' as ClaimType,
+      confidence: f.isAbnormal != null ? 0.95 : 0.85,
+      category: (f.category as string) ?? 'other',
+      isAbnormal: (f.isAbnormal as boolean) ?? undefined,
+      sources: f.sourceText ? [{ reportId: '', text: f.sourceText as string }] : [],
+    }));
+  } catch {
+    return [];
   }
-  return Math.round(Math.min(c, 1) * 100) / 100;
 }
 
 export async function POST(request: NextRequest) {
@@ -56,7 +55,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'reportId is required' }, { status: 400 });
     }
 
-    // Guard: reject obviously injected reportId values
     if (detectPromptInjection(reportId)) {
       await logAuditEntry(supabase, {
         user_id: user.id,
@@ -67,7 +65,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
 
-    // Fetch the report — ensure caller owns it or it's shareable
     const { data: report, error: reportError } = await supabase
       .from('reports')
       .select('id, patient_id, file_path, mime_type, report_type, is_shareable, title, file_size')
@@ -78,13 +75,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Report not found' }, { status: 404 });
     }
 
-    // Auth check: patient who owns it, or doctor viewing a shareable report
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single();
-
     const isOwner = report.patient_id === user.id;
     const isDoctor = profile?.role === 'doctor';
     const isAdmin = profile?.role === 'admin';
@@ -100,20 +95,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Return cached analysis if it exists (guardrails already passed for this report)
     const { data: existing } = await supabase
       .from('report_analyses')
       .select('*')
       .eq('report_id', reportId)
       .single();
 
-    if (existing) {
-      // Recalculate confidence from cached data (no migration needed)
-      const cachedConfidence = calculateConfidence(existing);
-      return NextResponse.json({ analysis: { ...existing, confidence: cachedConfidence } });
+    if (existing && existing.analysis_type === 'v2') {
+      return NextResponse.json({ analysis: existing });
     }
 
-    // Download file to check size before calling guardrails
     const { data: fileData, error: fileError } = await supabase.storage
       .from('reports')
       .download(report.file_path);
@@ -125,7 +116,6 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await fileData.arrayBuffer();
     const fileSizeBytes = arrayBuffer.byteLength;
 
-    // ── Security guardrails ──────────────────────────────────────────────────
     const guardResult = await checkAIGuardrails(
       supabase,
       user.id,
@@ -147,11 +137,8 @@ export async function POST(request: NextRequest) {
     }
 
     const base64 = Buffer.from(arrayBuffer).toString('base64');
-
-    // Secure system prompt with topic guardrails and injection prevention
     const systemPrompt = buildSecureSystemPrompt();
 
-    // Multi-provider: Gemini → NVIDIA (vision fallback)
     const { callVisionAI } = await import('@/lib/ai/provider-router');
     let rawText = '';
     let usedModel = '';
@@ -174,6 +161,7 @@ export async function POST(request: NextRequest) {
       }
       throw e;
     }
+
     if (!rawText) {
       return NextResponse.json(
         { error: 'AI service returned empty response. Please try again.' },
@@ -181,7 +169,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Validate AI response for safety ─────────────────────────────────────
     const validation = validateAIResponse(rawText);
     if (!validation.safe) {
       await logAuditEntry(supabase, {
@@ -198,38 +185,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if AI flagged the document as non-medical
-    if (rawText.includes('not_medical_document')) {
-      return NextResponse.json(
-        { error: 'This document does not appear to be a medical record.' },
-        { status: 422 }
-      );
-    }
+    const claims = parseFacts(rawText);
+    const verification = verifyClaims(claims);
 
-    const analysis = parseGeminiAnalysis(rawText);
-    if (!analysis) {
-      return NextResponse.json(
-        { error: 'AI could not analyze this document. Try a clearer image.' },
-        { status: 422 }
-      );
-    }
+    await supabase.from('report_analyses').upsert(
+      {
+        report_id: reportId,
+        summary: claims.map((c) => c.claim).join('; '),
+        key_findings: claims.filter((c) => c.isAbnormal).map((c) => c.claim),
+        model_used: usedModel,
+        analysis_type: 'v2',
+        extracted_data: { claims, verification },
+      },
+      { onConflict: 'report_id' }
+    );
 
-    // Heuristic fallback: if AI analyzed a non-medical document but didn't return the error JSON,
-    // detect it by checking if the analysis has no medical content
-    const hasMedicalContent =
-      (analysis.abnormal_values && analysis.abnormal_values.length > 0) ||
-      (analysis.medications_found && analysis.medications_found.length > 0) ||
-      (analysis.key_findings && analysis.key_findings.length > 0) ||
-      (analysis.report_type_detected && analysis.report_type_detected !== 'other');
+    await insertClaimsBatch(supabase, reportId, report.patient_id, claims);
 
-    if (!hasMedicalContent) {
-      return NextResponse.json(
-        { error: 'This document does not appear to be a medical record.' },
-        { status: 422 }
-      );
-    }
-
-    // Update audit log with model used
     await logAuditEntry(supabase, {
       user_id: user.id,
       report_id: reportId,
@@ -239,29 +211,7 @@ export async function POST(request: NextRequest) {
       flagged: false,
     });
 
-    // Store result in DB
-    const { data: saved, error: saveError } = await supabase
-      .from('report_analyses')
-      .upsert(
-        {
-          report_id: reportId,
-          summary: analysis.summary,
-          key_findings: analysis.key_findings,
-          abnormal_values: analysis.abnormal_values,
-          medications_found: analysis.medications_found,
-          recommendation: analysis.recommendation,
-          model_used: usedModel,
-        },
-        { onConflict: 'report_id' }
-      )
-      .select()
-      .single();
-
-    if (saveError) {
-      return NextResponse.json({ analysis: { ...analysis, report_id: reportId } });
-    }
-
-    return NextResponse.json({ analysis: saved });
+    return NextResponse.json({ analysis: { claims, verification, report_id: reportId } });
   } catch (err: unknown) {
     const apiErr = err as { status?: number; message?: string };
     console.error('[analyze-report] error:', apiErr);

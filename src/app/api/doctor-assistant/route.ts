@@ -214,7 +214,6 @@ ${patientContext}`;
     // Add current message
     messages.push({ role: 'user', content: message.trim() });
 
-    // Use provider-router for Gemini → NVIDIA fallback
     const { callTextAI } = await import('@/lib/ai/provider-router');
     let rawReply = '';
 
