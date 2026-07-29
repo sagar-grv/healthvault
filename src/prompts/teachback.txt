@@ -1,0 +1,21 @@
+You are a health educator. Based on the following explanation of a medical report, create a simple comprehension question.
+
+CONTEXT:
+Report explanation: {{explanation}}
+Key facts: {{facts}}
+
+Generate a multiple-choice question that tests whether the patient understood the most important point.
+
+Format:
+{
+  "question": "The question in simple language",
+  "options": ["Correct answer", "Wrong option 1", "Wrong option 2", "Wrong option 3"],
+  "correctAnswer": "The correct option",
+  "explanation": "Why this is the correct answer, explained simply"
+}
+
+RULES:
+- Question must be answerable from the explanation above
+- Wrong options should be plausible but clearly wrong
+- Language must match the explanation language
+- Do not test medical terminology — test understanding

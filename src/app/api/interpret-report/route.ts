@@ -2,22 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { validateOrigin } from '@/lib/csrf';
 import { checkAIGuardrails, logAuditEntry } from '@/lib/ai/guardrails';
-
-/**
- * POST /api/interpret-report
- *
- * Generates a plain-language explanation of a medical report
- * in the user's preferred language, with optional TTS audio.
- *
- * Body: { reportId: string, language: string }
- * Returns: { explanation: string, keyPoints: string[], audioText: string }
- *
- * Security:
- * - Auth required
- * - Patient must own the report, or doctor must have access
- * - Rate limited (shares AI quota with other AI routes)
- * - API key never exposed to client
- */
+import fs from 'fs';
+import path from 'path';
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: 'English',
@@ -34,43 +20,14 @@ const LANGUAGE_NAMES: Record<string, string> = {
   as: 'Assamese',
 };
 
+const EXPLANATION_PROMPT_TEMPLATE = fs.readFileSync(
+  path.join(process.cwd(), 'src/prompts/explanation.txt'),
+  'utf-8'
+);
+
 function buildInterpretPrompt(language: string): string {
   const langName = LANGUAGE_NAMES[language] || 'English';
-
-  return `You are a friendly health assistant explaining a medical report to a patient in simple terms.
-
-LANGUAGE: Respond ENTIRELY in ${langName}. Every word of your response must be in ${langName}.
-
-RULES:
-1. Use simple, everyday language — no medical jargon
-2. If you must use a medical term, immediately explain it in brackets
-3. Be warm, reassuring, and clear
-4. NEVER diagnose — always say "talk to your doctor"
-5. Use analogies when helpful (e.g., "think of it like...")
-6. Highlight what is normal (good news first) before what needs attention
-7. End with ONE simple action the patient can take
-
-RESPONSE FORMAT (respond in ${langName}):
-Return valid JSON only — no markdown, no code fences:
-{
-  "headline": "One sentence in simple words — what is this report about?",
-  "explanation": "2-3 paragraph plain language explanation",
-  "keyPoints": [
-    "Point 1 — a simple observation",
-    "Point 2 — another simple observation"
-  ],
-  "abnormalItems": [
-    {
-      "name": "Test name in simple words",
-      "yourValue": "what the report shows",
-      "normalRange": "what is normal",
-      "whatItMeans": "simple explanation",
-      "isHigh": true or false
-    }
-  ],
-  "actionAdvice": "One simple thing the patient should do or discuss with doctor",
-  "audioText": "A friendly 2-3 sentence spoken summary for text-to-speech — conversational, no numbers or jargon"
-}`;
+  return EXPLANATION_PROMPT_TEMPLATE.replace(/\{\{language\}\}/g, langName);
 }
 
 export async function POST(request: NextRequest) {
@@ -92,13 +49,10 @@ export async function POST(request: NextRequest) {
     if (!reportId || typeof reportId !== 'string') {
       return NextResponse.json({ error: 'reportId is required' }, { status: 400 });
     }
-
-    // Validate language code
     if (!LANGUAGE_NAMES[language]) {
       return NextResponse.json({ error: 'Unsupported language' }, { status: 400 });
     }
 
-    // Fetch report — check ownership
     const { data: report, error: reportError } = await supabase
       .from('reports')
       .select('id, patient_id, file_path, mime_type, report_type, is_shareable')
@@ -109,13 +63,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Report not found' }, { status: 404 });
     }
 
-    // Auth check: patient owns it OR doctor with shareable access
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single();
-
     const isOwner = report.patient_id === user.id;
     const isDoctor = profile?.role === 'doctor';
     const canAccess = isOwner || (isDoctor && report.is_shareable);
@@ -131,7 +83,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Check cache — return existing interpretation for same language
     const { data: cached } = await supabase
       .from('report_analyses')
       .select('extracted_data')
@@ -143,7 +94,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(cached.extracted_data[cacheKey]);
     }
 
-    // Download report file
     const { data: fileData, error: fileError } = await supabase.storage
       .from('reports')
       .download(report.file_path);
@@ -155,7 +105,6 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await fileData.arrayBuffer();
     const fileSizeBytes = arrayBuffer.byteLength;
 
-    // Rate limiting
     const guardResult = await checkAIGuardrails(
       supabase,
       user.id,
@@ -170,7 +119,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Multi-provider AI: Gemini → NVIDIA (vision fallback)
     const base64 = Buffer.from(arrayBuffer).toString('base64');
     const mimeType = report.mime_type as string;
 
@@ -195,7 +143,6 @@ export async function POST(request: NextRequest) {
       throw e;
     }
 
-    // Parse JSON response
     let parsed;
     try {
       const cleaned = responseText
@@ -216,26 +163,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Cache the interpretation in report_analyses.extracted_data
-    const updatedCache = {
-      ...(cached?.extracted_data || {}),
-      [cacheKey]: parsed,
-    };
-
+    const updatedCache = { ...(cached?.extracted_data || {}), [cacheKey]: parsed };
     await supabase.from('report_analyses').upsert({
       report_id: reportId,
       extracted_data: updatedCache,
       updated_at: new Date().toISOString(),
     });
 
-    // Audit log success
     await logAuditEntry(supabase, {
       user_id: user.id,
       report_id: reportId,
       action: 'interpret_report',
       flagged: false,
     });
-
     return NextResponse.json(parsed);
   } catch (error) {
     console.error('Interpret report error:', error);

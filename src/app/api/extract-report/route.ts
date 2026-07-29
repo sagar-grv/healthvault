@@ -2,56 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { validateOrigin } from '@/lib/csrf';
 import { checkAIGuardrails, logAuditEntry, MAX_AI_FILE_BYTES } from '@/lib/ai/guardrails';
+import fs from 'fs';
+import path from 'path';
 
-/**
- * POST /api/extract-report
- *
- * Extracts structured data from a medical report image using Gemini.
- * Called client-side after camera capture or file selection.
- *
- * Body: { image: base64string, mimeType: string }
- * Returns: ExtractedReportData JSON
- *
- * Security:
- * - Requires authenticated user
- * - Rate limited via guardrails
- * - API key never exposed to client
- * - Audit logged
- */
-
-const EXTRACTION_PROMPT = `You are a medical report data extractor. Analyze this medical report image and extract structured data.
-
-RULES:
-- Extract EXACTLY what you see. Do not guess or hallucinate.
-- If a field is not visible, set it to null.
-- For dates, use YYYY-MM-DD format.
-- For report type, choose ONLY from: prescription, lab_report, scan, discharge_summary, vaccination, other
-- For key values, extract test results with their normal ranges if shown on the report.
-- Mark values as abnormal if they are outside the normal range shown.
-- Keep the summary to ONE simple sentence a non-medical person would understand.
-- Extract all visible text as rawText (for search indexing).
-- If this is NOT a medical report, set confidence to 0 and title to "Not a medical report".
-
-Respond ONLY with valid JSON (no markdown, no code fences):
-{
-  "title": "string - descriptive title like 'Complete Blood Count Report'",
-  "reportDate": "YYYY-MM-DD or null",
-  "doctorName": "string or null",
-  "facilityName": "string or null",
-  "reportType": "prescription|lab_report|scan|discharge_summary|vaccination|other",
-  "keyValues": [
-    {
-      "name": "Test name",
-      "value": "Result value",
-      "unit": "unit or null",
-      "normalRange": "range string or null",
-      "isAbnormal": true or false
-    }
-  ],
-  "summary": "One simple sentence summary",
-  "rawText": "All visible text from the report",
-  "confidence": 0.0 to 1.0
-}`;
+const EXTRACTION_PROMPT = fs.readFileSync(
+  path.join(process.cwd(), 'src/prompts/extraction.txt'),
+  'utf-8'
+);
 
 export async function POST(request: NextRequest) {
   if (!validateOrigin(request)) {
@@ -66,7 +23,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Parse body
     const body = await request.json();
     const { image, mimeType } = body;
 
@@ -77,7 +33,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'mimeType is required' }, { status: 400 });
     }
 
-    // Validate mime type
     const supportedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
     if (!supportedTypes.includes(mimeType)) {
       return NextResponse.json(
@@ -86,7 +41,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Size check (base64 is ~33% larger than binary)
     const estimatedBytes = (image.length * 3) / 4;
     if (estimatedBytes > MAX_AI_FILE_BYTES) {
       return NextResponse.json(
@@ -95,7 +49,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Rate limiting via guardrails
     const guardResult = await checkAIGuardrails(
       supabase,
       user.id,
@@ -109,7 +62,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Multi-provider AI: Gemini → NVIDIA (vision fallback)
     const { callVisionAI } = await import('@/lib/ai/provider-router');
     let responseText = '';
 
@@ -131,7 +83,6 @@ export async function POST(request: NextRequest) {
       throw e;
     }
 
-    // Parse JSON from response (strip any markdown code fences if present)
     let parsed;
     try {
       const cleaned = responseText
@@ -140,7 +91,6 @@ export async function POST(request: NextRequest) {
         .trim();
       parsed = JSON.parse(cleaned);
     } catch {
-      // If JSON parse fails, return a minimal result
       await logAuditEntry(supabase, {
         user_id: user.id,
         action: 'extract_report',
@@ -153,13 +103,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Audit log (success)
-    await logAuditEntry(supabase, {
-      user_id: user.id,
-      action: 'extract_report',
-      flagged: false,
-    });
-
+    await logAuditEntry(supabase, { user_id: user.id, action: 'extract_report', flagged: false });
     return NextResponse.json(parsed);
   } catch (error) {
     console.error('Extract report error:', error);
