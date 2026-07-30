@@ -1,5 +1,6 @@
 'use client';
 
+import { useDebounce } from '@/hooks/useDebounce';
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
@@ -51,6 +52,7 @@ export default function AccessLogClient({ logs, shares: initialShares }: AccessL
   const locale = useLocale();
   const [shares, setShares] = useState(initialShares);
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [expandedDoctor, setExpandedDoctor] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -96,8 +98,10 @@ export default function AccessLogClient({ logs, shares: initialShares }: AccessL
 
   // Group logs by doctor
   const groupedLogs = useMemo(() => {
-    const filtered = searchQuery.trim()
-      ? logs.filter((l) => l.doctor_name.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+    const filtered = debouncedSearchQuery.trim()
+      ? logs.filter((l) =>
+          l.doctor_name.toLowerCase().includes(debouncedSearchQuery.trim().toLowerCase())
+        )
       : logs;
 
     const map = new Map<string, { doctorName: string; logs: AccessLog[]; totalReports: number }>();
@@ -116,7 +120,7 @@ export default function AccessLogClient({ logs, shares: initialShares }: AccessL
       (a, b) =>
         new Date(b.logs[0].searched_at).getTime() - new Date(a.logs[0].searched_at).getTime()
     );
-  }, [logs, searchQuery]);
+  }, [logs, debouncedSearchQuery]);
 
   const uniqueDoctors = new Set(logs.map((l) => l.doctor_id)).size;
 

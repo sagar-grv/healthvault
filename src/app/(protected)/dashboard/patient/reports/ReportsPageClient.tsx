@@ -1,5 +1,6 @@
 'use client';
 
+import { useDebounce } from '@/hooks/useDebounce';
 import { useState, useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -64,6 +65,7 @@ export default function ReportsPageClient({
   const router = useRouter();
   const [search, setSearch] = useState(searchParams.get('q') ?? '');
   const [filterType, setFilterType] = useState(searchParams.get('type') ?? FILTER_ALL);
+  const debouncedSearch = useDebounce(search, 300);
   const [viewingReport, setViewingReport] = useState<Report | null>(null);
   const [interpretingReport, setInterpretingReport] = useState<Report | null>(null);
   const [snackbar, setSnackbar] = useState({
@@ -98,12 +100,12 @@ export default function ReportsPageClient({
     if (filterType !== FILTER_ALL) {
       list = list.filter((r) => r.report_type === filterType);
     }
-    if (search.trim()) {
-      const q = search.toLowerCase();
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase();
       list = list.filter((r) => r.title.toLowerCase().includes(q));
     }
     return list;
-  }, [reports, filterType, search]);
+  }, [reports, filterType, debouncedSearch]);
 
   // Group filtered reports by month/year
   const grouped = useMemo(() => {
@@ -120,11 +122,11 @@ export default function ReportsPageClient({
   // Sync filters to URL
   useEffect(() => {
     const params = new URLSearchParams();
-    if (search) params.set('q', search);
+    if (debouncedSearch) params.set('q', debouncedSearch);
     if (filterType !== FILTER_ALL) params.set('type', filterType);
     const qs = params.toString();
     router.replace(`/dashboard/patient/reports${qs ? `?${qs}` : ''}`, { scroll: false });
-  }, [search, filterType, router]);
+  }, [debouncedSearch, filterType, router]);
 
   const handleToggleStar = async (reportId: string, current: boolean) => {
     const supabase = createClient();

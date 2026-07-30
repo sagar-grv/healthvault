@@ -1,0 +1,3 @@
+## 2024-07-24 - Debouncing frontend filter inputs for better responsiveness
+**Learning:** React applications that filter large lists client-side based on text inputs can suffer from main thread blocking if filtering occurs on every keystroke. The `useMemo` hooks recalculate the filtered lists continuously during typing, causing sluggish input behavior. This is especially true for dashboards displaying numerous patient records or logs.
+**Action:** Always implement a `useDebounce` hook for text inputs that trigger complex `useMemo` list filtering operations. Delaying the filter application by 300ms significantly improves perceived responsiveness and prevents unnecessary re-renders.

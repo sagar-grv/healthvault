@@ -22,6 +22,7 @@ import DescriptionIcon from '@mui/icons-material/DescriptionOutlined';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import CalendarTodayIcon from '@mui/icons-material/CalendarTodayOutlined';
+import { useDebounce } from '@/hooks/useDebounce';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import SearchIcon from '@mui/icons-material/Search';
@@ -63,6 +64,7 @@ export default function SharedWithMePanel({
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [now] = useState(() => Date.now());
 
   // Fetch share details when panel opens
@@ -130,8 +132,8 @@ export default function SharedWithMePanel({
     }
 
     // Search filter
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (debouncedSearchQuery.trim()) {
+      const q = debouncedSearchQuery.toLowerCase();
       result = result.filter(
         (r) =>
           r.title.toLowerCase().includes(q) ||
@@ -141,7 +143,7 @@ export default function SharedWithMePanel({
     }
 
     return result;
-  }, [reports, typeFilter, dateFilter, searchQuery, now]);
+  }, [reports, typeFilter, dateFilter, debouncedSearchQuery, now]);
 
   // Get unique report types for filter
   const reportTypes = useMemo(() => {

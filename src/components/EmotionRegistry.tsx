@@ -9,11 +9,7 @@ import { CacheProvider } from '@emotion/react';
 // It extracts critical CSS on the server and injects it into the HTML to
 // prevent the hydration mismatch between server and client rendering.
 
-export default function EmotionRegistry({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function EmotionRegistry({ children }: { children: React.ReactNode }) {
   const [registry] = React.useState(() => {
     const cache = createCache({ key: 'css' });
     cache.compat = true;
@@ -52,7 +48,5 @@ export default function EmotionRegistry({
     );
   });
 
-  return (
-    <CacheProvider value={registry.cache}>{children}</CacheProvider>
-  );
+  return <CacheProvider value={registry.cache}>{children}</CacheProvider>;
 }
