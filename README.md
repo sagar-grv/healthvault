@@ -7,9 +7,15 @@
 ![Supabase](https://img.shields.io/badge/supabase-postgres-3ecf8e?logo=supabase)
 ![Gemini](https://img.shields.io/badge/google%20gemini-2.5%20flash-4285f4?logo=google&logoColor=white)
 
-> **Your health records. Finally in your hands.**
+> **From scattered reports to a doctor-ready view.**
 
-AI-powered medical report management for Indian patients and doctors. Upload reports, get AI-driven insights in 12 languages, and securely share records via a unique Health ID.
+HealthVault is an AI-assisted record intake and sharing MVP for Indian patients and independent clinics. Patients upload paper reports, PDFs, prescriptions, and scans; doctors review only the records the patient has chosen to share.
+
+**2026 product direction:** a clinic-led pre-consultation workflow that works alongside existing EMRs, paper processes, and ABDM Personal Health Record apps.
+
+> **Transparency:** HealthVault is an independent prototype. ABDM sandbox integration is planned, but the product is not currently ABDM-certified. AI output is informational and requires clinician review.
+
+[Read the July 2026 product positioning and 90-day plan](docs/PRODUCT_POSITIONING_2026.md).
 
 ---
 
@@ -25,24 +31,23 @@ Doctors, meanwhile, start every appointment blind. _"Any previous reports?"_ _"I
 
 ## What HealthVault Does
 
-Upload a photo of any medical report. Our AI reads it, explains it in your language, and makes it instantly shareable with any doctor — using a single Health ID.
+Before a consultation, a patient uploads or selects existing reports and shares them with a doctor. HealthVault uses AI to extract and explain key details, while the original record remains available for review.
 
 ```mermaid
 flowchart LR
-    A[Register] --> B[Get Health ID\nHV-XXXX-XXXX]
-    B --> C[Scan Report\nwith Camera]
-    C --> D[AI Analyzes\nReport]
-    D --> E[Understand in\nYour Language]
-    E --> F[Share with\nDoctor via QR]
+    A[Clinic link or QR] --> B[Patient uploads\nor selects records]
+    B --> C[AI creates a\nreviewable draft]
+    C --> D[Patient chooses\nwhat to share]
+    D --> E[Doctor reviews\nrecords and draft]
 ```
 
-**30 seconds. No app download. Works on any phone.**
+The current `HV-XXXX-XXXX` identifier is an internal MVP identifier, not an ABHA Number. No native app download is required.
 
 ---
 
 ## How It Works for Doctors
 
-No new software to learn. No clinic system to adopt. Just search any patient by their Health ID and see their complete history — with AI-powered insights.
+No clinic-system replacement is required. Doctors can review the reports a patient explicitly shared and use AI as a review aid; the original medical record remains the source of truth.
 
 ```mermaid
 flowchart LR
@@ -76,8 +81,8 @@ flowchart LR
 | Feature                  | What It Does                                                                                                                                             |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Patient Lookup**       | Search any patient by Health ID with instant validation                                                                                                  |
-| **AI Clinical Insights** | Batch-analyze all shared reports — aggregated medications, abnormal values, and risk flags at a glance                                                   |
-| **AI Doctor Assistant**  | Floating chat assistant with context of your recent patients. Ask: _"Which patients have abnormal results?"_ or _"What medications are my patients on?"_ |
+| **AI Clinical Insights** | Draft aggregation of medications and abnormal values for clinician review; original reports remain the source of truth                                |
+| **AI Doctor Assistant**  | Patient-context review aid for navigating shared records; it is not a diagnostic or prescribing system                                                   |
 | **QR Scanner**           | Scan patient QR codes with torch toggle, camera switching, and file upload fallback                                                                      |
 | **Verification System**  | NMC scraping, government API verification, and admin review — so patients know you're real                                                               |
 | **Shared With Me**       | View all reports shared by patients with type/date filters and AI analysis                                                                               |
