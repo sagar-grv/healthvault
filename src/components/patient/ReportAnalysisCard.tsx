@@ -14,20 +14,20 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import MedicationIcon from '@mui/icons-material/Medication';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import EvidenceBadge from './EvidenceBadge';
-import type { EvidenceClaim } from '@/types/evidence';
+
+interface AbnormalValue {
+  name: string;
+  value: string;
+  normal_range: string;
+  status: string;
+}
 
 interface AnalysisResult {
   summary: string;
   key_findings: string[];
-  abnormal_values: Array<{ name: string; value: string; normal_range: string; status: string }>;
+  abnormal_values: AbnormalValue[];
   medications_found: string[];
   recommendation: string;
-}
-
-interface EvidenceAnalysis {
-  claims: EvidenceClaim[];
-  verification: { passed: boolean; failedClaims: Array<{ claim: string; reason: string }> };
 }
 
 interface ReportAnalysisCardProps {
@@ -35,6 +35,7 @@ interface ReportAnalysisCardProps {
   cachedAnalysis?: AnalysisResult | null;
 }
 
+// rgba-based colors — work on both light and dark backgrounds
 const STATUS_COLORS: Record<string, { bg: string; color: string; label: string }> = {
   high: { bg: 'rgba(239,68,68,0.12)', color: 'error.main', label: 'High' },
   low: { bg: 'rgba(37,99,235,0.10)', color: 'primary.main', label: 'Low' },
@@ -54,9 +55,7 @@ function AbnormalChip({ status }: { status: string }) {
 }
 
 export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportAnalysisCardProps) {
-  const [analysis, setAnalysis] = useState<AnalysisResult | EvidenceAnalysis | null>(
-    cachedAnalysis ?? null
-  );
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(cachedAnalysis ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [analyzed, setAnalyzed] = useState(!!cachedAnalysis);
@@ -84,10 +83,15 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
     }
   };
 
+  // Loading skeleton
   if (loading) {
     return (
       <Card
-        sx={{ mt: 2, border: '1px solid rgba(124,58,237,0.25)', bgcolor: 'rgba(124,58,237,0.06)' }}
+        sx={{
+          mt: 2,
+          border: '1px solid rgba(124,58,237,0.25)',
+          bgcolor: 'rgba(124,58,237,0.06)',
+        }}
       >
         <CardContent sx={{ p: 2.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
@@ -104,6 +108,7 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
     );
   }
 
+  // Analyze button (not yet analyzed)
   if (!analyzed || !analysis) {
     return (
       <Box sx={{ mt: 2 }}>
@@ -120,7 +125,10 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
           sx={{
             borderColor: 'secondary.main',
             color: 'secondary.main',
-            '&:hover': { bgcolor: 'rgba(124,58,237,0.08)', borderColor: 'secondary.dark' },
+            '&:hover': {
+              bgcolor: 'rgba(124,58,237,0.08)',
+              borderColor: 'secondary.dark',
+            },
           }}
         >
           {error ? 'Retry Analysis' : 'Analyze with AI'}
@@ -136,107 +144,9 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
     );
   }
 
-  // Check if V2 (evidence-based) or legacy
-  const isEvidenceBased = 'claims' in analysis;
-  if (isEvidenceBased) {
-    const ev = analysis as EvidenceAnalysis;
-    const abnormal = ev.claims.filter((c) => c.isAbnormal);
-    return (
-      <Card
-        sx={{ mt: 2, border: '1px solid rgba(124,58,237,0.35)', bgcolor: 'rgba(124,58,237,0.06)' }}
-      >
-        <CardContent sx={{ p: 2.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-            <AutoAwesomeIcon sx={{ fontSize: 18, color: 'secondary.main' }} />
-            <Typography
-              variant="body2"
-              sx={{ fontWeight: 700, color: 'secondary.main', flexGrow: 1 }}
-            >
-              AI Analysis
-            </Typography>
-            <Chip
-              label="Gemini"
-              size="small"
-              sx={{
-                bgcolor: 'rgba(124,58,237,0.12)',
-                color: 'secondary.main',
-                fontSize: '0.65rem',
-                height: 20,
-              }}
-            />
-          </Box>
+  // Analysis results
+  const hasAbnormal = analysis.abnormal_values?.length > 0;
 
-          {abnormal.length > 0 && (
-            <>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
-                <WarningAmberIcon sx={{ fontSize: 15, color: 'warning.main' }} />
-                <Typography
-                  variant="caption"
-                  sx={{
-                    fontWeight: 700,
-                    color: 'warning.main',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                  }}
-                >
-                  Values Outside Range
-                </Typography>
-              </Box>
-              {abnormal.map((c) => (
-                <Box
-                  key={c.id}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 0.75,
-                    mb: 0.75,
-                    px: 1.5,
-                    py: 0.75,
-                    bgcolor: 'background.paper',
-                    borderRadius: 1.5,
-                    border: '1px solid rgba(239,68,68,0.25)',
-                  }}
-                >
-                  <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                    <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }} noWrap>
-                      {c.claim}
-                    </Typography>
-                    <EvidenceBadge claimType={c.claimType} />
-                  </Box>
-                </Box>
-              ))}
-              <Divider sx={{ my: 1.5 }} />
-            </>
-          )}
-
-          {ev.claims
-            .filter((c) => !c.isAbnormal)
-            .map((c) => (
-              <Box key={c.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
-                <Typography variant="caption" sx={{ color: 'secondary.main', flexShrink: 0 }}>
-                  •
-                </Typography>
-                <Typography variant="caption" sx={{ lineHeight: 1.5, flexGrow: 1 }}>
-                  {c.claim}
-                </Typography>
-                <EvidenceBadge claimType={c.claimType} />
-              </Box>
-            ))}
-
-          {!ev.verification.passed && (
-            <Alert severity="warning" sx={{ mt: 1.5 }}>
-              {ev.verification.failedClaims.length} claim(s) could not be verified from source
-              document.
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Legacy V1 display
-  const legacy = analysis as AnalysisResult;
-  const hasAbnormal = legacy.abnormal_values?.length > 0;
   return (
     <Card
       sx={{
@@ -246,6 +156,7 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
       }}
     >
       <CardContent sx={{ p: 2.5 }}>
+        {/* Header */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
           <AutoAwesomeIcon sx={{ fontSize: 18, color: 'secondary.main' }} />
           <Typography
@@ -265,10 +176,13 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
             }}
           />
         </Box>
+
+        {/* Summary */}
         <Typography variant="body2" sx={{ mb: 1.5, lineHeight: 1.55 }}>
-          {legacy.summary}
+          {analysis.summary}
         </Typography>
 
+        {/* Abnormal values */}
         {hasAbnormal && (
           <>
             <Divider sx={{ my: 1.5 }} />
@@ -286,7 +200,7 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
                 Values Outside Range
               </Typography>
             </Box>
-            {legacy.abnormal_values.map((av, i) => (
+            {analysis.abnormal_values.map((av, i) => (
               <Box
                 key={i}
                 sx={{
@@ -320,7 +234,8 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
           </>
         )}
 
-        {legacy.key_findings?.length > 0 && (
+        {/* Key findings */}
+        {analysis.key_findings?.length > 0 && (
           <>
             <Divider sx={{ my: 1.5 }} />
             <Typography
@@ -336,7 +251,7 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
             >
               Key Findings
             </Typography>
-            {legacy.key_findings.map((f, i) => (
+            {analysis.key_findings.map((f, i) => (
               <Box key={i} sx={{ display: 'flex', gap: 0.75, mb: 0.5 }}>
                 <Typography
                   variant="caption"
@@ -352,7 +267,8 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
           </>
         )}
 
-        {legacy.medications_found?.length > 0 && (
+        {/* Medications */}
+        {analysis.medications_found?.length > 0 && (
           <>
             <Divider sx={{ my: 1.5 }} />
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
@@ -370,7 +286,7 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-              {legacy.medications_found.map((med, i) => (
+              {analysis.medications_found.map((med, i) => (
                 <Chip
                   key={i}
                   label={med}
@@ -386,7 +302,8 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
           </>
         )}
 
-        {legacy.recommendation && (
+        {/* Recommendation */}
+        {analysis.recommendation && (
           <>
             <Divider sx={{ my: 1.5 }} />
             <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'flex-start' }}>
@@ -398,7 +315,7 @@ export default function ReportAnalysisCard({ reportId, cachedAnalysis }: ReportA
                 color="text.secondary"
                 sx={{ fontStyle: 'italic', lineHeight: 1.5 }}
               >
-                {legacy.recommendation}
+                {analysis.recommendation}
               </Typography>
             </Box>
           </>
