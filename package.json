@@ -39,7 +39,7 @@
     "dompurify": "^3.4.10",
     "html5-qrcode": "^2.3.8",
     "jspdf": "^4.2.1",
-    "nanoid": "^5.1.11",
+    "nanoid": "^5.1.16",
     "next": "^16.2.9",
     "next-intl": "^4.13.0",
     "qrcode.react": "^4.2.0",
